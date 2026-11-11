@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { PlayPauseButton } from '@/components/ui/play-pause-button';
 import { Text } from '@/components/ui/text';
@@ -11,12 +11,15 @@ type LectureRowProps = {
   // Display-ready: "31 Oct · 36 min · Masjid Muswalla, Highlands".
   metaLabel: string;
   state: LectureRowState;
+  // A tap anywhere on the row. Usually the same action as the play button.
+  onPress?: () => void;
   onPlayPress?: () => void;
 };
 
-// Home list row: text block + play button. The play button is the control; the row itself is
-// not pressable, so screen readers don't find a button nested inside another button.
-export function LectureRow({ title, author, metaLabel, state, onPlayPress }: LectureRowProps) {
+// Home list row: text block + play button. The whole row is a touch target, but it is hidden
+// from screen readers (accessible={false}), so VoiceOver finds the labelled play button instead
+// of a button nested inside another button. The row and the play button do the same thing.
+export function LectureRow({ title, author, metaLabel, state, onPress, onPlayPress }: LectureRowProps) {
   const isActive = state !== 'idle';
   const isPlaying = state === 'active-playing';
 
@@ -35,7 +38,11 @@ export function LectureRow({ title, author, metaLabel, state, onPlayPress }: Lec
   }
 
   return (
-    <View className={`flex-row items-center gap-3.5 rounded-row py-3.5 pl-[18px] pr-3 ${rowClass}`}>
+    <Pressable
+      accessible={false}
+      onPress={onPress}
+      className={`flex-row items-center gap-3.5 rounded-row py-3.5 pl-[18px] pr-3 active:opacity-80 ${rowClass}`}
+    >
       <View className="flex-1 gap-1">
         <Text variant="title" numberOfLines={2}>
           {title}
@@ -53,6 +60,6 @@ export function LectureRow({ title, author, metaLabel, state, onPlayPress }: Lec
         accessibilityLabel={buttonLabel}
         onPress={onPlayPress}
       />
-    </View>
+    </Pressable>
   );
 }

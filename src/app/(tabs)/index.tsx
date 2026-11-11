@@ -9,6 +9,7 @@ import { mockPlayback, mockPlaybackLecture } from '@/data/mock-ui';
 import { lectureSeries, type LectureSummary } from '@/data/sample';
 import { lectureRowMetaLabel } from '@/features/lectures/lecture-labels';
 import { useLatestLecturesQuery } from '@/features/lectures/lectures.queries';
+import { openNowPlaying } from '@/features/player/open-now-playing';
 
 // TODO(player stage): calculated from progressById + lecture data, hidden on first launch.
 const continueListening: ContinueListeningContent = {
@@ -33,11 +34,27 @@ function renderLectureRow({ item }: ListRenderItemInfo<LectureSummary>) {
     rowState = 'active-paused';
   }
 
+  // Until the player stage, every tap on a lecture opens Now Playing for it (Stage 5).
+  function handleOpen() {
+    openNowPlaying(item.slug);
+  }
+
   return (
     <View className="px-gutter">
-      <LectureRow title={item.title} author={item.author} metaLabel={lectureRowMetaLabel(item)} state={rowState} />
+      <LectureRow
+        title={item.title}
+        author={item.author}
+        metaLabel={lectureRowMetaLabel(item)}
+        state={rowState}
+        onPress={handleOpen}
+        onPlayPress={handleOpen}
+      />
     </View>
   );
+}
+
+function handleContinueListeningPress() {
+  openNowPlaying(mockPlaybackLecture.slug);
 }
 
 function lectureKey(lecture: LectureSummary) {
@@ -96,6 +113,7 @@ export default function HomeScreen() {
             lectureCountLabel={lectureCountLabel}
             seriesLabels={seriesLabels}
             selectedSeriesLabel={selectedSeriesLabel}
+            onContinueListeningPress={handleContinueListeningPress}
           />
         }
         ListFooterComponent={footer}

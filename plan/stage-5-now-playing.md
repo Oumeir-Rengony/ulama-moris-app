@@ -1,5 +1,6 @@
 # Stage 5: Now Playing screen (composition)
 
+> **Status: ✅ Done (11 Nov 2026).** Verified on the iOS simulator (iPhone 17 and iPhone SE, Expo Go + AXe) and the web build, light and dark: opening from a row, a row's play button and the Continue listening card; closing; repeated `--N` copies; redirects for a missing or unknown slug; the no-tags lecture; control and slider sizes. Changes from this plan: the artwork shrinks to fit when a full-width square would push the controls off screen (it overflowed on the 402-wide iPhone 17), with the top bar fixed above the scroll area; the topic pill uses `topicLabels` ("Ṣaḥābā r.a"). Deep links were tested as `exp://…/--/player…` in Expo Go; `ulamamoris://` needs a development build.
 > **Doc paths:** the docs refer to `docs/updated-doc/…`. In this repo, those files live directly in `docs/…`.
 > **Depends on:** Stage 1 (`player.tsx` route), Stage 3 (Now Playing components, `CoverArt`), Stage 4 (Home list, `lectures.api.ts`, `AppProviders`, `format-time.ts`).
 

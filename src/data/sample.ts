@@ -163,13 +163,13 @@ export const lectures: Lecture[] = [
   },
   {
     id: 'mock-lecture-08',
-    // No venue.
+    // No venue, no event and no topic: Now Playing's "no tags" case.
     title: 'Guarding the Tongue in the Age of Social Media',
     slug: 'guarding-the-tongue-in-the-age-of-social-media',
     date: '2026-10-02T19:30:00.000+04:00',
     author: 'Mufti Yasin Doomah',
     duration: '28:40',
-    category: ['akhlaq'],
+    category: [],
     url: sacrificesAudioUrl,
     series: 'local',
   },

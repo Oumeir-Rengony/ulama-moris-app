@@ -1,4 +1,4 @@
-import { latestLecturesTotal, lectures, type LectureSummary } from '@/data/sample';
+import { latestLecturesTotal, lectures, type Lecture, type LectureSummary } from '@/data/sample';
 
 export const LECTURE_PAGE_SIZE = 10;
 
@@ -14,8 +14,8 @@ export type LecturePage = {
 // the list is as long as the total the "API" reports, so the list and the "81 lectures" label
 // agree. The first pass keeps the real slugs (so the playing lecture still matches); every later
 // copy gets "--<copy number>" added, so list keys stay unique.
-function buildMockLibrary(): LectureSummary[] {
-  const library: LectureSummary[] = [];
+function buildMockLibrary(): Lecture[] {
+  const library: Lecture[] = [];
   let copyNumber = 0;
 
   while (library.length < latestLecturesTotal) {
@@ -53,4 +53,16 @@ export async function fetchLecturePage(pageIndex: number): Promise<LecturePage> 
   }
 
   return { items, total: latestLecturesTotal, nextPageIndex };
+}
+
+// Returns one lecture's detail record, or null when no lecture has that slug.
+// Stub: looks the slug up in the same mock library Home pages through, so the repeated copies
+// ("…--2") resolve too. The real API replaces this function's body.
+export async function fetchLectureBySlug(slug: string): Promise<Lecture | null> {
+  for (const lecture of mockLibrary) {
+    if (lecture.slug === slug) {
+      return lecture;
+    }
+  }
+  return null;
 }

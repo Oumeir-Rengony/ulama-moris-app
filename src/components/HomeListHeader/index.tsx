@@ -22,6 +22,7 @@ type HomeListHeaderProps = {
   lectureCountLabel?: string;
   seriesLabels: string[];
   selectedSeriesLabel: string;
+  onContinueListeningPress?: () => void;
 };
 
 // Everything on Home above the lecture rows: the FlatList's ListHeaderComponent.
@@ -31,6 +32,7 @@ export function HomeListHeader({
   lectureCountLabel,
   seriesLabels,
   selectedSeriesLabel,
+  onContinueListeningPress,
 }: HomeListHeaderProps) {
   let countTrailing = null;
   if (lectureCountLabel !== undefined) {
@@ -62,6 +64,7 @@ export function HomeListHeader({
           progress={continueListening.progress}
           elapsedLabel={continueListening.elapsedLabel}
           minutesLeftLabel={continueListening.minutesLeftLabel}
+          onTogglePress={onContinueListeningPress}
         />
       </View>
 
