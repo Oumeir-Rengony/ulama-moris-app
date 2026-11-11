@@ -227,6 +227,8 @@ These render outside the normal screen tree and do **not** inherit any padding f
   - After `xcrun simctl ui booted content_size …`, terminate and reopen Expo Go (`xcrun simctl terminate booted host.exp.Exponent`); the running app doesn't pick up the new size.
   - In Expo Go, deep links are `exp://127.0.0.1:8081/--/<path>`. The app's own `ulamamoris://` scheme only works in a development build.
 - Web: drive `localhost:8081` with `playwright-cli` at 390 × 844. React Native Web renders the screen in an inner scroll container, so full-page screenshots need the viewport made taller or the container scrolled.
+- Known web-dev-only warning: "Can't perform a React state update on a component that hasn't mounted yet", from NativeWind's `useColorScheme` (react-native-css-interop). It fires only when the colour scheme changes at runtime (e.g. `emulateMedia({ colorScheme: 'dark' })` in a test) while a lazily loaded route is rendering. Without a theme switch it doesn't appear, and iOS never shows it. Not caused by app code; don't chase it.
+- Sticky headers (`SectionList`): put the top safe-area inset on the screen container, not in `contentContainerStyle`. Sticky headers pin to the top of the list, and would otherwise hide under the status bar.
 
 
 ## Rules
