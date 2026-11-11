@@ -15,6 +15,7 @@ import * as SystemUI from 'expo-system-ui';
 import { useColorScheme } from 'nativewind';
 import { useEffect } from 'react';
 
+import { AppProviders } from '@/providers/app-providers';
 import { useNavigationTheme } from '@/theme/navigation-theme';
 import { useThemeColors } from '@/theme/tokens';
 
@@ -62,24 +63,25 @@ export default function RootLayout() {
     return null;
   }
 
-  // TODO(data layer): wrap in <AppProviders> (src/providers/app-providers.tsx).
   // TODO(player stage): mount <PlayerStatusBridge /> once, here.
   return (
-    <ThemeProvider value={navigationTheme}>
-      <StatusBar style="auto" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="search" options={{ animation: 'slide_from_right' }} />
-        <Stack.Screen
-          name="player"
-          options={{
-            presentation: 'fullScreenModal',
-            animation: 'slide_from_bottom',
-            gestureEnabled: true,
-            gestureDirection: 'vertical',
-          }}
-        />
-      </Stack>
-    </ThemeProvider>
+    <AppProviders>
+      <ThemeProvider value={navigationTheme}>
+        <StatusBar style="auto" />
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="search" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen
+            name="player"
+            options={{
+              presentation: 'fullScreenModal',
+              animation: 'slide_from_bottom',
+              gestureEnabled: true,
+              gestureDirection: 'vertical',
+            }}
+          />
+        </Stack>
+      </ThemeProvider>
+    </AppProviders>
   );
 }

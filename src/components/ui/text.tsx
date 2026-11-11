@@ -116,7 +116,14 @@ export type TextProps = NativeTextProps & {
   className?: string;
 };
 
-export function Text({ variant = 'body', tabular = false, className, style, ...rest }: TextProps) {
+// The three largest headings are already big. At the largest accessibility text sizes (about 3×)
+// a 28pt heading would reach ~87pt and break words in the middle ("Nurtur-e"), so they stop
+// growing at 1.6×. All other variants scale without a limit. A caller can still pass its own
+// maxFontSizeMultiplier.
+const largeHeadingMaxScale = 1.6;
+const variantsWithCappedScale = new Set<TextVariant>(['display', 'h1', 'h2']);
+
+export function Text({ variant = 'body', tabular = false, className, style, maxFontSizeMultiplier, ...rest }: TextProps) {
   const combinedClassName = buildClassName(variant, className);
 
   let combinedStyle = style;
@@ -124,5 +131,17 @@ export function Text({ variant = 'body', tabular = false, className, style, ...r
     combinedStyle = [{ fontVariant: ['tabular-nums'] }, style];
   }
 
-  return <NativeText className={combinedClassName} style={combinedStyle} {...rest} />;
+  let maxScale = maxFontSizeMultiplier;
+  if (maxScale === undefined && variantsWithCappedScale.has(variant)) {
+    maxScale = largeHeadingMaxScale;
+  }
+
+  return (
+    <NativeText
+      className={combinedClassName}
+      style={combinedStyle}
+      maxFontSizeMultiplier={maxScale}
+      {...rest}
+    />
+  );
 }

@@ -3,6 +3,8 @@
 // add the formatting helpers (HANDOFF §4.7) and the player, these strings are written by hand.
 // The screen stages replace each value with a computed one, then delete this file.
 
+import { lectures, type Lecture } from './sample';
+
 export type TitlePart = {
   text: string;
   highlighted: boolean;
@@ -19,6 +21,19 @@ export const mockPlayback = {
   sourceLabel: 'Latest lectures',
   longDate: 'Saturday, 31 October 2026',
 };
+
+function findMockPlaybackLecture(): Lecture {
+  for (const lecture of lectures) {
+    if (lecture.slug === mockPlayback.lectureSlug) {
+      return lecture;
+    }
+  }
+  throw new Error(`mock-ui: no lecture with slug "${mockPlayback.lectureSlug}"`);
+}
+
+// The lecture record behind mockPlayback (title, author …). Until the player stage, the Continue
+// listening card, the mini player and the active Home row all show this lecture, paused.
+export const mockPlaybackLecture = findMockPlaybackLecture();
 
 // Home row meta lines (date · minutes · venue), keyed by lecture slug. No minutes when the
 // duration is unknown, no venue when there is none.

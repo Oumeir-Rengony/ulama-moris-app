@@ -59,10 +59,22 @@ export function MiniPlayer({
         onPress={onOpenPress}
         className="min-h-touch flex-1 justify-center gap-0.5 pl-2 active:opacity-80"
       >
-        <Text variant="bodySm" numberOfLines={1} className={`font-manrope-bold ${miniPlayer.fg}`}>
+        {/* The bar is always on screen above the tabs, so its text is capped like the tab labels
+            (AGENTS.md "Text & font scaling"); uncapped, it would take over the footer. */}
+        <Text
+          variant="bodySm"
+          numberOfLines={1}
+          maxFontSizeMultiplier={1.3}
+          className={`font-manrope-bold ${miniPlayer.fg}`}
+        >
           {title}
         </Text>
-        <Text variant="caption" numberOfLines={1} className={`font-manrope-semibold ${miniPlayer.fgMuted}`}>
+        <Text
+          variant="caption"
+          numberOfLines={1}
+          maxFontSizeMultiplier={1.3}
+          className={`font-manrope-semibold ${miniPlayer.fgMuted}`}
+        >
           {author}
         </Text>
       </Pressable>

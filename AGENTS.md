@@ -75,7 +75,9 @@ Read [src/theme/README.md](src/theme/README.md) before adding or changing any co
 - Colours a class can't reach (icon `color`, SVG fills, navigation) come from `useThemeColors()`; shadows from `useThemeShadows()`. Both read NativeWind's `useColorScheme`, never React Native's, so classes and JS always agree.
 - Text: `<Text variant="h1">` from `@/components/ui/text`. Variants: `display`, `h1`, `h2`, `section`, `headingSm`, `title`, `body`, `bodySm`, `meta`, `caption`, `label`, `overline`. Default colour `text-fg`; pass `className` to change colour or weight (the component drops its own default so yours wins, because NativeWind resolves conflicts by stylesheet order, not className order). Use `tabular` for every time value.
 - Manrope is loaded in the root layout before the splash hides. Use `font-manrope-*` classes, never `font-bold`.
-- `/dev/tokens` (development only) shows every token in the current theme.
+- `/dev/tokens` (development only) shows every token in the current theme. It and `/dev/components` have no in-app link: open them by URL (web: `localhost:8081/dev/components`; iOS in Expo Go: `xcrun simctl openurl booted "exp://127.0.0.1:8081/--/dev/components"`).
+- `metro.config.js` sets NativeWind's `inlineRem: 16`. Tailwind's spacing scale is in rem, and NativeWind's native default is 14, which made every spacing class 12% smaller on iOS/Android than on web and in the designs (`min-h-10` came out 35, not 40). Don't remove it.
+- Text scaling: the `Text` component caps `display`, `h1` and `h2` at 1.6× (they broke words mid-word at the largest accessibility sizes). Body text scales without limit. The mini player and the tab bar labels cap at 1.3×.
 
 ## Components
 
@@ -219,6 +221,12 @@ These render outside the normal screen tree and do **not** inherit any padding f
 
 - Edge-to-edge, orientation, status bar config and splash can differ in Expo Go. Verify screen-fit work in a development build.
 - Before declaring a UI task done, check ios simulator is working fine. we dont have android simulator. use the web version as a replacement for android
+- iOS: `npx expo start --ios` installs Expo Go on the booted simulator and opens the app (every native module in use so far ships in Expo Go). Drive it with **AXe** (`axe screenshot | describe-ui | tap | swipe --udid <id>`). Notes:
+  - The first `axe describe-ui` after launch can time out while it sets up; run it again.
+  - `axe tap --label` refuses a label that matches several elements. The Home list repeats the sample lectures to reach 81 rows, so "Play {title}" labels repeat: tap those by coordinates (`-x/-y`) taken from `describe-ui`.
+  - After `xcrun simctl ui booted content_size …`, terminate and reopen Expo Go (`xcrun simctl terminate booted host.exp.Exponent`); the running app doesn't pick up the new size.
+  - In Expo Go, deep links are `exp://127.0.0.1:8081/--/<path>`. The app's own `ulamamoris://` scheme only works in a development build.
+- Web: drive `localhost:8081` with `playwright-cli` at 390 × 844. React Native Web renders the screen in an inner scroll container, so full-page screenshots need the viewport made taller or the container scrolled.
 
 
 ## Rules

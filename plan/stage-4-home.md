@@ -1,5 +1,6 @@
 # Stage 4: Home screen (composition)
 
+> **Status: ✅ Done (11 Nov 2026).** Verified on the iOS simulator (Expo Go, driven with AXe) and the web build, light and dark: visual match with `home.png`, element sizes, infinite scroll to the 81st row, placeholder taps, tab switching, the Event detail deep link and the largest accessibility text size. Lint, typecheck and `check:theme` pass. Deliberate differences: the Continue listening card, active row and mini player show the `mockPlayback` lecture (paused), and the dev pages are opened by URL.
 > **Doc paths:** the docs refer to `docs/updated-doc/…`. In this repo, those files live directly in `docs/…`.
 > **Depends on:** Stage 1 (routes, tabs), Stage 2 (tokens, fonts, `Text`), Stage 3 (all components, typed `sample.ts`, `mock-ui.ts`, `formatVenue`, `catForTopic`).
 

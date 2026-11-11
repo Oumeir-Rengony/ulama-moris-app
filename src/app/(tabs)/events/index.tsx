@@ -1,13 +1,19 @@
-import { PlaceholderLink, PlaceholderScreen } from '@/components/PlaceholderScreen';
+import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Text } from '@/components/ui/text';
+
+// Title-only placeholder so the tabs can be switched. The Events screen stage replaces this file.
 export default function EventsScreen() {
+  const insets = useSafeAreaInsets();
+
   return (
-    <PlaceholderScreen routeName="Events" details={['Route: /events']} ownsBottomInset={false}>
-      <PlaceholderLink href={{ pathname: '/search', params: { scope: 'events' } }} label="Search events" />
-      <PlaceholderLink
-        href={{ pathname: '/events/[slug]', params: { slug: 'the-sahaba-radiyyallahu-anhum' } }}
-        label="Open The Sahaba Radiyyallahu Anhum"
-      />
-    </PlaceholderScreen>
+    <View className="flex-1 bg-bg" style={{ paddingTop: insets.top }}>
+      <View className="px-gutter pt-2">
+        <Text variant="display" accessibilityRole="header">
+          Events
+        </Text>
+      </View>
+    </View>
   );
 }
