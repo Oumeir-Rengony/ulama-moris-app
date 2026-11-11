@@ -1,0 +1,87 @@
+/* Ulama Moris colour system, tier 2: semantic tokens (NativeWind v4).
+   Semantic colours as RGB channels so opacity modifiers work (bg-emphasis-fg/[0.12]).
+   Light = :root, dark = prefers-color-scheme: dark.
+   Each value comes from a primitive (src/theme/primitives.ts), named in the comment.
+   border / border-strong are fg at 10% / 20% and live in tailwind.config.js.
+   Component tokens (tier 3) live with their components in src/components/<Name>/tokens.ts.
+   Reference board: html/design-system.html.
+   In this project, this file replaces the template's src/global.css (see DESIGN-SYSTEM.md §12). */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-bg: 241 235 221; /* sand-50 #F1EBDD */
+    --color-surface-1: 234 227 211; /* sand-100 #EAE3D3 */
+    --color-surface-2: 228 220 201; /* sand-200 #E4DCC9 */
+    --color-fg: 41 45 37; /* charcoal-900 #292D25 */
+    --color-fg-muted: 90 95 82; /* stone-600 #5A5F52 */
+    --color-primary: 86 97 63; /* olive-600 #56613F */
+    --color-primary-fg: 241 235 221; /* sand-50 #F1EBDD */
+    --color-primary-subtle: 221 226 211; /* olive-100 #DDE2D3 */
+    --color-primary-subtle-fg: 59 67 48; /* olive-800 #3B4330 */
+    --color-secondary: 198 167 93; /* ochre-400 #C6A75D */
+    --color-secondary-fg: 41 45 37; /* charcoal-900 #292D25 */
+    --color-secondary-strong: 114 91 42; /* ochre-600 #725B2A */
+    --color-secondary-subtle: 239 226 191; /* ochre-100 #EFE2BF */
+    --color-secondary-subtle-fg: 94 81 48; /* ochre-700 #5E5130 */
+    --color-emphasis: 59 67 48; /* olive-800 #3B4330 */
+    --color-emphasis-fg: 241 235 221; /* sand-50 #F1EBDD */
+    --color-emphasis-fg-muted: 213 217 201; /* stone-200 #D5D9C9 */
+    --color-inverse: 41 45 37; /* charcoal-900 #292D25 */
+    --color-inverse-fg: 241 235 221; /* sand-50 #F1EBDD */
+    --color-track: 169 180 154; /* olive-300 #A9B49A */
+    --color-danger: 184 117 92; /* clay-500 #B8755C */
+    --color-danger-subtle: 235 211 200; /* clay-100 #EBD3C8 */
+    --color-danger-subtle-fg: 94 64 52; /* clay-700 #5E4034 */
+    --color-cat-1-bg: 221 226 211; /* olive-100 #DDE2D3 */
+    --color-cat-1-fg: 59 67 48; /* olive-800 #3B4330 */
+    --color-cat-2-bg: 239 226 191; /* ochre-100 #EFE2BF */
+    --color-cat-2-fg: 94 81 48; /* ochre-700 #5E5130 */
+    --color-cat-3-bg: 235 211 200; /* clay-100 #EBD3C8 */
+    --color-cat-3-fg: 94 64 52; /* clay-700 #5E4034 */
+    --color-cat-4-bg: 211 224 220; /* teal-100 #D3E0DC */
+    --color-cat-4-fg: 47 74 69; /* teal-700 #2F4A45 */
+    --color-cat-5-bg: 229 214 221; /* plum-100 #E5D6DD */
+    --color-cat-5-fg: 79 58 69; /* plum-700 #4F3A45 */
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: 41 45 37; /* charcoal-900 #292D25 */
+      --color-surface-1: 48 53 43; /* charcoal-800 #30352B */
+      --color-surface-2: 54 59 48; /* charcoal-700 #363B30 */
+      --color-fg: 241 235 221; /* sand-50 #F1EBDD */
+      --color-fg-muted: 189 192 174; /* stone-300 #BDC0AE */
+      --color-primary: 169 180 154; /* olive-300 #A9B49A */
+      --color-primary-fg: 41 45 37; /* charcoal-900 #292D25 */
+      --color-primary-subtle: 58 67 52; /* olive-850 #3A4334 */
+      --color-primary-subtle-fg: 201 209 186; /* olive-200 #C9D1BA */
+      --color-secondary: 198 167 93; /* ochre-400 #C6A75D */
+      --color-secondary-fg: 41 45 37; /* charcoal-900 #292D25 */
+      --color-secondary-strong: 198 167 93; /* ochre-400 #C6A75D */
+      --color-secondary-subtle: 74 67 48; /* ochre-900 #4A4330 */
+      --color-secondary-subtle-fg: 227 207 154; /* ochre-200 #E3CF9A */
+      --color-emphasis: 59 67 48; /* olive-800 #3B4330 */
+      --color-emphasis-fg: 241 235 221; /* sand-50 #F1EBDD */
+      --color-emphasis-fg-muted: 213 217 201; /* stone-200 #D5D9C9 */
+      --color-inverse: 241 235 221; /* sand-50 #F1EBDD */
+      --color-inverse-fg: 41 45 37; /* charcoal-900 #292D25 */
+      --color-track: 85 92 73; /* stone-700 #555C49 */
+      --color-danger: 184 117 92; /* clay-500 #B8755C */
+      --color-danger-subtle: 74 56 49; /* clay-900 #4A3831 */
+      --color-danger-subtle-fg: 230 188 169; /* clay-200 #E6BCA9 */
+      --color-cat-1-bg: 58 67 52; /* olive-850 #3A4334 */
+      --color-cat-1-fg: 201 209 186; /* olive-200 #C9D1BA */
+      --color-cat-2-bg: 74 67 48; /* ochre-900 #4A4330 */
+      --color-cat-2-fg: 227 207 154; /* ochre-200 #E3CF9A */
+      --color-cat-3-bg: 74 56 49; /* clay-900 #4A3831 */
+      --color-cat-3-fg: 230 188 169; /* clay-200 #E6BCA9 */
+      --color-cat-4-bg: 47 64 60; /* teal-900 #2F403C */
+      --color-cat-4-fg: 183 211 204; /* teal-200 #B7D3CC */
+      --color-cat-5-bg: 68 54 61; /* plum-900 #44363D */
+      --color-cat-5-fg: 221 194 206; /* plum-200 #DDC2CE */
+    }
+  }
+}
