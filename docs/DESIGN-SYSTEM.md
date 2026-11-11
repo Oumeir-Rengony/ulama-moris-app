@@ -13,7 +13,7 @@ Colours live in **three tiers**, and each tier may only point at the one below i
 | `src/theme/primitives.ts` | Tier 1: the 35 raw colours in eight ramps |
 | `global.css` | Tier 2 as CSS variables (`:root` = light, `@media (prefers-color-scheme: dark)` = dark) |
 | `tailwind.config.js` | Maps the semantic tokens to classes (`bg-surface-1`, `text-fg-muted`, `bg-cat-4-bg`, `border-border-strong` …), plus fonts, type scale, radii, spacing |
-| `src/theme/tokens.ts` | The same semantic colours in JS (`useThemeColors()`) for places classes can't reach (SVG fills, icon colours, StatusBar, navigation theme, animations), the category helpers (`catAt`, `catForItem`, `catClasses`), the offline `scrim`, the artwork `palette`, shadows (`useThemeShadows()`), type, spacing, radii, sizes |
+| `src/theme/tokens.ts` | The same semantic colours in JS (`useThemeColors()`) for places classes can't reach (SVG fills, icon colours, StatusBar, navigation theme, animations), the category helpers (`catAt`, `catForTopic`, `catClasses`), the offline `scrim`, the artwork `palette`, shadows (`useThemeShadows()`), type, spacing, radii, sizes |
 | `src/components/<Name>/tokens.ts` | Tier 3: component tokens for MiniPlayer, TabBar, Skeleton and Search |
 | `html/design-system.html` | The colour board: light and dark semantic tokens, categories, sample components, primitives and component tokens. Image: `artboards/design-system.png` |
 | `COLOUR-SYSTEM-CHANGES.md` | Change log from the old flat token names to this system, with the migration map |
@@ -118,8 +118,10 @@ Five colours named by number, from five hues: **cat-1 sage → cat-2 ochre → c
 | `cat-5` | plum-100 `#E5D6DD` / plum-900 `#44363D` | plum-700 `#4F3A45` / plum-200 `#DDC2CE` |
 
 - Use them to tell list items and topics apart: event date tiles, search result tiles, "Popular topics" chips, the Now Playing topic tag. **Never to signal state.** `cat-3` and `danger` share clay primitives but are separate tokens, so recolouring the cycle never changes error states.
-- **Which category:** pick by **topic** where an item has one (Ṣaḥābā `cat-1`, Finance `cat-2`, Fire `cat-3`; `topicCategory` in tokens.ts), so a topic keeps its colour everywhere. Otherwise by position: `catAt(index)` → `cat-[(index % 5) + 1]`. `catForItem(topic, index)` applies both rules.
-  - By topic: search result tiles (lectures), "Popular topics" chips, the Now Playing topic tag.
+- **Which category (decided 11 Nov 2026): rotation.** Category colours carry no meaning, so they rotate cat-1 → cat-2 → … → cat-5 → cat-1. There is no fixed topic → colour map (the old `topicCategory` map and `catForItem` were removed). Not `Math.random()`: a random colour would change on every render and launch.
+  - **By position:** `catAt(index)` → `cat-[(index % 5) + 1]`.
+  - **By topic:** `catForTopic(topic, topicOrder)` rotates by the topic's position in **one ordered list of known topics** (`topicOrder`: every distinct `category` string in the order it first appears in the data; later it comes from the API). So a topic keeps its colour on every screen. An unknown topic falls back to `cat-1`.
+  - By topic: search result tiles (lectures), the Now Playing topic tag.
   - By position: event date tiles (Events list, events-scope search results).
   - Fixed `cat-1`: the Events count chip and the Event detail number tiles.
 - Background: `bg-cat-N-bg`; its text or icon: `text-cat-N-fg` (icons take `colors[catFgColorKey[N]]` from `useThemeColors()`). Always pair a `cat-N-bg` with its own `cat-N-fg`.
@@ -306,7 +308,7 @@ const shadows = useThemeShadows();
 </View>
 
 // Now Playing tags: topic pill (category by topic) + outlined event link
-const topicCat = catClasses[catForItem(lecture.topic, 0)];
+const topicCat = catClasses[catForTopic(lecture.category[0], topicOrder)];
 <View className="flex-row gap-2">
   <View className={`h-[34px] px-3 rounded-full justify-center ${topicCat.bg}`}>
     <Text className={`font-manrope-bold text-meta ${topicCat.fg}`}>Ṣaḥābā r.a</Text>
@@ -402,4 +404,4 @@ From the change log (COLOUR-SYSTEM-CHANGES.md). None blocks the build; the value
 - Confirm the `ochre-600` hue (keep ≥ 4.5:1 on `surface-2`).
 - Keep a separate dark search highlight if matches look faint? (`search.highlight` dropped from `#5A4E2E` to `#4A4330` in dark.)
 - Lift `danger` for the dark mini player (2.8:1 for the error line)?
-- Category by topic or by position? Current rule: by topic where an item has one, otherwise by position (§5.1).
+- ~~Category by topic or by position?~~ Decided 11 Nov 2026: rotation, by topic position in `topicOrder` where an item has a topic, otherwise by list position (§5.1).

@@ -1,5 +1,6 @@
 # Stage 2: Design system (tokens, theme, fonts, typography)
 
+> **Status: ✅ Done (11 Nov 2026).** Verified on the web build: `/dev/tokens` in light and dark, Manrope in all five weights, `check:theme` catching deliberate breaks. Lint, typecheck, `check:theme` and `expo-doctor` (20/20) pass. **Still open:** the iOS simulator checks (§7.3, §7.5 theme switch, §7.6 largest Dynamic Type), once a simulator is available.
 > **Doc paths:** the docs refer to `docs/updated-doc/…`. In this repo, those files live directly in `docs/…`.
 > **Build order:** this is HANDOFF §7 step 1. It depends on Stage 1 (folder structure and routes).
 

@@ -28,7 +28,7 @@ Tip: build one screen per session and compare it with its artboard before moving
 | `ERROR-STATES.md` | Error and offline states. Built as a separate stage after all screens are done (HANDOFF.md §9) |
 | `global.css`, `tailwind.config.js` | NativeWind theme: the semantic tier as classes that switch light/dark |
 | `src/theme/primitives.ts` | Tier 1: raw colour ramps (never used in screens) |
-| `src/theme/tokens.ts` | Tier 2 in JS: `useThemeColors()`, `useThemeShadows()`, `catAt()`, `catForItem()`, `catClasses`, the offline `scrim`, the artwork `palette`, type, spacing, radii, sizes |
+| `src/theme/tokens.ts` | Tier 2 in JS: `useThemeColors()`, `useThemeShadows()`, `catAt()`, `catForTopic()`, `catClasses`, the offline `scrim`, the artwork `palette`, type, spacing, radii, sizes |
 | `src/components/*/tokens.ts` | Tier 3: component tokens (MiniPlayer, TabBar, Skeleton, Search) |
 | `src/data/sample.ts` | Static sample content from the website, with types, topic labels and placeholder recent searches |
 | `html/screens/*.html`, `artboards/screens/*.png` | Every screen as a working page (opens in any browser, offline; fonts in `html/fonts/`) and as a 2× PNG, same names. Static snapshots: buttons don't respond |

@@ -55,7 +55,7 @@ Not needed in this stage: `expo-animation` (no motion yet), `expo-ui` (no sheets
   - [docs/HANDOFF.md](../docs/HANDOFF.md): §1 principles, §4.1–§4.6 per screen, §4.6 mini player + tab bar.
   - [docs/DESIGN-SYSTEM.md](../docs/DESIGN-SYSTEM.md): §5.1 category rules, §10 type/radii/spacing, §11 shadows, **§12 component recipes**, §13 15-second icons, **§15 the complete component set**.
   - Where the HTML and HANDOFF.md disagree, HANDOFF.md wins.
-- **Tokens:** `src/theme/tokens.ts` (`catClasses`, `catAt`, `catForItem`, `palette`, `size`, `radius`, `useThemeColors`, `useThemeShadows`) and the component tokens in `src/components/{MiniPlayer,TabBar,Skeleton,Search}/tokens.ts`. All of these come from Stage 2.
+- **Tokens:** `src/theme/tokens.ts` (`catClasses`, `catAt`, `catForTopic`, `palette`, `size`, `radius`, `useThemeColors`, `useThemeShadows`) and the component tokens in `src/components/{MiniPlayer,TabBar,Skeleton,Search}/tokens.ts`. All of these come from Stage 2.
 
 ## 1. Dependencies
 

@@ -1,5 +1,6 @@
 # Stage 1: Project architecture, folder structure and navigation
 
+> **Status: ✅ Done (11 Nov 2026).** Verified on the web build (stand-in for Android): every route, deep links, scope parsing, back/forward and `+not-found`. Lint and typecheck pass. **Still open:** the iOS simulator walk (§6.2–6.3), once a simulator is available.
 > **Doc paths:** the docs refer to `docs/updated-doc/…`. In this repo, those files live directly in `docs/…`.
 > **Build order:** this stage is the scaffolding that comes before HANDOFF §7 steps 1–4. It only sets up the structure, with placeholder screens. No styling, no player, no data.
 

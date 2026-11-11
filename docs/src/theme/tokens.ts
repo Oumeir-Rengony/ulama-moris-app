@@ -100,37 +100,30 @@ export function useThemeColors() {
   return lightColors;
 }
 
-// Category colours tell list items and topics apart. Never use them to signal state (errors use danger).
-// Rule: pick by TOPIC where an item has one, so a topic keeps its colour everywhere;
-// otherwise by the item's position in the list.
+// Category colours tell list items and topics apart. They carry no meaning, and never signal
+// state (errors use danger). They are assigned by ROTATION: cat-1 → cat-2 … cat-5 → cat-1 again.
+// Not Math.random(): a random colour would change on every render and every launch.
 export type Category = 1 | 2 | 3 | 4 | 5;
 
 const categoryCount = 5;
 
-// Position rule: item 0 → cat-1, item 1 → cat-2 … item 5 → cat-1 again.
+// Position rule (event date tiles, search result tiles): item 0 → cat-1 … item 5 → cat-1 again.
 export function catAt(index: number): Category {
   // The extra "+ categoryCount" keeps the result positive if a negative index ever comes in.
   const position = ((index % categoryCount) + categoryCount) % categoryCount;
   return (position + 1) as Category;
 }
 
-// Topic rule. Keys match the Topic type in src/data/sample.ts; 'other' has no colour of its own.
-export const topicCategory: Record<string, Category | undefined> = {
-  sahaba: 1,
-  finance: 2,
-  fire: 3,
-  other: undefined,
-};
-
-// Use the topic's colour when it has one, otherwise fall back to the position rule.
-export function catForItem(topic: string | undefined, index: number): Category {
-  if (topic !== undefined) {
-    const categoryForTopic = topicCategory[topic];
-    if (categoryForTopic !== undefined) {
-      return categoryForTopic;
-    }
+// Topic rule (Now Playing topic pill, lecture search tiles). A topic must keep the same colour on
+// every screen, so it rotates by its position in ONE ordered list of known topics (`topicOrder`,
+// built from the data), not by its position in whichever list is on screen.
+// An unknown topic falls back to cat-1.
+export function catForTopic(topic: string, knownTopics: readonly string[]): Category {
+  const topicPosition = knownTopics.indexOf(topic);
+  if (topicPosition === -1) {
+    return 1;
   }
-  return catAt(index);
+  return catAt(topicPosition);
 }
 
 // Tailwind only keeps classes it can see written out, so the class names are literal here.
