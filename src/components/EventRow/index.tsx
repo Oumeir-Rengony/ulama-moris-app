@@ -44,7 +44,9 @@ export function EventRow({ title, statsLabel, venue, dateRangeLabel, day, month,
       <DateTile day={day} month={month} category={category} size="row" />
       <View className="flex-1 gap-[5px]">
         <Text variant="title">{title}</Text>
-        <Text variant="caption" numberOfLines={1} className="font-manrope-semibold text-primary">
+        {/* Two lines: the data's date range ("24 Oct – 31 Oct 2026") is longer than the design's
+            "24 – 31 Oct", and one line would cut off the year. */}
+        <Text variant="caption" numberOfLines={2} className="font-manrope-semibold text-primary">
           {statsLabel}
         </Text>
         {lastLine}

@@ -1,5 +1,6 @@
 # Stage 6: Events list (composition)
 
+> **Status: ✅ Done (11 Nov 2026).** Verified on the iOS simulator (Expo Go + AXe) and the web build, light and dark: match with `events.png`, sticky year headers, the second page loading to the 11th event with no leftover footer, tile colours rotating across 2026 → 2025, Jummah without a venue line, the card and rows opening `/events/[slug]`, Back keeping the scroll position, and "Search events" doing nothing. Changes from this plan: the stats line may wrap to 2 lines (the data's "24 Oct – 31 Oct 2026" cut off the year on one line); the top inset sits on the screen container so sticky headers don't hide under the status bar; the card and rows keep the Stage 3 label "Open event: {title}".
 > **Doc paths:** the docs refer to `docs/updated-doc/…`. In this repo, those files live directly in `docs/…`.
 > **Depends on:** Stage 1 (Events stack, `events/[slug].tsx`), Stage 3 (event components, mock events), Stage 4 (infinite-scroll pattern, tabs footer), Stage 5 (Now Playing). **Comes before:** Stage 7 (Event detail).
 
