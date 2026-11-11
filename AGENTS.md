@@ -77,6 +77,17 @@ Read [src/theme/README.md](src/theme/README.md) before adding or changing any co
 - Manrope is loaded in the root layout before the splash hides. Use `font-manrope-*` classes, never `font-bold`.
 - `/dev/tokens` (development only) shows every token in the current theme.
 
+## Components
+
+- Generic primitives with no domain knowledge are kebab-case files in `src/components/ui/` (`icon-button.tsx`, `pill.tsx`, `play-pause-button.tsx` …). Custom SVG icons live in `components/icons/`, illustrations in `components/artwork/`. Composites (`HeroCard`, `LectureRow`, `MiniPlayer` …) have PascalCase folders. Screens only put these together and connect them.
+- **Components are static presentation.** They render what their props say: visual state is a prop (`state: 'idle' | 'active-paused' | 'active-playing'`, `selected`), never internal `useState`. No navigation, data fetching, stores or audio inside `src/components`.
+- Every future control is already a `Pressable` with `accessibilityRole="button"` and its final `accessibilityLabel`, and takes an optional `onPress?`. Screens wire behaviour by passing handlers; they don't change the component.
+- Props take **display-ready strings** ("35:48", "31 Oct", "2h 34m", "Masjid Muswalla, Highlands"). Formatting happens in the screen with the helpers in `src/utils/` (`formatVenue`, and the time helpers in HANDOFF §4.7).
+- Category colours are chosen by the caller and passed as `category: Category`: `catAt(index)` by position, `catForTopic(topic, topicOrder)` by topic.
+- Icons: `<Icon icon={…} color="fgMuted" />` with a semantic colour name. Import lucide icons one by one (`import Play from 'lucide-react-native/icons/play'`), never from the package root, which bundles every icon.
+- `react-native-svg` on web passes unknown props to the DOM, so don't put `accessible` / `importantForAccessibility` on `<Svg>`; the button around an icon carries the label.
+- `/dev/components` (development only) shows every component in every state with the mock data in `src/data/mock-ui.ts`, plus a Home screen mock. Add new components there.
+
 ## State management
 
 ### Deciding where a piece of state lives

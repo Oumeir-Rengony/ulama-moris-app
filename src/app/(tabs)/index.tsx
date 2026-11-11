@@ -6,6 +6,7 @@ export default function HomeScreen() {
       <PlaceholderLink href={{ pathname: '/search', params: { scope: 'lectures' } }} label="Search lectures" />
       <PlaceholderLink href="/player" label="Open Now Playing" />
       {__DEV__ ? <PlaceholderLink href="/dev/tokens" label="Design tokens (dev)" /> : null}
+      {__DEV__ ? <PlaceholderLink href="/dev/components" label="Component gallery (dev)" /> : null}
     </PlaceholderScreen>
   );
 }

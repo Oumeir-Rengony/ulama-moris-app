@@ -1,5 +1,6 @@
 # Stage 3: Components (static presentation layer)
 
+> **Status: ✅ Done (11 Nov 2026).** Verified on the web build: `/dev/components` in light and dark (every state from §3), the Home screen mock next to `artboards/screens/home.png`, and the §7.6 grep (no state, navigation or audio in `src/components`). Lint, typecheck and `check:theme` pass. **Still open:** the iOS simulator checks (§7.2, §7.4 largest Dynamic Type, §7.5 VoiceOver spot check).
 > **Doc paths:** the docs refer to `docs/updated-doc/…`. In this repo, those files live directly in `docs/…`.
 > **Depends on:** Stage 1 (folders, routes) and Stage 2 (tokens, NativeWind, fonts, `Text`).
 > **Comes before:** every screen stage. Screens only put these components together and connect them.

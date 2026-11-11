@@ -2,28 +2,40 @@ import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { EventsTabIcon, HomeTabIcon } from '@/components/icons/tab-icons';
 import { Text } from '@/components/ui/text';
 
 import { tabBar } from './tokens';
 
-// Labels for the two tab routes in src/app/(tabs)/. Anything else is not shown as a tab.
-const tabLabels: Record<string, string> = {
-  index: 'Home',
-  events: 'Events',
+type TabKey = 'home' | 'events';
+
+// The two tab routes in src/app/(tabs)/. Anything else is not shown as a tab.
+const tabsByRouteName: Record<string, { key: TabKey; label: string }> = {
+  index: { key: 'home', label: 'Home' },
+  events: { key: 'events', label: 'Events' },
 };
 
 type TabBarItemProps = {
+  tab: TabKey;
   label: string;
   isSelected: boolean;
-  onPress: () => void;
+  onPress?: () => void;
 };
 
-function TabBarItem({ label, isSelected, onPress }: TabBarItemProps) {
-  let pillClassName = '';
-  let labelClassName = `font-manrope-semibold ${tabBar.inactiveFg}`;
+// Active: filled icon on a 60 × 32 pill, ExtraBold label. Inactive: outline icon, muted label.
+export function TabBarItem({ tab, label, isSelected, onPress }: TabBarItemProps) {
+  let pillClass = '';
+  let labelClass = `font-manrope-semibold ${tabBar.inactiveFg}`;
+  let iconColor: 'primarySubtleFg' | 'fgMuted' = 'fgMuted';
   if (isSelected) {
-    pillClassName = tabBar.activeBg;
-    labelClassName = 'font-manrope-extrabold text-fg';
+    pillClass = tabBar.activeBg;
+    labelClass = 'font-manrope-extrabold text-fg';
+    iconColor = 'primarySubtleFg';
+  }
+
+  let icon = <HomeTabIcon filled={isSelected} color={iconColor} />;
+  if (tab === 'events') {
+    icon = <EventsTabIcon filled={isSelected} color={iconColor} />;
   }
 
   return (
@@ -32,14 +44,13 @@ function TabBarItem({ label, isSelected, onPress }: TabBarItemProps) {
       accessibilityLabel={label}
       accessibilityState={{ selected: isSelected }}
       onPress={onPress}
-      className="min-h-touch flex-1 items-center justify-center pt-1"
+      className="min-h-touch flex-1 items-center gap-1 pt-1"
     >
-      {/* TODO(stage 3): icon inside a 60 × 32 pill, styled from the tabBar tokens. */}
-      <View className={`min-h-8 min-w-[60px] items-center justify-center rounded-full px-3 ${pillClassName}`}>
-        <Text variant="caption" maxFontSizeMultiplier={1.3} className={labelClassName}>
-          {label}
-        </Text>
-      </View>
+      <View className={`h-8 w-[60px] items-center justify-center rounded-full ${pillClass}`}>{icon}</View>
+      {/* The tab bar can't grow much, so its label is capped (AGENTS.md "Text & font scaling"). */}
+      <Text variant="caption" maxFontSizeMultiplier={1.3} numberOfLines={1} className={labelClass}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -48,12 +59,12 @@ export function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
 
   return (
-    <View className={`bg-bg px-bar ${tabBar.divider}`} style={{ paddingBottom: insets.bottom }}>
-      {/* TODO: MiniPlayer goes here */}
+    <View className={`gap-2 bg-bg px-bar ${tabBar.divider}`} style={{ paddingBottom: insets.bottom }}>
+      {/* TODO: MiniPlayer goes here (tabs-layout stage), with mt-2.5 above it. */}
       <View className="flex-row gap-1">
         {state.routes.map((route, index) => {
-          const label = tabLabels[route.name];
-          if (label === undefined) {
+          const tab = tabsByRouteName[route.name];
+          if (tab === undefined) {
             return null;
           }
 
@@ -71,7 +82,13 @@ export function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
           }
 
           return (
-            <TabBarItem key={route.key} label={label} isSelected={isSelected} onPress={handlePress} />
+            <TabBarItem
+              key={route.key}
+              tab={tab.key}
+              label={tab.label}
+              isSelected={isSelected}
+              onPress={handlePress}
+            />
           );
         })}
       </View>

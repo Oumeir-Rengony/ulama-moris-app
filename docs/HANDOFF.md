@@ -100,7 +100,7 @@ One `FlatList` for the whole screen; the sections above the list are its `ListHe
 2. Count chip: "11 events" (`bg-cat-1-bg text-cat-1-fg`, radio icon).
 3. **Latest event card** (`HeroCard`, same style as Continue listening): overline "LATEST EVENT", title 22, "24 – 31 Oct 2026 · Masjid Muswalla, Highlands", chips "4 lectures" "2h 34m" (`bg-emphasis-fg/[0.12]`), 48px `bg-secondary` arrow circle (`secondary-fg` icon). The whole card is one button → event detail.
 4. **All events:** `SectionList` grouped by **year** (sticky section headers "2026", "2025" in `text-label text-fg-muted`). Event row: `bg-surface-1`, 60 × 64 date tile coloured by **category, by position** (`catClasses[catAt(index)]`: day 22 ExtraBold + month 12 Bold in the matching `cat-N-fg`), title 15 Bold, "4 lectures · 2h 34m · 24 – 31 Oct" in `text-primary`, venue with pin icon, chevron right. Infinite scroll with skeleton + "Loading more events".
-   - **Date rule:** the date tile, the year group and the sort order all use the event's **`endDate`** (its most recent recording). Newest first. Example: Sahaba (24–31 Oct 2026) shows **31 Oct** under 2026; Jummah (17 Nov 2023 – 22 Aug 2025) shows **22 Aug** under 2025.
+   - **Date rule (decided 11 Nov 2026):** the date tile shows the data's `day` / `month` as they are, which is the event's **start** day: Sahaba (24–31 Oct 2026) shows **24 Oct**. The year group uses the data's `year`, and the order is newest first by `latestTime` (the most recent recording), so Jummah (17 Nov 2023 – 22 Aug 2025) sits under 2025 and shows **17 Nov**.
    - **Optional parts:** venue, date range and other meta are shown only when the data has them. When a value is missing, leave that part out.
 
 ### 4.3 Event detail (`html/screens/event-detail.html`)

@@ -34,8 +34,13 @@ const variantSizeClass = {
 
 export type TextVariant = keyof typeof variantFontClass;
 
-// The `text-*` classes that set a size, not a colour (tailwind.config.js `fontSize`).
-const sizeClassNames = new Set([
+// The `text-*` classes that are not colours: the sizes (tailwind.config.js `fontSize`) and the
+// alignments.
+const nonColorTextClassNames = new Set([
+  'text-left',
+  'text-center',
+  'text-right',
+  'text-justify',
   'text-display',
   'text-h1',
   'text-h2',
@@ -60,8 +65,10 @@ function callerSetsColor(callerClasses: string[]): boolean {
   for (const callerClass of callerClasses) {
     const classWithoutVariant = removeVariantPrefix(callerClass);
     const isTextClass = classWithoutVariant.startsWith('text-');
-    const isSizeClass = sizeClassNames.has(classWithoutVariant);
-    if (isTextClass && !isSizeClass) {
+    const isNamedNonColorClass = nonColorTextClassNames.has(classWithoutVariant);
+    // "text-[15px]" is an arbitrary size. An arbitrary colour (miniPlayer.errorFg) starts with "text-[#".
+    const isArbitrarySize = /^text-\[\d/.test(classWithoutVariant);
+    if (isTextClass && !isNamedNonColorClass && !isArbitrarySize) {
       return true;
     }
   }
