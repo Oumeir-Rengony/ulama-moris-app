@@ -1,5 +1,6 @@
 # Stage 7: Event detail (composition)
 
+> **Status: ✅ Done (11 Nov 2026).** Verified on the iOS simulator (Expo Go + AXe) and the web build, light and dark: match with `event-detail.png`; the mini player showing the event's first lecture on Event detail and the `mockPlayback` lecture elsewhere (`useSegments` / `useGlobalSearchParams` do update inside the custom tab bar); row and play-button taps opening Now Playing with the event as "Playing from"; generated lectures (Jummah, 8 rows) opening too; Share and the mini player controls doing nothing; Back; deep links to a known and an unknown event; the largest text size. Deliberate differences: row 01 is the active row; the card and rows keep the label "Open event: {title}". Generated copies keep their source lecture's fields, so their Now Playing event pill shows the source lecture's event.
 > **Doc paths:** the docs refer to `docs/updated-doc/…`. In this repo, those files live directly in `docs/…`.
 > **Depends on:** Stage 3 (event components), Stage 4 (tabs footer, mock-library pattern), Stage 5 (`openNowPlaying`, Now Playing), Stage 6 (Events list, `events.api.ts`, `events.queries.ts`).
 

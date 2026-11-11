@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import type { LectureRowState } from '@/components/LectureRow';
 import { PlayPauseButton } from '@/components/ui/play-pause-button';
@@ -13,11 +13,23 @@ type NumberedLectureRowProps = {
   // Playing: "Now playing · 16:05 / 46:21".
   metaLabel: string;
   state: LectureRowState;
+  // A tap anywhere on the row. Usually the same action as the play button.
+  onPress?: () => void;
   onPlayPress?: () => void;
 };
 
 // Event detail row. The number tile is always cat-1, except on the active row.
-export function NumberedLectureRow({ number, title, author, metaLabel, state, onPlayPress }: NumberedLectureRowProps) {
+// Like LectureRow, the whole row is a touch target hidden from screen readers (accessible={false}),
+// so VoiceOver finds the labelled play button instead of a button nested in a button.
+export function NumberedLectureRow({
+  number,
+  title,
+  author,
+  metaLabel,
+  state,
+  onPress,
+  onPlayPress,
+}: NumberedLectureRowProps) {
   const isActive = state !== 'idle';
   const isPlaying = state === 'active-playing';
 
@@ -42,7 +54,11 @@ export function NumberedLectureRow({ number, title, author, metaLabel, state, on
   }
 
   return (
-    <View className={`flex-row items-center gap-3.5 rounded-row p-3 ${rowClass}`}>
+    <Pressable
+      accessible={false}
+      onPress={onPress}
+      className={`flex-row items-center gap-3.5 rounded-row p-3 active:opacity-80 ${rowClass}`}
+    >
       <View className={`h-touch w-touch items-center justify-center rounded-tile ${tileClass}`}>
         <Text variant="title" tabular maxFontSizeMultiplier={1.3} className={numberClass}>
           {number}
@@ -65,6 +81,6 @@ export function NumberedLectureRow({ number, title, author, metaLabel, state, on
         accessibilityLabel={buttonLabel}
         onPress={onPlayPress}
       />
-    </View>
+    </Pressable>
   );
 }

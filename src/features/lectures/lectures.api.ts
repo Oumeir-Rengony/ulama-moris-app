@@ -1,4 +1,5 @@
-import { latestLecturesTotal, lectures, type Lecture, type LectureSummary } from '@/data/sample';
+import { findSampleLecture, repeatSampleLectures } from '@/data/mock-repeat';
+import { latestLecturesTotal, type Lecture, type LectureSummary } from '@/data/sample';
 
 export const LECTURE_PAGE_SIZE = 10;
 
@@ -10,33 +11,13 @@ export type LecturePage = {
   nextPageIndex: number | null;
 };
 
-// The sample data has only about a dozen lectures, too few to scroll. Repeat them in order until
-// the list is as long as the total the "API" reports, so the list and the "81 lectures" label
-// agree. The first pass keeps the real slugs (so the playing lecture still matches); every later
-// copy gets "--<copy number>" added, so list keys stay unique.
-function buildMockLibrary(): Lecture[] {
-  const library: Lecture[] = [];
-  let copyNumber = 0;
-
-  while (library.length < latestLecturesTotal) {
-    for (const lecture of lectures) {
-      if (library.length >= latestLecturesTotal) {
-        break;
-      }
-
-      let slug = lecture.slug;
-      if (copyNumber > 0) {
-        slug = `${lecture.slug}--${copyNumber}`;
-      }
-      library.push({ ...lecture, slug });
-    }
-    copyNumber += 1;
-  }
-
-  return library;
-}
-
-const mockLibrary = buildMockLibrary();
+// MOCK: the sample lectures repeated up to the total the "API" reports, so the list and the
+// "81 lectures" label agree (see src/data/mock-repeat.ts).
+const mockLibrary = repeatSampleLectures({
+  count: latestLecturesTotal,
+  copyTag: '',
+  keepRealSlugsOnFirstPass: true,
+});
 
 // Returns one page of the latest lectures, newest first.
 // Stub: reads the static data directly, with no network and no delay. When the real API arrives,
@@ -56,13 +37,8 @@ export async function fetchLecturePage(pageIndex: number): Promise<LecturePage> 
 }
 
 // Returns one lecture's detail record, or null when no lecture has that slug.
-// Stub: looks the slug up in the same mock library Home pages through, so the repeated copies
-// ("…--2") resolve too. The real API replaces this function's body.
+// Stub: resolves the sample lectures and every generated copy ("…--3", "…--jummah-0"), so a
+// lecture opened from Home or from any event detail can be found. The real API replaces this body.
 export async function fetchLectureBySlug(slug: string): Promise<Lecture | null> {
-  for (const lecture of mockLibrary) {
-    if (lecture.slug === slug) {
-      return lecture;
-    }
-  }
-  return null;
+  return findSampleLecture(slug);
 }

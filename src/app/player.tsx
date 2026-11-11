@@ -14,6 +14,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { SeekBar } from '@/components/ui/seek-bar';
 import { Text } from '@/components/ui/text';
 import type { Lecture } from '@/data/sample';
+import { useEventQuery } from '@/features/events/events.queries';
 import { useLectureQuery } from '@/features/lectures/lectures.queries';
 import { fitArtworkSize, nowPlayingSeekBar, nowPlayingTrackInfo } from '@/features/player/now-playing-content';
 
@@ -55,8 +56,9 @@ function NowPlayingTopBar({ sourceLabel }: { sourceLabel: string }) {
 // controls don't do anything yet. Only "Minimise player" works, so there is a way out.
 export default function NowPlayingScreen() {
   const insets = useSafeAreaInsets();
-  const { slug } = useLocalSearchParams<{ slug?: string }>();
+  const { slug, fromEventSlug } = useLocalSearchParams<{ slug?: string; fromEventSlug?: string }>();
   const { data: lecture, isSuccess } = useLectureQuery(slug);
+  const { data: sourceEvent } = useEventQuery(fromEventSlug);
 
   // A cold deep link to /player, or an unknown slug: there is nothing to show, so go home.
   const hasNoSlug = slug === undefined || slug === '';
@@ -65,8 +67,11 @@ export default function NowPlayingScreen() {
     return <Redirect href="/" />;
   }
 
-  // Home is the only way in for now. TODO(stage 7 / search stage): the event or the query.
-  const sourceLabel = 'Latest lectures';
+  // Where the lecture was opened from (HANDOFF §4.4.1). TODO(search stage): the query in quotes.
+  let sourceLabel = 'Latest lectures';
+  if (sourceEvent) {
+    sourceLabel = sourceEvent.event.title;
+  }
 
   // No header covers the notch and there is no tab bar, so this screen owns both insets.
   return (

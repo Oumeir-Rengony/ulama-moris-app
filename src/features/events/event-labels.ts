@@ -1,5 +1,6 @@
-import type { EventSummary } from '@/data/sample';
+import type { EventSummary, Lecture } from '@/data/sample';
 import { formatVenue } from '@/utils/format-venue';
+import { shortDateLabel } from '@/utils/format-time';
 
 function lectureCountLabel(total: number): string {
   if (total === 1) {
@@ -34,4 +35,39 @@ export function eventVenueLabel(event: EventSummary): string | undefined {
     return formatVenue(event.location);
   }
   return undefined;
+}
+
+// Event hero chip: "4 recorded lectures".
+export function recordedLecturesLabel(event: EventSummary): string {
+  if (event.total === 1) {
+    return '1 recorded lecture';
+  }
+  return `${event.total} recorded lectures`;
+}
+
+// Event detail row number: 0 → "01", 9 → "10".
+export function lectureNumberLabel(index: number): string {
+  const number = index + 1;
+  if (number < 10) {
+    return `0${number}`;
+  }
+  return `${number}`;
+}
+
+// Event detail row meta when the row isn't the active lecture: "31 Oct · 35:48".
+// The duration part is left out when it's unknown.
+export function eventLectureMetaLabel(lecture: Lecture): string {
+  const dateLabel = shortDateLabel(lecture.date);
+  if (lecture.duration) {
+    return `${dateLabel} · ${lecture.duration}`;
+  }
+  return dateLabel;
+}
+
+// Event detail row meta for the paused active lecture: "Paused · 16:05 / 46:21".
+export function pausedLectureMetaLabel(lecture: Lecture, elapsed: string): string {
+  if (lecture.duration) {
+    return `Paused · ${elapsed} / ${lecture.duration}`;
+  }
+  return `Paused · ${elapsed}`;
 }
