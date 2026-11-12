@@ -10,6 +10,7 @@ import { lectureSeries, type LectureSummary } from '@/data/sample';
 import { lectureRowMetaLabel } from '@/features/lectures/lecture-labels';
 import { useLatestLecturesQuery } from '@/features/lectures/lectures.queries';
 import { openNowPlaying } from '@/features/player/open-now-playing';
+import { openSearch } from '@/features/search/open-search';
 
 // TODO(player stage): calculated from progressById + lecture data, hidden on first launch.
 const continueListening: ContinueListeningContent = {
@@ -55,6 +56,10 @@ function renderLectureRow({ item }: ListRenderItemInfo<LectureSummary>) {
 
 function handleContinueListeningPress() {
   openNowPlaying(mockPlaybackLecture.slug);
+}
+
+function handleSearchPress() {
+  openSearch('lectures');
 }
 
 function lectureKey(lecture: LectureSummary) {
@@ -114,6 +119,7 @@ export default function HomeScreen() {
             seriesLabels={seriesLabels}
             selectedSeriesLabel={selectedSeriesLabel}
             onContinueListeningPress={handleContinueListeningPress}
+            onSearchPress={handleSearchPress}
           />
         }
         ListFooterComponent={footer}

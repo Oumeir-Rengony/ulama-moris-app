@@ -56,7 +56,11 @@ function NowPlayingTopBar({ sourceLabel }: { sourceLabel: string }) {
 // controls don't do anything yet. Only "Minimise player" works, so there is a way out.
 export default function NowPlayingScreen() {
   const insets = useSafeAreaInsets();
-  const { slug, fromEventSlug } = useLocalSearchParams<{ slug?: string; fromEventSlug?: string }>();
+  const { slug, fromEventSlug, fromQuery } = useLocalSearchParams<{
+    slug?: string;
+    fromEventSlug?: string;
+    fromQuery?: string;
+  }>();
   const { data: lecture, isSuccess } = useLectureQuery(slug);
   const { data: sourceEvent } = useEventQuery(fromEventSlug);
 
@@ -67,10 +71,13 @@ export default function NowPlayingScreen() {
     return <Redirect href="/" />;
   }
 
-  // Where the lecture was opened from (HANDOFF §4.4.1). TODO(search stage): the query in quotes.
+  // Where the lecture was opened from (HANDOFF §4.4.1): an event, a search query in curly
+  // quotes, or the Home list.
   let sourceLabel = 'Latest lectures';
   if (sourceEvent) {
     sourceLabel = sourceEvent.event.title;
+  } else if (fromQuery) {
+    sourceLabel = `“${fromQuery}”`;
   }
 
   // No header covers the notch and there is no tab bar, so this screen owns both insets.

@@ -649,7 +649,7 @@ function SearchSection() {
       <Example label="RecentSearchList: 5 rows">
         <View className="gap-1">
           <SectionHeader title="Recent searches" size="small" trailing={<SectionHeaderAction label="Clear all" />} />
-          <RecentSearchList queries={seedRecentSearches} />
+          <RecentSearchList queries={seedRecentSearches.lectures} />
         </View>
       </Example>
       <Example label="RecentSearchList: empty">

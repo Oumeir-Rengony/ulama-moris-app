@@ -11,14 +11,22 @@ type SearchInputProps = {
   value: string;
   // "Search by topic" (lectures) or "Search events by name" (events).
   placeholder: string;
+  // The Search screen focuses the input as it opens, so the keyboard is already up.
+  autoFocus?: boolean;
   onChangeText?: (text: string) => void;
   onClearPress?: () => void;
   onMicPress?: () => void;
 };
 
-// The Search screen's input pill. Controlled by its props; autofocus and submit come with the
-// Search screen. Trailing button: mic while empty (visual only), clear ✕ once there is text.
-export function SearchInput({ value, placeholder, onChangeText, onClearPress, onMicPress }: SearchInputProps) {
+// The Search screen's input pill. Controlled by its props. Trailing button: mic while empty (visual only), clear ✕ once there is text.
+export function SearchInput({
+  value,
+  placeholder,
+  autoFocus = false,
+  onChangeText,
+  onClearPress,
+  onMicPress,
+}: SearchInputProps) {
   const colors = useThemeColors();
   const { colorScheme } = useColorScheme();
   const hasText = value.length > 0;
@@ -36,6 +44,7 @@ export function SearchInput({ value, placeholder, onChangeText, onClearPress, on
         placeholder={placeholder}
         placeholderTextColor={colors.fgMuted}
         onChangeText={onChangeText}
+        autoFocus={autoFocus}
         accessibilityLabel="Search"
         returnKeyType="search"
         keyboardAppearance={keyboardAppearance}

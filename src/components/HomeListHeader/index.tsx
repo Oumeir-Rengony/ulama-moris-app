@@ -23,6 +23,7 @@ type HomeListHeaderProps = {
   seriesLabels: string[];
   selectedSeriesLabel: string;
   onContinueListeningPress?: () => void;
+  onSearchPress?: () => void;
 };
 
 // Everything on Home above the lecture rows: the FlatList's ListHeaderComponent.
@@ -33,6 +34,7 @@ export function HomeListHeader({
   seriesLabels,
   selectedSeriesLabel,
   onContinueListeningPress,
+  onSearchPress,
 }: HomeListHeaderProps) {
   let countTrailing = null;
   if (lectureCountLabel !== undefined) {
@@ -53,7 +55,7 @@ export function HomeListHeader({
       </View>
 
       <View className="mt-[18px] px-gutter">
-        <SearchFieldButton label="Search by topic" />
+        <SearchFieldButton label="Search by topic" onPress={onSearchPress} />
       </View>
 
       <View className="mt-6 px-gutter">
