@@ -63,7 +63,11 @@ export function HeroCard({ preset, overline, title, subtitle, children }: HeroCa
   return (
     <View className="gap-3.5 overflow-hidden rounded-card bg-emphasis p-[22px]">
       {style.rosette ? (
-        <View className="absolute" style={{ right: style.rosette.right, top: style.rosette.top }}>
+        <View
+          testID="hero-rosette"
+          className="absolute"
+          style={{ right: style.rosette.right, top: style.rosette.top }}
+        >
           <Rosette size={style.rosette.size} />
         </View>
       ) : null}

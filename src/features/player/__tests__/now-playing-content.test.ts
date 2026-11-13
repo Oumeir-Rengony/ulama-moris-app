@@ -1,0 +1,77 @@
+import { mockPlayback, mockPlaybackLecture } from '@/data/mock-ui';
+import { fitArtworkSize, nowPlayingSeekBar, nowPlayingTrackInfo } from '@/features/player/now-playing-content';
+import { bareLecture, fullLecture } from '@/test-utils/fixtures';
+
+describe('nowPlayingSeekBar', () => {
+  it('shows the mock progress for the mock playback lecture', () => {
+    const seekBar = nowPlayingSeekBar(mockPlaybackLecture);
+    expect(seekBar.progress).toBe(mockPlayback.progress);
+    expect(seekBar.elapsed).toBe('16:05');
+    expect(seekBar.remaining).toBe('-30:16');
+    expect(seekBar.accessibilityValue).toEqual({ min: 0, max: 2781, now: 965, text: '16:05 of 46:21' });
+  });
+
+  it('shows the start for any other lecture', () => {
+    const seekBar = nowPlayingSeekBar(fullLecture);
+    expect(seekBar.progress).toBe(0);
+    expect(seekBar.elapsed).toBe('0:00');
+    expect(seekBar.remaining).toBe('-46:21');
+    expect(seekBar.accessibilityValue).toEqual({ min: 0, max: 2781, now: 0, text: '0:00 of 46:21' });
+  });
+
+  it('shows no remaining time when the duration is unknown', () => {
+    const seekBar = nowPlayingSeekBar(bareLecture);
+    expect(seekBar.remaining).toBe('');
+    expect(seekBar.accessibilityValue.text).toBe('0:00 of unknown length');
+  });
+});
+
+describe('fitArtworkSize', () => {
+  it('uses the full column width when everything fits', () => {
+    const size = fitArtworkSize({ availableWidth: 342, availableHeight: 900, heightOfEverythingElse: 400 });
+    expect(size).toBe(342);
+  });
+
+  it('shrinks just enough for the controls to fit', () => {
+    const size = fitArtworkSize({ availableWidth: 342, availableHeight: 700, heightOfEverythingElse: 400 });
+    expect(size).toBe(300);
+  });
+
+  it('stops shrinking at 200', () => {
+    const size = fitArtworkSize({ availableWidth: 342, availableHeight: 500, heightOfEverythingElse: 400 });
+    expect(size).toBe(200);
+  });
+
+  it('is never wider than the column', () => {
+    const size = fitArtworkSize({ availableWidth: 150, availableHeight: 500, heightOfEverythingElse: 400 });
+    expect(size).toBe(150);
+  });
+});
+
+describe('nowPlayingTrackInfo', () => {
+  it('fills every line and pill a complete lecture has', () => {
+    expect(nowPlayingTrackInfo(fullLecture)).toEqual({
+      venue: 'Masjid Muswalla, Highlands',
+      dateLabel: 'Saturday, 31 October 2026',
+      topicLabel: 'Ṣaḥābā r.a',
+      topicCategory: 1,
+      eventTitle: 'The Sahaba Radiyyallahu Anhum',
+    });
+  });
+
+  it('leaves out what the data does not have', () => {
+    const trackInfo = nowPlayingTrackInfo(bareLecture);
+    expect(trackInfo.venue).toBeUndefined();
+    expect(trackInfo.topicLabel).toBeUndefined();
+    expect(trackInfo.topicCategory).toBeUndefined();
+    expect(trackInfo.eventTitle).toBeUndefined();
+    expect(trackInfo.dateLabel).toBe('Friday, 2 October 2026');
+  });
+
+  it('shows a topic with no display label as written, in category 1', () => {
+    const lecture = { ...fullLecture, category: ['tafsir'] };
+    const trackInfo = nowPlayingTrackInfo(lecture);
+    expect(trackInfo.topicLabel).toBe('tafsir');
+    expect(trackInfo.topicCategory).toBe(1);
+  });
+});

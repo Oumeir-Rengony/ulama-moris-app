@@ -18,9 +18,11 @@ npx tsc --noEmit            # typecheck
 npx expo-doctor             # diagnose dependency and config issues
 npx expo install --fix      # fix incompatible package versions
 npm run check:theme         # colour parity across the theme files + no raw colours in UI code
+npm test                    # unit and component tests (Jest + React Native Testing Library)
+npm run test:watch          # the same, re-running on save
 ```
 
-Run lint, typecheck and `npm run check:theme` before declaring any task done.
+Run lint, typecheck, `npm run check:theme` and `npm test` before declaring any task done.
 
 ## Project structure
 
@@ -230,6 +232,17 @@ These render outside the normal screen tree and do **not** inherit any padding f
 - Known web-dev-only warning: "Can't perform a React state update on a component that hasn't mounted yet", from NativeWind's `useColorScheme` (react-native-css-interop). It fires only when the colour scheme changes at runtime (e.g. `emulateMedia({ colorScheme: 'dark' })` in a test) while a lazily loaded route is rendering. Without a theme switch it doesn't appear, and iOS never shows it. Not caused by app code; don't chase it.
 - Sticky headers (`SectionList`): put the top safe-area inset on the screen container, not in `contentContainerStyle`. Sticky headers pin to the top of the list, and would otherwise hide under the status bar.
 
+## Testing
+
+- Run tests with `npm test`, not bare `npx jest`. The script sets `TZ=America/Los_Angeles`, far from the data's `+04:00`, so a date helper that goes through `new Date(isoString)` shows the wrong day and fails. A guard test in `format-time.test.ts` fails if the time zone isn't set.
+- Tests go in a `__tests__` folder next to the code they test (`src/utils/__tests__/format-time.test.ts`). **Never inside `src/app/`**: every file there becomes a route.
+- Shared helpers live in `src/test-utils/`: `renderWithProviders` (a new `QueryClient` per test plus `SafeAreaProvider`) and `fixtures.ts` (hand-written edge cases). Never import them from app code.
+- RNTL 14 is async: `await` every `render`, `renderHook`, `fireEvent` and `act`. Query by role and accessibility label (`getByRole('button', { name: 'Play …' })`), the way VoiceOver finds things. That way the tests also enforce the labels.
+- Test behaviour and text, not class names. No snapshot tests.
+- A `console.error` or `console.warn` during a test fails it (`jest.setup.ts`). Fix the cause; don't silence it.
+- Add a mock to `jest.setup.ts` only when a test fails without it, with a comment saying why.
+- `package.json` maps `lucide-react-native/icons/*` to lucide's CommonJS build (jest-expo would otherwise load the `.mjs` files, which Jest can't run) and maps `@/assets/*` to `assets/` (the general `@/*` → `src/` rule would catch it first).
+- A new component goes in the light/dark guard list in `src/components/__tests__/theme-guard.test.tsx`.
 
 ## Rules
 

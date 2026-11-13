@@ -416,5 +416,9 @@ export const topicOrder: string[] = buildTopicOrder(lectures);
 
 // ---------- Search ----------
 
-// Placeholder recent searches from the design. They are not real searches (HANDOFF §6).
-export const seedRecentSearches = ['Ṣaḥābā', 'Islamic finance', 'Fire', 'Sacrifices', 'Ummah'];
+// Placeholder recent searches per scope. The lectures list is the design's; the events list has
+// no design and is made up from event titles. They are not real searches (HANDOFF §6).
+export const seedRecentSearches: { lectures: string[]; events: string[] } = {
+  lectures: ['Ṣaḥābā', 'Islamic finance', 'Fire', 'Sacrifices', 'Ummah'],
+  events: ['Jummah', 'Sahaba', 'Islahi'],
+};

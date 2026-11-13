@@ -16,6 +16,7 @@ import {
 import { useEventsQuery } from '@/features/events/events.queries';
 import { groupEventsByYear, type EventListItem, type EventYearSection } from '@/features/events/group-by-year';
 import { openEvent } from '@/features/events/open-event';
+import { openSearch } from '@/features/search/open-search';
 import { catAt } from '@/theme/tokens';
 
 const bottomSpacing = 24;
@@ -41,6 +42,10 @@ function renderEventRow({ item }: SectionListRenderItemInfo<EventListItem, Event
       />
     </View>
   );
+}
+
+function handleSearchPress() {
+  openSearch('events');
 }
 
 function eventKey(item: EventListItem) {
@@ -147,6 +152,7 @@ export default function EventsScreen() {
             eventCountLabel={eventCountLabel}
             latestEvent={latestEvent ? buildLatestEventContent(latestEvent) : undefined}
             onLatestEventPress={handleLatestEventPress}
+            onSearchPress={handleSearchPress}
           />
         }
         ListFooterComponent={footer}
