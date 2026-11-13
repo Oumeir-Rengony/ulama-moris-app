@@ -5,17 +5,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EventDetailHeader, type EventHeroContent } from '@/components/EventDetailHeader';
 import { NumberedLectureRow } from '@/components/NumberedLectureRow';
-import { mockPlayback } from '@/data/mock-ui';
 import type { EventSummary, Lecture } from '@/data/sample';
 import {
   eventLectureMetaLabel,
   eventVenueLabel,
   lectureNumberLabel,
-  pausedLectureMetaLabel,
   recordedLecturesLabel,
 } from '@/features/events/event-labels';
 import { useEventQuery } from '@/features/events/events.queries';
+import { ActiveNumberedLectureRow } from '@/features/player/active-numbered-lecture-row';
 import { openNowPlaying } from '@/features/player/open-now-playing';
+import { selectActiveLectureSlug, usePlayerStore, type QueueSource } from '@/features/player/player.store';
+import { useMiniPlayerSpace } from '@/features/player/use-mini-player-space';
 
 const bottomSpacing = 24;
 
@@ -41,19 +42,21 @@ function buildHeroContent(event: EventSummary): EventHeroContent {
   };
 }
 
-// Event detail: the event's lectures in data order. Visual only, except that Back works and a
-// lecture opens Now Playing (with the event as its "Playing from" source).
+// Event detail: the event's lectures in data order. A lecture opens Now Playing with the event's
+// lectures as its queue, and the event as its "Playing from" source.
 export default function EventDetailScreen() {
   const insets = useSafeAreaInsets();
+  const miniPlayerSpace = useMiniPlayerSpace();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const { data, isSuccess } = useEventQuery(slug);
+  const activeLectureSlug = usePlayerStore(selectActiveLectureSlug);
 
   // An unknown event (for example a bad deep link): back to the list.
   if (isSuccess && data === null) {
     return <Redirect href="/events" />;
   }
 
-  // Headerless screen in the Events tab stack: it owns the top inset; the tabs footer owns the
+  // Headerless screen in the Events tab stack: it owns the top inset; the tab bar owns the
   // bottom. While the stub resolves (instantly) only the ground shows.
   if (!data) {
     return <View className="flex-1 bg-bg" style={{ paddingTop: insets.top }} />;
@@ -61,29 +64,39 @@ export default function EventDetailScreen() {
 
   const { event, lectures } = data;
 
+  const queueSource: QueueSource = { kind: 'event', eventSlug: event.slug, eventTitle: event.title };
+
   function renderLectureRow({ item, index }: ListRenderItemInfo<Lecture>) {
+    // The row body opens Now Playing. The play button also resumes the lecture if it's the
+    // loaded one and paused; if it's playing, it opens Now Playing without pausing.
     function handleOpen() {
-      openNowPlaying(item.slug, { fromEventSlug: event.slug });
+      openNowPlaying({ lecture: item, queue: lectures, source: queueSource, resumeIfPaused: false });
     }
 
-    // TODO(player stage): the active row is whichever lecture is loaded in the player. For now the
-    // first row is shown paused, matching the mini player on this screen.
-    const isActiveRow = index === 0;
-    let metaLabel = eventLectureMetaLabel(item);
-    if (isActiveRow) {
-      metaLabel = pausedLectureMetaLabel(item, mockPlayback.elapsed);
+    function handlePlayPress() {
+      openNowPlaying({ lecture: item, queue: lectures, source: queueSource, resumeIfPaused: true });
+    }
+
+    const number = lectureNumberLabel(index);
+
+    if (item.slug === activeLectureSlug) {
+      return (
+        <View className="px-gutter">
+          <ActiveNumberedLectureRow number={number} lecture={item} onPress={handleOpen} onPlayPress={handlePlayPress} />
+        </View>
+      );
     }
 
     return (
       <View className="px-gutter">
         <NumberedLectureRow
-          number={lectureNumberLabel(index)}
+          number={number}
           title={item.title}
           author={item.author}
-          metaLabel={metaLabel}
-          state={isActiveRow ? 'active-paused' : 'idle'}
+          metaLabel={eventLectureMetaLabel(item)}
+          state="idle"
           onPress={handleOpen}
-          onPlayPress={handleOpen}
+          onPlayPress={handlePlayPress}
         />
       </View>
     );
@@ -95,13 +108,16 @@ export default function EventDetailScreen() {
       <FlatList
         data={lectures}
         renderItem={renderLectureRow}
+        // Which row is active comes from the player, not from `data`.
+        extraData={activeLectureSlug}
         keyExtractor={lectureKey}
         ItemSeparatorComponent={RowGap}
         ListHeaderComponent={
           <EventDetailHeader hero={buildHeroContent(event)} lectureCount={`${event.total}`} onBackPress={goBack} />
         }
+        // Normal spacing, plus room for the floating mini player so the last row scrolls clear.
         contentContainerStyle={{
-          paddingBottom: bottomSpacing,
+          paddingBottom: bottomSpacing + miniPlayerSpace,
           width: '100%',
           maxWidth: 600,
           alignSelf: 'center',

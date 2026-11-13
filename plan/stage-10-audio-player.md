@@ -24,7 +24,7 @@ Playback keeps going in the background and while moving between screens.
 | Part | This stage | Later |
 |---|---|---|
 | Engine (`audio-engine.ts`) | One `createAudioPlayer` at module scope, plus the commands `playLecture`, `toggle`, `seek`, `skip` | — |
-| Store (`player.store.ts`) | Queue, current index, source, mirrored status, `progressById` (persisted) | The mini player reads it |
+| Stores | `player.store.ts`: queue, current index, source, mirrored status (not persisted). `listening-history.store.ts`: `progressById` (persisted) | The mini player reads them |
 | Status bridge | expo-audio status → store; auto-advance; progress checkpoints | — |
 | Now Playing | **Fully wired:** play/pause, drag + tap seek, back 15, forward 15, live times, the play-button shape animation | Swipe-down to dismiss (still a later item) |
 | Starting playback | Home rows, the Continue listening play button, Event detail rows and search results start playback *and* open Now Playing (Stage 5 behaviour, now with sound) | When the mini player exists, a Home row plays in place instead (HANDOFF §3) |
@@ -32,7 +32,7 @@ Playback keeps going in the background and while moving between screens.
 | Background playback | iOS `audio` background mode, Android media-playback foreground service | — |
 | Mini player | **Unchanged and static** | Mini player stage |
 | Active-row looks, Continue listening progress | Unchanged (static mock from Stages 4 and 7) | Mini player stage connects them to the store as well |
-| Buffering spinner, audio errors | The store records `isBuffering` and `error`, but no UI for them yet | HANDOFF §8.2 item 2; error-states stage (`audio-didnt-load`) |
+| Buffering spinner, audio errors | The store records `isBuffering`, but no UI for it yet. `error` isn't stored until a UI reads it | HANDOFF §8.2 item 2; error-states stage (`audio-didnt-load`) |
 
 ## Skills to load
 
@@ -76,9 +76,18 @@ Playback keeps going in the background and while moving between screens.
    - `ios/<app>/Info.plist` has `UIBackgroundModes` → `audio` and no `NSMicrophoneUsageDescription`;
    - `android/app/src/main/AndroidManifest.xml` has the two foreground-service permissions, `POST_NOTIFICATIONS`, and no `RECORD_AUDIO`.
 
-## 2. The store: `src/features/player/player.store.ts`
+## 2. The stores
 
-Holds data only. Plain synchronous setters. One exported hook, `usePlayerStore`.
+Two small stores, each with one job. Both hold data only, with plain synchronous setters, and neither imports `expo-audio` or `expo-router`.
+
+| Store | File | Job | Persisted |
+|---|---|---|---|
+| `usePlayerStore` | `src/features/player/player.store.ts` | What's happening right now: the queue and the live playback status | No. Empty on every launch |
+| `useListeningHistoryStore` | `src/features/player/listening-history.store.ts` | What survives a restart: resume points | Yes, all of it |
+
+**Why two stores and not one with `partialize`:** Zustand's `persist` middleware writes to storage after **every** `set`. `partialize` only chooses *what* is written, not *when*. In a single store, the bridge's `applyStatus` (4 times a second) would rewrite AsyncStorage 4 times a second. Splitting them means the store that changes often is never persisted, and the persisted store changes only at checkpoints. It also answers "does this survive a restart?" by file name.
+
+### 2.1 `player.store.ts`: the live session
 
 ```ts
 type QueueSource =
@@ -90,29 +99,40 @@ type PlayerState = {
   queue: LectureSummary[];          // a snapshot the user chose (AGENTS.md: the one allowed copy of query data)
   currentIndex: number | null;      // null = nothing loaded
   source: QueueSource | null;
-  // Mirrored from expo-audio by the bridge. Never set from a button press.
+  // Copied from expo-audio by the bridge. Never set from a button press.
   isPlaying: boolean;
   isBuffering: boolean;
   isLoaded: boolean;
   positionSec: number;
   durationSec: number;
-  error: string | null;
-  // Resume points, persisted.
-  progressById: Record<string, number>;
   // Setters
-  setQueue(queue: LectureSummary[], startIndex: number, source: QueueSource): void;
+  startQueue(queue: LectureSummary[], startIndex: number, source: QueueSource): void;
   setCurrentIndex(index: number | null): void;
   applyStatus(status: MirroredStatus): void;
-  saveProgress(slug: string, positionSec: number): void;
 };
 ```
 
-- **Persistence:** `persist` with `createJSONStorage(() => AsyncStorage)` and `partialize: (state) => ({ progressById: state.progressById })`. Only resume points survive a restart. The queue and live status don't (AGENTS.md). Name the storage key `player`.
+- **Not persisted.** The queue and the live status don't survive a restart (AGENTS.md).
+- **No `error` field yet.** No UI reads it in this stage. The error-states stage adds it together with its UI.
 - **Derived values are not stored** (AGENTS.md rule 1). Export plain selector functions next to the store:
   - `selectCurrentLecture(state)` → `queue[currentIndex]` or `null`;
   - `selectSourceLabel(state)` → "Latest lectures" / the event title / “query”.
 - **Reading it:** always through a selector, for example `usePlayerStore((state) => state.positionSec)`. Use `useShallow` when a selector returns an object. Only the progress bar and the time labels subscribe to `positionSec`.
+- Export `initialPlayerState` so tests can reset the store to the same object.
+
+### 2.2 `listening-history.store.ts`: resume points
+
+```ts
+type ListeningHistoryState = {
+  progressById: Record<string, number>;   // resume point in seconds, by lecture slug
+  saveProgress(slug: string, positionSec: number): void;
+};
+```
+
+- **Persistence:** `persist` with `createJSONStorage(() => AsyncStorage)`, storage key `listening-history`. No `partialize`: everything in this store is meant to be saved.
+- Only checkpoints call `saveProgress` (§4), so AsyncStorage is written only at checkpoints.
 - Resume points are saved by slug. The generated `--N` slugs from the mock library count as separate lectures. That's acceptable for mock data; leave a comment.
+- Export `initialListeningHistoryState` for tests.
 
 ## 3. The engine: `src/features/player/audio-engine.ts`
 
@@ -128,8 +148,8 @@ Exported commands, each a plain function with one job:
 
 | Command | What it does |
 |---|---|
-| `playLecture(lecture, queue, source)` | 1. On Android, on the first call only, request notification permission (§1.3). 2. `store.setQueue(queue, indexOf(lecture), source)`. 3. `loadCurrent({ autoplay: true })` |
-| `loadCurrent({ autoplay })` (internal) | Reads the current lecture from the store. Then: `player.replace({ uri: lecture.url, name: lecture.title })` → resume from `progressById[slug]`, if any (see note) → `player.setActiveForLockScreen(true, metadata, lockScreenOptions)` → `player.play()` if `autoplay` |
+| `playLecture(lecture, queue, source)` | 1. On Android, on the first call only, request notification permission (§1.3). 2. `usePlayerStore.getState().startQueue(queue, indexOf(lecture), source)`. 3. `loadCurrent({ autoplay: true })` |
+| `loadCurrent({ autoplay })` (internal) | Reads the current lecture from `usePlayerStore`. Then: `player.replace({ uri: lecture.url, name: lecture.title })` → resume from `useListeningHistoryStore.getState().progressById[slug]`, if any (see note) → `player.setActiveForLockScreen(true, metadata, lockScreenOptions)` → `player.play()` if `autoplay` |
 | `toggle()` | `player.playing ? player.pause() : player.play()`. Then saves a progress checkpoint when pausing |
 | `seek(sec)` | Clamps to `0…player.duration`, then `await player.seekTo(sec)`, then saves a checkpoint |
 | `skip(deltaSec)` | `seek(player.currentTime + deltaSec)`, used with −15 / +15. Works while playing or paused |
@@ -189,10 +209,10 @@ No notification-permission request here (§1.3). Don't call `setAudioModeAsync` 
 A component that renders `null`, mounted **once** in `src/app/_layout.tsx`, inside `AppProviders`. It replaces the "PlayerProvider slot" from Stage 1. It is not a Context.
 
 - `const status = useAudioPlayerStatus(player);`
-- Effect on `status`: `applyStatus({ isPlaying: status.playing, isBuffering: status.isBuffering, isLoaded: status.isLoaded, positionSec: status.currentTime, durationSec: status.duration, error: status.error })`.
+- Effect on `status`: `applyStatus({ isPlaying: status.playing, isBuffering: status.isBuffering, isLoaded: status.isLoaded, positionSec: status.currentTime, durationSec: status.duration })`.
   - Guard `duration` (it's 0 until loaded): the progress fraction is 0 when the duration is 0.
 - **Auto-advance:** when `status.didJustFinish` is true, save the finished lecture's progress as 0 (it's finished, so it shouldn't resume at the end), then `playNext()`.
-- **Checkpoints** (AGENTS.md):
+- **Checkpoints** (AGENTS.md). A checkpoint is one call to `useListeningHistoryStore.getState().saveProgress(slug, player.currentTime)`. It's the only thing that writes AsyncStorage:
   - every ~10 s while playing, using a ref holding the last save time (not a timer);
   - when `playing` turns from true to false (a pause from anywhere: the app, the lock screen, a phone call, unplugged headphones);
   - when the track changes;
@@ -281,7 +301,7 @@ export function createFakeAudioPlayer() {
 **AsyncStorage:** in `jest.setup.ts`, `jest.mock('@react-native-async-storage/async-storage', () => require('@react-native-async-storage/async-storage/jest/async-storage-mock'))`. Check the current mock path in that package's docs.
 
 **Fresh state for every test** (in `beforeEach`):
-- reset the store to its initial state (`usePlayerStore.setState(initialPlayerState, true)`), and export `initialPlayerState` from the store file so tests use the same object;
+- reset both stores to their initial state (`usePlayerStore.setState(initialPlayerState, true)` and `useListeningHistoryStore.setState(initialListeningHistoryState, true)`), using the objects exported from the store files;
 - clear the fake player's calls and fields;
 - `await AsyncStorage.clear()`.
 - Because the engine keeps its "permission already asked" flag in module scope, load the engine module fresh where that matters, with `jest.isolateModules`.
@@ -292,18 +312,26 @@ export function createFakeAudioPlayer() {
 
 **Fixtures:** reuse `src/test-utils/fixtures.ts` from Stage 9. Add `queueOfThree` (three lectures, each with a `url`) and `eventSource` / `searchSource` objects.
 
-### 8.2 Store tests: `src/features/player/__tests__/player.store.test.ts`
+### 8.2 Store tests
+
+`src/features/player/__tests__/player.store.test.ts`:
 
 | Test | Assertion |
 |---|---|
 | starts empty | `currentIndex` is `null`, the queue is empty, `isPlaying` is false |
-| `setQueue` | stores the queue in the given order (no sorting), the start index and the source |
+| `startQueue` | stores the queue in the given order (no sorting), the start index and the source |
 | `applyStatus` | copies each mirrored field. A duration of 0 stays 0 (no division anywhere in the store) |
-| `saveProgress` | writes `progressById[slug]` and leaves the other slugs as they are |
-| persists only resume points | after `setQueue` + `applyStatus` + `saveProgress`, the JSON written to AsyncStorage under `player` contains `progressById` and **no** `queue`, `positionSec` or `isPlaying` |
-| rehydrates resume points | write a stored `{ progressById: { a: 120 } }`, rehydrate (`usePlayerStore.persist.rehydrate()`), and `progressById.a` is 120 |
+| never touches storage | 100 `applyStatus` calls → `AsyncStorage.setItem` is called **0** times |
 | `selectCurrentLecture` | returns `null` when nothing is loaded, and `queue[currentIndex]` otherwise |
 | `selectSourceLabel` | "Latest lectures" / the event title / “query” (curly quotes) for the three sources |
+
+`src/features/player/__tests__/listening-history.store.test.ts`:
+
+| Test | Assertion |
+|---|---|
+| `saveProgress` | writes `progressById[slug]` and leaves the other slugs as they are |
+| persists | after `saveProgress`, the JSON written to AsyncStorage under `listening-history` contains `progressById` |
+| rehydrates resume points | write a stored `{ progressById: { a: 120 } }`, rehydrate (`useListeningHistoryStore.persist.rehydrate()`), and `progressById.a` is 120 |
 
 ### 8.3 Engine tests: `src/features/player/__tests__/audio-engine.test.ts`
 
@@ -372,7 +400,7 @@ The engine module is mocked here (`jest.mock('@/features/player/audio-engine')`)
 ### 8.7 Guard tests (rules from AGENTS.md)
 
 Add these to `scripts/check-theme.js` (renamed `scripts/check-rules.js` if it now covers more than the theme), or as a Jest test that reads the source files:
-- `src/features/player/player.store.ts` doesn't import `expo-audio`.
+- `player.store.ts` and `listening-history.store.ts` don't import `expo-audio`.
 - `setAudioModeAsync(` appears in exactly one file (`setup-audio.ts`).
 - `createAudioPlayer(` appears in exactly one file (`audio-engine.ts`).
 - No file imports `expo-av`.
@@ -388,13 +416,13 @@ Add these to `scripts/check-theme.js` (renamed `scripts/check-rules.js` if it no
   3. take out the clamp in `skip` → the near-end / near-start tests fail;
   4. set `isPlaying` from the play button's `onPress` → the "follows status, not the press" test fails;
   5. save progress on every status update → the throttle test fails;
-  6. persist the whole store → the "persists only resume points" test fails;
-  7. import `expo-audio` in the store → the guard test fails.
+  6. wrap `player.store.ts` in `persist` → the "never touches storage" test fails;
+  7. import `expo-audio` in either store → the guard test fails.
 - Run `npx jest --coverage src/features/player` and record the numbers in the stage summary. Expect complete coverage of the store and engine branches. The bridge's `AppState` branch must be covered.
 
 ## 9. Files touched
 
-- New: `src/features/player/player.store.ts`, `audio-engine.ts`, `setup-audio.ts`, `player-status-bridge.tsx`, `lock-screen-artwork.ts`, `src/components/NowPlaying/now-playing-times.tsx`, `now-playing-seek-bar.tsx` (or the `@expo/ui` slider wrapper)
+- New: `src/features/player/player.store.ts`, `listening-history.store.ts`, `audio-engine.ts`, `setup-audio.ts`, `player-status-bridge.tsx`, `lock-screen-artwork.ts`, `src/components/NowPlaying/now-playing-times.tsx`, `now-playing-seek-bar.tsx` (or the `@expo/ui` slider wrapper)
 - Edited:
   - `app.json` (expo-audio plugin)
   - `.gitignore` (`/ios`, `/android`)
@@ -413,7 +441,7 @@ Add these to `scripts/check-theme.js` (renamed `scripts/check-rules.js` if it no
 The agent runs what it can: the iOS simulator with **AXe**, and the web build with `playwright-cli`. The guide is clear that **lock screen, notification and background behaviour must be confirmed on real devices**. The agent prepares the dev builds and a checklist, and asks the user to run the device-only checks.
 
 ### 10.1 Static
-`npx expo lint`, `npx tsc --noEmit`, `npm run check:theme` and `npm test` pass. Grep: there are no `expo-av` imports, `useAudioPlayer(` is never used for the main player, `setAudioModeAsync` appears exactly once, and `player.store.ts` never imports `expo-audio`.
+`npx expo lint`, `npx tsc --noEmit`, `npm run check:theme` and `npm test` pass. Grep: there are no `expo-av` imports, `useAudioPlayer(` is never used for the main player, `setAudioModeAsync` appears exactly once, and neither store imports `expo-audio`.
 
 ### 10.2 Native config
 After `npx expo prebuild --clean`, check the `Info.plist` and `AndroidManifest.xml` entries listed in §1.5.
@@ -448,3 +476,10 @@ Build a development client for a physical iPhone (`npx expo run:ios --device`) a
 - [ ] Pauses from the lock screen / notification are reflected in the app when it's reopened (via the bridge).
 
 Report each item as pass, fail or not checked. Don't mark the stage done while a device check is still unchecked without saying so.
+
+## As built (13 Nov 2026)
+
+- **§3.2 lock-screen step:** expo-audio 58 has `seekForwardIntervalSeconds` / `seekBackwardIntervalSeconds` in `AudioLockScreenOptions` (iOS and Android). Both are set to 15. Confirm on a real device.
+- **§3 resume note:** the pending-resume approach is used. Native `seekTo` goes straight to AVPlayer, which isn't safe before the item has loaded. `loadCurrent` stores the position; the bridge calls `finishPendingResumeIfReady()`, which seeks once `player.isLoaded` and then plays.
+- **One player, created lazily:** `getPlayer()` instead of a module-scope constant. The web build server-renders, and expo-audio's web player calls `new Audio()` when created.
+- **Not done here:** `expo-dev-client` and a development build. Verification ran in Expo Go (iOS simulator) and on web. Background audio, the lock screen and the notification need the real-device checklist in §10.5.

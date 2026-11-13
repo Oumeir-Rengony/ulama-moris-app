@@ -1,26 +1,26 @@
-import { mockPlayback, mockPlaybackLecture } from '@/data/mock-ui';
 import { fitArtworkSize, nowPlayingSeekBar, nowPlayingTrackInfo } from '@/features/player/now-playing-content';
 import { bareLecture, fullLecture } from '@/test-utils/fixtures';
 
 describe('nowPlayingSeekBar', () => {
-  it('shows the mock progress for the mock playback lecture', () => {
-    const seekBar = nowPlayingSeekBar(mockPlaybackLecture);
-    expect(seekBar.progress).toBe(mockPlayback.progress);
+  it('shows the live position against the loaded length', () => {
+    const seekBar = nowPlayingSeekBar({ positionSec: 965, durationSec: 2781, dataDuration: '46:21' });
+    expect(seekBar.progress).toBeCloseTo(0.347, 3);
     expect(seekBar.elapsed).toBe('16:05');
     expect(seekBar.remaining).toBe('-30:16');
     expect(seekBar.accessibilityValue).toEqual({ min: 0, max: 2781, now: 965, text: '16:05 of 46:21' });
   });
 
-  it('shows the start for any other lecture', () => {
-    const seekBar = nowPlayingSeekBar(fullLecture);
+  it("uses the data's duration before the audio has loaded", () => {
+    const seekBar = nowPlayingSeekBar({ positionSec: 0, durationSec: 0, dataDuration: fullLecture.duration });
     expect(seekBar.progress).toBe(0);
     expect(seekBar.elapsed).toBe('0:00');
     expect(seekBar.remaining).toBe('-46:21');
     expect(seekBar.accessibilityValue).toEqual({ min: 0, max: 2781, now: 0, text: '0:00 of 46:21' });
   });
 
-  it('shows no remaining time when the duration is unknown', () => {
-    const seekBar = nowPlayingSeekBar(bareLecture);
+  it('shows no remaining time when no length is known yet', () => {
+    const seekBar = nowPlayingSeekBar({ positionSec: 0, durationSec: 0, dataDuration: bareLecture.duration });
+    expect(seekBar.progress).toBe(0);
     expect(seekBar.remaining).toBe('');
     expect(seekBar.accessibilityValue.text).toBe('0:00 of unknown length');
   });

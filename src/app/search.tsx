@@ -114,7 +114,15 @@ function LectureResult({ result, query }: { result: LectureSearchResult; query: 
   const firstTopic = lecture.category[0] ?? '';
 
   function handlePress() {
-    openNowPlaying(lecture.slug, { fromQuery: query, replaceSearch: true });
+    // Just this lecture, with the query as its "Playing from" source. Now Playing replaces
+    // Search, so minimising it returns to the tab Search was opened from.
+    openNowPlaying({
+      lecture,
+      queue: [lecture],
+      source: { kind: 'search', query },
+      resumeIfPaused: true,
+      replaceCurrentScreen: true,
+    });
   }
 
   return (

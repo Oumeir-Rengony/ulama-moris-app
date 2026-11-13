@@ -1,7 +1,7 @@
-import { screen } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 
 import { ProgressBar } from '@/components/ui/progress-bar';
-import { SeekBar } from '@/components/ui/seek-bar';
+import { fractionAlongTrack, SeekBar } from '@/components/ui/seek-bar';
 import { renderWithProviders } from '@/test-utils/render-with-providers';
 
 // The filled part of the bar is the first child of the given element.
@@ -60,5 +60,42 @@ describe('SeekBar', () => {
     );
     const track = filledPart(screen.getByRole('adjustable'));
     expect(filledPart(track)).toHaveStyle({ width: '100%' });
+  });
+});
+
+describe('fractionAlongTrack', () => {
+  it('is the touch position over the track width', () => {
+    expect(fractionAlongTrack(225, 300)).toBe(0.75);
+  });
+
+  it('stays between 0 and 1 when the finger leaves the track', () => {
+    expect(fractionAlongTrack(-20, 300)).toBe(0);
+    expect(fractionAlongTrack(340, 300)).toBe(1);
+  });
+
+  it('is 0 before the track has been measured', () => {
+    expect(fractionAlongTrack(100, 0)).toBe(0);
+  });
+});
+
+describe('SeekBar accessibility actions', () => {
+  it('reports increment and decrement', async () => {
+    const handleStep = jest.fn();
+    await renderWithProviders(
+      <SeekBar
+        progress={0.35}
+        elapsed="16:05"
+        remaining="-30:16"
+        accessibilityValue={{ min: 0, max: 2781, now: 965, text: '16:05 of 46:21' }}
+        onAccessibilityStep={handleStep}
+      />,
+    );
+    const seekBar = screen.getByRole('adjustable', { name: 'Seek position' });
+
+    await fireEvent(seekBar, 'accessibilityAction', { nativeEvent: { actionName: 'increment' } });
+    await fireEvent(seekBar, 'accessibilityAction', { nativeEvent: { actionName: 'decrement' } });
+
+    expect(handleStep).toHaveBeenNthCalledWith(1, 'increment');
+    expect(handleStep).toHaveBeenNthCalledWith(2, 'decrement');
   });
 });

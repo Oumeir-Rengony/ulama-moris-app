@@ -6,6 +6,7 @@ import {
   latestEventMetaLabel,
   lectureNumberLabel,
   pausedLectureMetaLabel,
+  playingLectureMetaLabel,
   recordedLecturesLabel,
 } from '@/features/events/event-labels';
 import { bareLecture, fullEvent, fullLecture, noVenueEvent } from '@/test-utils/fixtures';
@@ -67,5 +68,15 @@ describe('event detail row meta', () => {
 
   it('shows only the paused position when the duration is unknown', () => {
     expect(pausedLectureMetaLabel(bareLecture, '2:00')).toBe('Paused · 2:00');
+  });
+});
+
+describe('playingLectureMetaLabel', () => {
+  it('shows the position over the duration', () => {
+    expect(playingLectureMetaLabel(fullLecture, '16:05')).toBe('Now playing · 16:05 / 46:21');
+  });
+
+  it('shows only the position when the duration is unknown', () => {
+    expect(playingLectureMetaLabel(bareLecture, '2:00')).toBe('Now playing · 2:00');
   });
 });

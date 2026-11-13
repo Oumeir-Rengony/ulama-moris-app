@@ -41,7 +41,7 @@ src/
 │   ├── Skeleton/        # index.tsx + tokens.ts
 │   └── Search/          # search UI + tokens.ts
 ├── features/            # State, data and pure logic per domain. No JSX screens
-│   ├── player/          # audio-engine.ts, player.store.ts, player-status-bridge.tsx
+│   ├── player/          # audio-engine.ts, player.store.ts, listening-history.store.ts, player-status-bridge.tsx
 │   ├── lectures/        # lectures.api.ts, lectures.queries.ts
 │   ├── events/          # events.api.ts, events.queries.ts, group-by-year.ts
 │   └── search/          # scope.ts, match.ts, search.queries.ts, recent-searches.store.ts
@@ -98,7 +98,7 @@ Read [src/theme/README.md](src/theme/README.md) before adding or changing any co
 
 Ask these questions in order and stop at the first "yes":
 
-1. **Can it be calculated from other state, props or query data?** → Don't store it. Calculate it during render. Examples: the Continue listening lecture (the most recent entry in `progressById`), "N min left", the "81 lectures" count.
+1. **Can it be calculated from other state, props or query data?** → Don't store it. Calculate it during render. Examples: whether the mini player is visible (`selectIsMiniPlayerVisible`), "N min left", the "81 lectures" count.
 2. **Does it come from the server, or from an API stub standing in for one?** → TanStack Query (`useQuery` / `useInfiniteQuery`). Load the `expo-data-fetching` skill.
 3. **Is it used by only one component (and the children it passes props to), and is it fine to lose it when the screen closes?** → `useState` in that component.
 4. **Is it read or changed on more than one screen, updated often, or must it survive an app restart?** → A Zustand store.
@@ -112,9 +112,10 @@ If you can't choose between `useState` and Zustand, start with `useState`. Move 
 |---|---|---|
 | Light/dark theme | NativeWind `dark:` classes + `useColorScheme()`. JS colour values come from `useThemeColors()` (`src/theme/tokens.ts`) | Set by the OS. No ThemeContext and no theme store |
 | Lecture pages, event pages, event detail, search results | TanStack Query | Server data (static stubs today, real API later) |
-| Player queue, `currentIndex`, queue `source` | Zustand `player.store.ts` | The mini player, Now Playing and the list rows on every screen read it |
+| Player queue, `currentIndex`, queue `source` | Zustand `player.store.ts` (not persisted) | The mini player, Now Playing and the list rows on every screen read it. Not persisted, so a launch shows no mini player |
+| Whether Now Playing is on screen (`isNowPlayingOnScreen`), whether the queue has ended (`hasQueueEnded`) | Zustand `player.store.ts`. `isNowPlayingOnScreen` is written only by `openNowPlaying` and the Now Playing screen hook | The mini player's visibility is calculated from these and the loaded lecture |
 | Playback status (`isPlaying`, `positionSec`, `durationSec`, buffering) | Comes from expo-audio `useAudioPlayerStatus`, copied into `player.store.ts` by one bridge component | Many components subscribe to it, and it updates several times a second (see below) |
-| Resume points `progressById` | Zustand `player.store.ts`, persisted to AsyncStorage | Must survive a restart |
+| Resume points `progressById`, the Continue listening lecture `lastPlayedSlug` | Zustand `listening-history.store.ts`, persisted to AsyncStorage | Must survive a restart. Kept apart from `player.store.ts` (see Zustand rules) |
 | Recent searches per scope | Zustand `recent-searches.store.ts`, persisted | Must survive a restart. The `persist` middleware is simpler than writing your own load/save effects |
 | Search input text, the selected Home filter chip, whether a sheet or menu is open | `useState` | Belongs to one screen |
 | Online/offline (error-states stage) | NetInfo's `useNetInfo()` where it's needed | It's already a subscription. Don't copy it into a store |
@@ -123,17 +124,30 @@ Not in the spec yet: signed-in user, bookmarks, language. Don't add stores or co
 
 ### Audio: expo-audio plays, Zustand remembers
 
-- `expo-audio` is the audio engine. Follow [docs/expo-audio.md](docs/expo-audio.md). Create exactly one player with `createAudioPlayer()` at module scope in `features/player/audio-engine.ts`. That file also exports the commands: `playLecture`, `toggle`, `seek`, `skip`.
+- `expo-audio` is the audio engine. Follow [docs/expo-audio.md](docs/expo-audio.md). Exactly one player, created by `getPlayer()` in `features/player/audio-engine.ts` on first use (not when the file loads: the web build also renders on the server, where expo-audio's web player can't be created). That file also exports the commands: `playLecture`, `toggle`, `pause`, `resume`, `seek`, `skip`, `playNext`, `stopAndClear`.
+- A saved resume point is applied once the new lecture has loaded (`finishPendingResumeIfReady`, called by the bridge). Seeking an item that hasn't loaded isn't safe on iOS.
+- Lock screen / notification: back and forward step 15 s through `seekBackwardIntervalSeconds` / `seekForwardIntervalSeconds` (expo-audio 58). No next/previous track.
 - The Zustand store holds data only. It never holds the player object, and it never calls `play()`, `pause()` or `seekTo()`. Components call the engine commands. The commands control the player and update the queue in the store.
 - Status flows in one direction: expo-audio → `PlayerStatusBridge` → store. The bridge is mounted once in the root layout. It runs `useAudioPlayerStatus(player)`, writes `isPlaying` / `positionSec` / `durationSec` into the store, and starts the next lecture when `didJustFinish` is true. Never set `isPlaying` or `positionSec` from a button press. Call the engine and let the next status update show the change. This keeps the UI correct when the OS pauses audio (phone call, headphones unplugged, lock screen).
-- Save to `progressById` at checkpoints only: on pause, on seek, on track change, and every ~10 s while playing. Each change rewrites AsyncStorage, so don't save on every status update.
+- Save to `progressById` (with `saveProgress`) at checkpoints only: on pause, on seek, on track change, and every ~10 s while playing. Each change rewrites AsyncStorage, so don't save on every status update.
+
+### Mini player
+
+- It floats above the tab bar, rendered once in `src/app/(tabs)/_layout.tsx` (not inside the tab bar footer, not in the root layout). Search and Now Playing are root-stack screens drawn over the tabs, so they cover it without route checks. Tab screen lists add `useMiniPlayerSpace()` to their bottom padding.
+- Whether it shows comes only from `selectIsMiniPlayerVisible`: a lecture is active (loaded, queue not ended) and `isNowPlayingOnScreen` is false. Never from `isPlaying`.
+- Every way into Now Playing goes through `openNowPlaying` / `openNowPlayingForLoadedLecture` (`features/player/open-now-playing.ts`): intent first (hides the bar), then pause the old lecture and wait for the bar to leave, then navigate (`router.navigate`, never `push`), then load.
+- The bar never introduces a lecture: rows and search results open Now Playing. This overrides HANDOFF §3 "plays in the mini player".
+- A launch shows no bar (the queue isn't persisted). Continue listening shows `lastPlayedSlug`.
+- Closing Now Playing with the chevron (`router.back`) or on web sends no closing `transitionEnd`: the screen unmounts at once while it still slides away. `use-now-playing-presentation.ts` then waits `NOW_PLAYING_CLOSE_ANIMATION_MS` before the bar may show. Native dismissals (swipe, Android back) do send the event.
+- Swipe the bar down to dismiss: React Native `PanResponder`, not Gesture Handler (its v3 detector received no touches on the floating bar on iOS). Screen readers get a "Stop and close player" action.
+- Components that read the player stores live in `src/features/player/*.tsx` (`mini-player-slot`, `now-playing-controls` …), because `src/components` never reads stores.
 
 ### Zustand rules
 
 - One store per domain, in a file named `<domain>.store.ts` inside its feature folder. Export one hook, e.g. `usePlayerStore`.
 - Always read through a selector: `usePlayerStore((state) => state.positionSec)`. Never call `usePlayerStore()` with no selector, because position updates several times a second and every subscriber would re-render. Only progress bars and time labels should subscribe to `positionSec`. When a selector returns an object or array, wrap it in `useShallow`.
 - A store holds state and plain synchronous setters. Side effects (audio, network) live outside the store.
-- Persist with `persist` + `createJSONStorage(() => AsyncStorage)`. Use `partialize` to save only what must survive a restart (`progressById`, not `positionSec`).
+- Persist with `persist` + `createJSONStorage(() => AsyncStorage)`, and persist **whole stores only**. `persist` writes storage after every `set`, and `partialize` only chooses what is written, not when. So state that changes often (`positionSec`, 4 times a second) must live in a store that isn't persisted. That's why the player has two stores: `player.store.ts` (live, not persisted) and `listening-history.store.ts` (persisted, changes only at checkpoints).
 
 ### TanStack Query rules
 
@@ -147,7 +161,6 @@ Not in the spec yet: signed-in user, bookmarks, language. Don't add stores or co
 - Use Context only for values that rarely change. Every consumer re-renders whenever the value changes.
 - App-wide providers (`QueryClientProvider`, plus any others) are combined in `src/providers/app-providers.tsx`, which `src/app/_layout.tsx` renders once.
 
-Install these with `npx expo install zustand @tanstack/react-query @react-native-async-storage/async-storage` when the first stage that needs them starts. They're not installed yet.
 
 ## Screens, Safe Areas & Device Fit
 
@@ -228,6 +241,9 @@ These render outside the normal screen tree and do **not** inherit any padding f
   - `axe tap --label` refuses a label that matches several elements. The Home list repeats the sample lectures to reach 81 rows, so "Play {title}" labels repeat: tap those by coordinates (`-x/-y`) taken from `describe-ui`.
   - After `xcrun simctl ui booted content_size …`, terminate and reopen Expo Go (`xcrun simctl terminate booted host.exp.Exponent`); the running app doesn't pick up the new size.
   - In Expo Go, deep links are `exp://127.0.0.1:8081/--/<path>`. The app's own `ulamamoris://` scheme only works in a development build.
+- Audio in the iOS simulator: this Mac's network goes through Netskope, which re-signs HTTPS. The simulator must trust its root certificate or every lecture fails with "The certificate for this server is invalid": `xcrun simctl keychain booted add-root-cert ~/Desktop/caadmin.netskope.com.cer` (done once per simulator; `xcrun simctl keychain booted reset` undoes it).
+- AXe `swipe` doesn't deliver touch moves to React Native's JS responders (PanResponder, Pressable). Use `axe drag` for drags on JS-handled views.
+- Run Metro without `CI=1` while testing: with it, Metro doesn't watch files and edits never reach the app.
 - Web: drive `localhost:8081` with `playwright-cli` at 390 × 844. React Native Web renders the screen in an inner scroll container, so full-page screenshots need the viewport made taller or the container scrolled.
 - Known web-dev-only warning: "Can't perform a React state update on a component that hasn't mounted yet", from NativeWind's `useColorScheme` (react-native-css-interop). It fires only when the colour scheme changes at runtime (e.g. `emulateMedia({ colorScheme: 'dark' })` in a test) while a lazily loaded route is rendering. Without a theme switch it doesn't appear, and iOS never shows it. Not caused by app code; don't chase it.
 - Sticky headers (`SectionList`): put the top safe-area inset on the screen container, not in `contentContainerStyle`. Sticky headers pin to the top of the list, and would otherwise hide under the status bar.

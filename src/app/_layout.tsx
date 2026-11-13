@@ -15,6 +15,8 @@ import * as SystemUI from 'expo-system-ui';
 import { useColorScheme } from 'nativewind';
 import { useEffect } from 'react';
 
+import { PlayerStatusBridge } from '@/features/player/player-status-bridge';
+import { setupAudio } from '@/features/player/setup-audio';
 import { AppProviders } from '@/providers/app-providers';
 import { useNavigationTheme } from '@/theme/navigation-theme';
 import { useThemeColors } from '@/theme/tokens';
@@ -54,6 +56,12 @@ export default function RootLayout() {
     }
   }, [fontsAreSettled]);
 
+  // The audio mode is global and set once, when the app starts (in the browser, not on the
+  // web server render).
+  useEffect(() => {
+    setupAudio();
+  }, []);
+
   // The root view shows between the splash and the first screen, and behind transitions.
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(colors.bg);
@@ -63,11 +71,11 @@ export default function RootLayout() {
     return null;
   }
 
-  // TODO(player stage): mount <PlayerStatusBridge /> once, here.
   return (
     <AppProviders>
       <ThemeProvider value={navigationTheme}>
         <StatusBar style="auto" />
+        <PlayerStatusBridge />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="search" options={{ animation: 'slide_from_right' }} />

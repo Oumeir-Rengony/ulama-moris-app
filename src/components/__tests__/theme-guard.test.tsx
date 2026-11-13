@@ -123,7 +123,28 @@ const everyComponent: { name: string; element: ReactElement }[] = [
     name: 'EventRow',
     element: <EventRow title="Title" statsLabel="Stats" venue="Venue" day="24" month="Oct" category={2} />,
   },
-  { name: 'MiniPlayer', element: <MiniPlayer title="Title" author="Author" state="playing" progress={0.35} /> },
+  {
+    name: 'MiniPlayer',
+    element: (
+      <MiniPlayer
+        title="Title"
+        author="Author"
+        playState="playing"
+        progressLine={<ProgressBar progress={0.35} variant="miniLine" />}
+      />
+    ),
+  },
+  {
+    name: 'MiniPlayer loading',
+    element: (
+      <MiniPlayer
+        title="Title"
+        author="Author"
+        playState="loading"
+        progressLine={<ProgressBar progress={0} variant="miniLine" />}
+      />
+    ),
+  },
   { name: 'TabBarItem', element: <TabBarItem tab="events" label="Events" isSelected /> },
   { name: 'SkeletonRow', element: <SkeletonRow variant="lecture" /> },
   { name: 'LoadingFooter', element: <LoadingFooter label="Loading more lectures" /> },

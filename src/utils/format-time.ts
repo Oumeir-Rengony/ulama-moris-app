@@ -1,6 +1,5 @@
 // Formatting helpers for times and dates (HANDOFF §4.7). One plain function per format.
-// The other helpers (minutesLeftLabel, clockLabel, totalLabel) are added by the stages that
-// first need them. Month and weekday names are written out here instead of using
+// totalLabel is added by the stage that first needs it. Month and weekday names are written out here instead of using
 // toLocaleDateString, so the output is the same in every device language.
 
 // "35:48" → 2148, "1:02:05" → 3725. Returns null for a missing, empty or invalid value.
@@ -29,6 +28,39 @@ export function clockToSeconds(clock: string | undefined): number | null {
 export function minutesLabel(seconds: number): string {
   const minutes = Math.round(seconds / 60);
   return `${minutes} min`;
+}
+
+// 1925 → "31 min left". Rounds UP, so a few seconds left still reads "1 min left".
+export function minutesLeftLabel(secondsLeft: number): string {
+  let minutes = Math.ceil(secondsLeft / 60);
+  if (minutes < 0) {
+    minutes = 0;
+  }
+  return `${minutes} min left`;
+}
+
+function twoDigits(value: number): string {
+  if (value < 10) {
+    return `0${value}`;
+  }
+  return `${value}`;
+}
+
+// 965 → "16:05", 3725 → "1:02:05". Drops the fraction of a second. Below 0 reads "0:00".
+export function clockLabel(totalSeconds: number): string {
+  let wholeSeconds = Math.floor(totalSeconds);
+  if (wholeSeconds < 0 || Number.isNaN(wholeSeconds)) {
+    wholeSeconds = 0;
+  }
+
+  const hours = Math.floor(wholeSeconds / 3600);
+  const minutes = Math.floor((wholeSeconds % 3600) / 60);
+  const seconds = wholeSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${twoDigits(minutes)}:${twoDigits(seconds)}`;
+  }
+  return `${minutes}:${twoDigits(seconds)}`;
 }
 
 const shortMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

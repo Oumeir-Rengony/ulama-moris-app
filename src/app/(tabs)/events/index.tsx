@@ -16,6 +16,7 @@ import {
 import { useEventsQuery } from '@/features/events/events.queries';
 import { groupEventsByYear, type EventListItem, type EventYearSection } from '@/features/events/group-by-year';
 import { openEvent } from '@/features/events/open-event';
+import { useMiniPlayerSpace } from '@/features/player/use-mini-player-space';
 import { openSearch } from '@/features/search/open-search';
 import { catAt } from '@/theme/tokens';
 
@@ -93,6 +94,7 @@ function buildLatestEventContent(event: EventSummary): LatestEventContent {
 
 export default function EventsScreen() {
   const insets = useSafeAreaInsets();
+  const miniPlayerSpace = useMiniPlayerSpace();
   const { data, hasNextPage, isFetchingNextPage, fetchNextPage } = useEventsQuery();
 
   const loadedEvents: EventSummary[] = [];
@@ -160,7 +162,8 @@ export default function EventsScreen() {
         onEndReachedThreshold={0.5}
         // Headerless tab-stack screen: it owns the top inset (above). The tabs footer owns the bottom.
         contentContainerStyle={{
-          paddingBottom: bottomSpacing,
+          // Room for the floating mini player, so the last row scrolls clear of it.
+          paddingBottom: bottomSpacing + miniPlayerSpace,
           width: '100%',
           maxWidth: 600,
           alignSelf: 'center',

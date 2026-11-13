@@ -1,22 +1,24 @@
 import ChevronDown from 'lucide-react-native/icons/chevron-down';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Artwork } from '@/components/NowPlaying/artwork';
-import { PlayerControls } from '@/components/NowPlaying/player-controls';
 import { TrackInfo } from '@/components/NowPlaying/track-info';
 import { ScreenTopBar } from '@/components/ScreenTopBar';
 import { Icon } from '@/components/ui/icon';
 import { IconButton } from '@/components/ui/icon-button';
-import { SeekBar } from '@/components/ui/seek-bar';
 import { Text } from '@/components/ui/text';
 import type { Lecture } from '@/data/sample';
-import { useEventQuery } from '@/features/events/events.queries';
 import { useLectureQuery } from '@/features/lectures/lectures.queries';
-import { fitArtworkSize, nowPlayingSeekBar, nowPlayingTrackInfo } from '@/features/player/now-playing-content';
+import { playLecture } from '@/features/player/audio-engine';
+import { fitArtworkSize, nowPlayingTrackInfo } from '@/features/player/now-playing-content';
+import { NowPlayingControls } from '@/features/player/now-playing-controls';
+import { NowPlayingSeekBar } from '@/features/player/now-playing-seek-bar';
+import { selectCurrentLecture, selectSourceLabel, usePlayerStore } from '@/features/player/player.store';
+import { useNowPlayingPresentation } from '@/features/player/use-now-playing-presentation';
 
 const contentMaxWidth = 600;
 // px-gutter on each side of the content column.
@@ -52,32 +54,39 @@ function NowPlayingTopBar({ sourceLabel }: { sourceLabel: string }) {
   );
 }
 
-// Now Playing: a full-screen modal. Visual only until the player stage: the slider and the
-// controls don't do anything yet. Only "Minimise player" works, so there is a way out.
+// Now Playing: a full-screen modal showing the lecture loaded in the player. Minimising it
+// (router.back) never stops playback.
 export default function NowPlayingScreen() {
+  useNowPlayingPresentation();
+
   const insets = useSafeAreaInsets();
-  const { slug, fromEventSlug, fromQuery } = useLocalSearchParams<{
-    slug?: string;
-    fromEventSlug?: string;
-    fromQuery?: string;
-  }>();
-  const { data: lecture, isSuccess } = useLectureQuery(slug);
-  const { data: sourceEvent } = useEventQuery(fromEventSlug);
+  const { slug } = useLocalSearchParams<{ slug?: string }>();
+  const currentLecture = usePlayerStore(selectCurrentLecture);
+  const sourceLabel = usePlayerStore(selectSourceLabel);
 
-  // A cold deep link to /player, or an unknown slug: there is nothing to show, so go home.
-  const hasNoSlug = slug === undefined || slug === '';
-  const lectureNotFound = isSuccess && lecture === null;
-  if (hasNoSlug || lectureNotFound) {
-    return <Redirect href="/" />;
+  // A deep link (/player?slug=…) with nothing loaded: load that lecture, paused, so a link never
+  // starts sound by surprise.
+  let deepLinkSlug: string | undefined = undefined;
+  if (currentLecture === null && slug !== undefined && slug !== '') {
+    deepLinkSlug = slug;
   }
+  const deepLink = useLectureQuery(deepLinkSlug);
+  const deepLinkedLecture = deepLink.data;
 
-  // Where the lecture was opened from (HANDOFF §4.4.1): an event, a search query in curly
-  // quotes, or the Home list.
-  let sourceLabel = 'Latest lectures';
-  if (sourceEvent) {
-    sourceLabel = sourceEvent.event.title;
-  } else if (fromQuery) {
-    sourceLabel = `“${fromQuery}”`;
+  useEffect(() => {
+    if (currentLecture === null && deepLinkedLecture) {
+      playLecture(deepLinkedLecture, [deepLinkedLecture], { kind: 'latest' }, { autoplay: false });
+    }
+  }, [currentLecture, deepLinkedLecture]);
+
+  // The detail record (topic, event) of the loaded lecture. The queue holds list summaries.
+  const { data: lecture } = useLectureQuery(currentLecture?.slug);
+
+  // Nothing loaded and nothing to load (no slug, or an unknown one): go home.
+  const hasNoSlug = slug === undefined || slug === '';
+  const deepLinkNotFound = deepLink.isSuccess && deepLinkedLecture === null;
+  if (currentLecture === null && (hasNoSlug || deepLinkNotFound)) {
+    return <Redirect href="/" />;
   }
 
   // No header covers the notch and there is no tab bar, so this screen owns both insets.
@@ -99,7 +108,6 @@ type Size = {
 
 function NowPlayingBody({ lecture }: { lecture: Lecture }) {
   const trackInfo = nowPlayingTrackInfo(lecture);
-  const seekBar = nowPlayingSeekBar(lecture);
 
   // The artwork's size depends on how much room the screen has, so two things are measured:
   // the scroll area, and the block under the artwork (whose height doesn't depend on it).
@@ -145,17 +153,13 @@ function NowPlayingBody({ lecture }: { lecture: Lecture }) {
               eventTitle={trackInfo.eventTitle}
             />
           </View>
+          {/* Only the seek bar and the controls follow the player, so the artwork and the track
+              info don't re-render with the position. */}
           <View className="mt-[18px]">
-            <SeekBar
-              progress={seekBar.progress}
-              elapsed={seekBar.elapsed}
-              remaining={seekBar.remaining}
-              accessibilityValue={seekBar.accessibilityValue}
-            />
+            <NowPlayingSeekBar dataDuration={lecture.duration} />
           </View>
-          {/* TODO(player stage): the real play state; for now always the paused look. */}
           <View className="mt-[18px]">
-            <PlayerControls state="paused" />
+            <NowPlayingControls />
           </View>
         </View>
       </View>
