@@ -78,3 +78,22 @@ export const noVenueEvent: EventSummary = {
 export function eventInYear(slug: string, year: string): EventSummary {
   return { ...fullEvent, slug, title: slug, year };
 }
+
+// ---------- Player ----------
+
+function lectureInQueue(position: number): Lecture {
+  return {
+    ...fullLecture,
+    id: `fixture-queue-${position}`,
+    slug: `fixture-queue-lecture-${position}`,
+    title: `Queue lecture ${position}`,
+    url: `https://example.com/queue-${position}.m4a`,
+  };
+}
+
+// Three lectures with their own audio URLs, in data order.
+export const queueOfThree: Lecture[] = [lectureInQueue(1), lectureInQueue(2), lectureInQueue(3)];
+
+export const latestSource = { kind: 'latest' } as const;
+export const eventSource = { kind: 'event', eventSlug: fullEvent.slug, eventTitle: fullEvent.title } as const;
+export const searchSource = { kind: 'search', query: 'Ṣaḥābā' } as const;

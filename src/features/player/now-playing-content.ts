@@ -1,10 +1,9 @@
 import type { AccessibilityValue } from 'react-native';
 
-import { mockPlayback } from '@/data/mock-ui';
 import { topicLabels, topicOrder, type Lecture } from '@/data/sample';
 import { catForTopic, type Category } from '@/theme/tokens';
 import { formatVenue } from '@/utils/format-venue';
-import { clockToSeconds, longDateLabel } from '@/utils/format-time';
+import { clockLabel, clockToSeconds, longDateLabel } from '@/utils/format-time';
 
 export type SeekBarContent = {
   progress: number;
@@ -13,41 +12,46 @@ export type SeekBarContent = {
   accessibilityValue: AccessibilityValue;
 };
 
-// The slider's values. Until the player stage there is no live position: the mockPlayback
-// lecture shows its mock progress, and every other lecture shows the start.
-// TODO(player stage): read positionSec / durationSec from the player store.
-export function nowPlayingSeekBar(lecture: Lecture): SeekBarContent {
-  const durationSeconds = clockToSeconds(lecture.duration);
+type SeekBarInput = {
+  // Live values from the player store.
+  positionSec: number;
+  durationSec: number;
+  // The data's clock string ("46:21"). Shown until the audio has loaded and reports its own
+  // length (the player reports 0 before that). Missing when unknown.
+  dataDuration: string | undefined;
+};
 
-  if (lecture.slug === mockPlayback.lectureSlug) {
-    return {
-      progress: mockPlayback.progress,
-      elapsed: mockPlayback.elapsed,
-      remaining: mockPlayback.remaining,
-      accessibilityValue: {
-        min: 0,
-        max: durationSeconds ?? 0,
-        now: clockToSeconds(mockPlayback.elapsed) ?? 0,
-        text: `${mockPlayback.elapsed} of ${lecture.duration ?? ''}`,
-      },
-    };
+// The slider's values: progress 0–1, "16:05", "-30:16", and what screen readers announce.
+export function nowPlayingSeekBar({ positionSec, durationSec, dataDuration }: SeekBarInput): SeekBarContent {
+  let lengthSec = durationSec;
+  if (lengthSec <= 0) {
+    lengthSec = clockToSeconds(dataDuration) ?? 0;
   }
+
+  let progress = 0;
+  if (lengthSec > 0) {
+    progress = positionSec / lengthSec;
+  }
+
+  const elapsed = clockLabel(positionSec);
 
   // TODO(design): a lecture without a known duration shows no remaining time.
   let remaining = '';
-  if (lecture.duration) {
-    remaining = `-${lecture.duration}`;
+  let lengthText = 'unknown length';
+  if (lengthSec > 0) {
+    remaining = `-${clockLabel(lengthSec - positionSec)}`;
+    lengthText = clockLabel(lengthSec);
   }
 
   return {
-    progress: 0,
-    elapsed: '0:00',
+    progress,
+    elapsed,
     remaining,
     accessibilityValue: {
       min: 0,
-      max: durationSeconds ?? 0,
-      now: 0,
-      text: `0:00 of ${lecture.duration ?? 'unknown length'}`,
+      max: Math.floor(lengthSec),
+      now: Math.floor(positionSec),
+      text: `${elapsed} of ${lengthText}`,
     },
   };
 }

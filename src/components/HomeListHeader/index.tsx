@@ -17,7 +17,9 @@ export type ContinueListeningContent = {
 };
 
 type HomeListHeaderProps = {
-  continueListening: ContinueListeningContent;
+  // Left out when nothing has been listened to yet: the card is hidden.
+  // TODO(design): no empty state is designed for Continue listening.
+  continueListening?: ContinueListeningContent;
   // "81 lectures". Left out until the first page has arrived.
   lectureCountLabel?: string;
   seriesLabels: string[];
@@ -58,17 +60,19 @@ export function HomeListHeader({
         <SearchFieldButton label="Search by topic" onPress={onSearchPress} />
       </View>
 
-      <View className="mt-6 px-gutter">
-        <ContinueListeningCard
-          title={continueListening.title}
-          author={continueListening.author}
-          state={continueListening.state}
-          progress={continueListening.progress}
-          elapsedLabel={continueListening.elapsedLabel}
-          minutesLeftLabel={continueListening.minutesLeftLabel}
-          onTogglePress={onContinueListeningPress}
-        />
-      </View>
+      {continueListening ? (
+        <View className="mt-6 px-gutter">
+          <ContinueListeningCard
+            title={continueListening.title}
+            author={continueListening.author}
+            state={continueListening.state}
+            progress={continueListening.progress}
+            elapsedLabel={continueListening.elapsedLabel}
+            minutesLeftLabel={continueListening.minutesLeftLabel}
+            onTogglePress={onContinueListeningPress}
+          />
+        </View>
+      ) : null}
 
       <View className="mt-[34px] px-gutter">
         <SectionHeader title="Latest lectures" trailing={countTrailing} />

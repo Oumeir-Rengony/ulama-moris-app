@@ -139,19 +139,20 @@ function Example({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-// The mini player + tab bar footer, drawn statically (the real one is the tabs layout's tab bar).
+// The floating mini player above the tab bar footer, drawn statically. In the app the bar is a
+// separate layer in the tabs layout, 8px above the tab bar; the footer is the tab bar alone.
 function FooterMock({ selectedTab }: { selectedTab: 'home' | 'events' }) {
   return (
-    <View className={`gap-2 bg-bg px-bar pb-6 ${tabBar.divider}`}>
-      <View className="mt-2.5">
+    <View className="gap-2">
+      <View className="px-bar">
         <MiniPlayer
           title={playingLecture.title}
           author={playingLecture.author}
-          state="paused"
-          progress={mockPlayback.progress}
+          playState="paused"
+          progressLine={<ProgressBar progress={mockPlayback.progress} variant="miniLine" />}
         />
       </View>
-      <View className="flex-row gap-1">
+      <View className={`flex-row gap-1 bg-bg px-bar pb-6 pt-2 ${tabBar.divider}`}>
         <TabBarItem tab="home" label="Home" isSelected={selectedTab === 'home'} />
         <TabBarItem tab="events" label="Events" isSelected={selectedTab === 'events'} />
       </View>
@@ -744,10 +745,28 @@ function SharedBarSection() {
   return (
     <GallerySection title="MiniPlayer and TabBar">
       <Example label="MiniPlayer paused (light: inverse; dark: emphasis + outline)">
-        <MiniPlayer title={playingLecture.title} author={playingLecture.author} state="paused" progress={mockPlayback.progress} />
+        <MiniPlayer
+          title={playingLecture.title}
+          author={playingLecture.author}
+          playState="paused"
+          progressLine={<ProgressBar progress={mockPlayback.progress} variant="miniLine" />}
+        />
       </Example>
       <Example label="MiniPlayer playing">
-        <MiniPlayer title={playingLecture.title} author={playingLecture.author} state="playing" progress={0.62} />
+        <MiniPlayer
+          title={playingLecture.title}
+          author={playingLecture.author}
+          playState="playing"
+          progressLine={<ProgressBar progress={0.62} variant="miniLine" />}
+        />
+      </Example>
+      <Example label="MiniPlayer loading (TODO(design): not designed)">
+        <MiniPlayer
+          title={playingLecture.title}
+          author={playingLecture.author}
+          playState="loading"
+          progressLine={<ProgressBar progress={0} variant="miniLine" />}
+        />
       </Example>
       <Example label="Footer: mini player + tabs (Home active)">
         <View className="-mx-gutter">

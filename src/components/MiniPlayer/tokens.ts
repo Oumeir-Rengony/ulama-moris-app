@@ -23,3 +23,12 @@ export const miniPlayerColors = {
   light: { fg: lightColors.inverseFg, fgMuted: lightColors.emphasisFgMuted, errorFg: primitives.clay[200] },
   dark: { fg: darkColors.emphasisFg, fgMuted: darkColors.emphasisFgMuted, errorFg: primitives.clay[200] },
 } as const;
+
+// The bar's height at the largest text size it allows (its text is capped at 1.3×), plus the
+// 8px gap above the tab bar. Tab screens add this under their list (useMiniPlayerSpace) so the
+// last row scrolls clear of the floating bar. At normal text sizes it leaves a little extra room,
+// which is harmless and simpler than measuring the bar.
+export const MINI_PLAYER_SPACE = 80;
+
+// The gap between the floating bar and the tab bar.
+export const MINI_PLAYER_GAP_ABOVE_TAB_BAR = 8;

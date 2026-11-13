@@ -1,10 +1,12 @@
 import Pause from 'lucide-react-native/icons/pause';
 import Play from 'lucide-react-native/icons/play';
 import { useColorScheme } from 'nativewind';
+import { useEffect } from 'react';
 import { Pressable } from 'react-native';
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Icon } from '@/components/ui/icon';
-import { useThemeShadows, type SemanticColor } from '@/theme/tokens';
+import { useThemeColors, useThemeShadows, type SemanticColor } from '@/theme/tokens';
 
 // Its own component, with explicit variants, because the size, fill and icon colour change with
 // where the button sits: a list row, the Continue listening card, the mini player or Now Playing.
@@ -25,7 +27,7 @@ type VariantStyle = {
   iconColor: SemanticColor;
 };
 
-function getVariantStyle(variant: PlayPauseVariant, isPlaying: boolean, isDark: boolean): VariantStyle {
+function getVariantStyle(variant: PlayPauseVariant, isDark: boolean): VariantStyle {
   if (variant === 'row') {
     return { buttonClass: 'h-touch w-touch rounded-full bg-bg', iconSize: 18, iconColor: 'fg' };
   }
@@ -44,31 +46,69 @@ function getVariantStyle(variant: PlayPauseVariant, isPlaying: boolean, isDark: 
     return { buttonClass: 'h-touch w-touch rounded-full bg-transparent', iconSize: 22, iconColor: miniIconColor };
   }
 
-  // nowPlaying: 96 × 76, a squarer shape while playing (radius 26) and rounder while paused (38).
-  // The change will be animated in a later stage.
-  let radiusClass = 'rounded-[38px]';
+  // nowPlaying: 96 × 76. Its fill and rounded shape are drawn by NowPlayingButtonShape, which
+  // animates the corner radius.
+  return { buttonClass: 'h-[76px] w-24', iconSize: 30, iconColor: 'primaryFg' };
+}
+
+const playingRadius = 26;
+const pausedRadius = 38;
+const radiusChangeMs = 250;
+
+// The Now Playing button's fill: squarer while playing (radius 26), rounder while paused (38).
+// The radius animates over 0.25 s, or changes at once when the user asks for less motion.
+// A Reanimated view takes plain style values only, so the colour comes from useThemeColors().
+function NowPlayingButtonShape({ isPlaying }: { isPlaying: boolean }) {
+  const colors = useThemeColors();
+  const shadows = useThemeShadows();
+  const isReduceMotionOn = useReducedMotion();
+
+  let targetRadius = pausedRadius;
   if (isPlaying) {
-    radiusClass = 'rounded-[26px]';
+    targetRadius = playingRadius;
   }
-  return { buttonClass: `h-[76px] w-24 bg-primary ${radiusClass}`, iconSize: 30, iconColor: 'primaryFg' };
+
+  const radius = useSharedValue(targetRadius);
+
+  useEffect(() => {
+    if (isReduceMotionOn) {
+      radius.set(targetRadius);
+      return;
+    }
+    radius.set(withTiming(targetRadius, { duration: radiusChangeMs }));
+  }, [isReduceMotionOn, radius, targetRadius]);
+
+  const radiusStyle = useAnimatedStyle(() => {
+    return { borderRadius: radius.get() };
+  });
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: colors.primary },
+        { boxShadow: shadows.playButton },
+        radiusStyle,
+      ]}
+    />
+  );
 }
 
 export function PlayPauseButton({ state, variant, accessibilityLabel, onPress }: PlayPauseButtonProps) {
   const { colorScheme } = useColorScheme();
-  const shadows = useThemeShadows();
 
   const isPlaying = state === 'pause';
   const isDark = colorScheme === 'dark';
-  const variantStyle = getVariantStyle(variant, isPlaying, isDark);
+  const variantStyle = getVariantStyle(variant, isDark);
 
   let glyph = Play;
   if (isPlaying) {
     glyph = Pause;
   }
 
-  let shadowStyle = undefined;
+  let shape = null;
   if (variant === 'nowPlaying') {
-    shadowStyle = { boxShadow: shadows.playButton };
+    shape = <NowPlayingButtonShape isPlaying={isPlaying} />;
   }
 
   return (
@@ -77,8 +117,8 @@ export function PlayPauseButton({ state, variant, accessibilityLabel, onPress }:
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}
       className={`shrink-0 items-center justify-center active:opacity-80 ${variantStyle.buttonClass}`}
-      style={shadowStyle}
     >
+      {shape}
       <Icon icon={glyph} size={variantStyle.iconSize} color={variantStyle.iconColor} filled />
     </Pressable>
   );

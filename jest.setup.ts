@@ -4,6 +4,25 @@
 // Jest has no native safe-area module. The library's own mock gives every inset as 0.
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 
+// Reanimated 4 loads native code Jest can't run, and its own mock fails under jest-expo's iOS
+// preset. A small stand-in covers the parts the app uses (src/test-utils/reanimated-mock.ts).
+jest.mock('react-native-reanimated', () => require('./src/test-utils/reanimated-mock'));
+
+// Gesture Handler's native module isn't available in Jest. Its own setup swaps in mocks.
+require('react-native-gesture-handler/jestSetup');
+
+// Gesture Handler would hand its gestures to Reanimated when it finds it. In tests, tell it
+// Reanimated and worklets aren't installed, so gestures run as plain JS callbacks.
+jest.mock('react-native-gesture-handler/lib/module/handlers/gestures/reanimatedWrapper', () => ({
+  Reanimated: undefined,
+  Worklets: undefined,
+}));
+
+// The listening history is persisted to AsyncStorage, which has no native module in Jest.
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+
 // A console.error or console.warn during a test is a bug (a missing list key, an update outside
 // act, a bad prop), so it fails the test that caused it instead of scrolling past in the output.
 let consoleMessages: string[] = [];

@@ -1,4 +1,4 @@
-import type { EventSummary, Lecture } from '@/data/sample';
+import type { EventSummary, Lecture, LectureSummary } from '@/data/sample';
 import { formatVenue } from '@/utils/format-venue';
 import { shortDateLabel } from '@/utils/format-time';
 
@@ -65,9 +65,17 @@ export function eventLectureMetaLabel(lecture: Lecture): string {
 }
 
 // Event detail row meta for the paused active lecture: "Paused · 16:05 / 46:21".
-export function pausedLectureMetaLabel(lecture: Lecture, elapsed: string): string {
+export function pausedLectureMetaLabel(lecture: LectureSummary, elapsed: string): string {
   if (lecture.duration) {
     return `Paused · ${elapsed} / ${lecture.duration}`;
   }
   return `Paused · ${elapsed}`;
+}
+
+// Event detail row meta for the playing active lecture: "Now playing · 16:05 / 46:21".
+export function playingLectureMetaLabel(lecture: LectureSummary, elapsed: string): string {
+  if (lecture.duration) {
+    return `Now playing · ${elapsed} / ${lecture.duration}`;
+  }
+  return `Now playing · ${elapsed}`;
 }

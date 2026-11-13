@@ -1,20 +1,23 @@
 import { fireEvent, screen } from '@testing-library/react-native';
 
 import { MiniPlayer } from '@/components/MiniPlayer';
+import { ProgressBar } from '@/components/ui/progress-bar';
 import { renderWithProviders } from '@/test-utils/render-with-providers';
 
 const title = "Sacrifices of the Şahābā Radiyallāhu 'Anhum for Islam";
 const author = 'Mawlana Zyad Ally Quenette';
+const openLabel = `Open player: ${title}, ${author}`;
+const progressLine = <ProgressBar progress={0.35} variant="miniLine" />;
 
 describe('MiniPlayer', () => {
   it('shows the title and author', async () => {
-    await renderWithProviders(<MiniPlayer title={title} author={author} state="paused" progress={0.35} />);
+    await renderWithProviders(<MiniPlayer title={title} author={author} playState="paused" progressLine={progressLine} />);
     expect(screen.getByText(title)).toBeOnTheScreen();
     expect(screen.getByText(author)).toBeOnTheScreen();
   });
 
   it('has no cover art or thumbnail', async () => {
-    await renderWithProviders(<MiniPlayer title={title} author={author} state="paused" progress={0.35} />);
+    await renderWithProviders(<MiniPlayer title={title} author={author} playState="paused" progressLine={progressLine} />);
     expect(screen.queryByRole('image')).not.toBeOnTheScreen();
 
     // No image element of any kind, labelled or not.
@@ -22,25 +25,27 @@ describe('MiniPlayer', () => {
     expect(imageElements).toHaveLength(0);
   });
 
-  it('has "Open player", play/pause and "Skip forward 15 seconds" buttons', async () => {
-    await renderWithProviders(<MiniPlayer title={title} author={author} state="playing" progress={0.35} />);
-    expect(screen.getByRole('button', { name: 'Open player' })).toBeOnTheScreen();
+  it('has the open button, play/pause and "Skip forward 15 seconds"', async () => {
+    await renderWithProviders(<MiniPlayer title={title} author={author} playState="playing" progressLine={progressLine} />);
+    expect(screen.getByRole('button', { name: openLabel })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Pause' })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Skip forward 15 seconds' })).toBeOnTheScreen();
   });
 
   it('labels the toggle "Play" while paused', async () => {
-    await renderWithProviders(<MiniPlayer title={title} author={author} state="paused" progress={0.35} />);
+    await renderWithProviders(<MiniPlayer title={title} author={author} playState="paused" progressLine={progressLine} />);
     expect(screen.getByRole('button', { name: 'Play' })).toBeOnTheScreen();
   });
 
-  it('tells screen readers what is playing through the open button hint', async () => {
-    await renderWithProviders(<MiniPlayer title={title} author={author} state="paused" progress={0.35} />);
-    expect(screen.getByRole('button', { name: 'Open player' })).toHaveProp('accessibilityHint', `${title}, ${author}`);
+  it('shows "Loading" in place of play/pause while the audio loads', async () => {
+    await renderWithProviders(<MiniPlayer title={title} author={author} playState="loading" progressLine={progressLine} />);
+    expect(screen.getByLabelText('Loading')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Play' })).not.toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Pause' })).not.toBeOnTheScreen();
   });
 
-  it('shows the progress', async () => {
-    await renderWithProviders(<MiniPlayer title={title} author={author} state="paused" progress={0.35} />);
+  it('renders the progress line it is given', async () => {
+    await renderWithProviders(<MiniPlayer title={title} author={author} playState="paused" progressLine={progressLine} />);
     expect(screen.getByRole('progressbar')).toHaveAccessibilityValue({ now: 35 });
   });
 
@@ -52,20 +57,33 @@ describe('MiniPlayer', () => {
       <MiniPlayer
         title={title}
         author={author}
-        state="paused"
-        progress={0.35}
+        playState="paused"
+        progressLine={progressLine}
         onOpenPress={handleOpen}
         onTogglePress={handleToggle}
         onSkipForwardPress={handleSkip}
       />,
     );
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Open player' }));
+    await fireEvent.press(screen.getByRole('button', { name: openLabel }));
     await fireEvent.press(screen.getByRole('button', { name: 'Play' }));
     await fireEvent.press(screen.getByRole('button', { name: 'Skip forward 15 seconds' }));
 
     expect(handleOpen).toHaveBeenCalledTimes(1);
     expect(handleToggle).toHaveBeenCalledTimes(1);
     expect(handleSkip).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers "Stop and close player" to screen readers, which calls onDismiss', async () => {
+    const handleDismiss = jest.fn();
+    await renderWithProviders(
+      <MiniPlayer title={title} author={author} playState="paused" progressLine={progressLine} onDismiss={handleDismiss} />,
+    );
+
+    const openButton = screen.getByRole('button', { name: openLabel });
+    expect(openButton).toHaveProp('accessibilityActions', [{ name: 'dismiss', label: 'Stop and close player' }]);
+
+    await fireEvent(openButton, 'accessibilityAction', { nativeEvent: { actionName: 'dismiss' } });
+    expect(handleDismiss).toHaveBeenCalledTimes(1);
   });
 });

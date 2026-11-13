@@ -2,61 +2,25 @@ import { StatusBar } from 'expo-status-bar';
 import { FlatList, View, type ListRenderItemInfo } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { HomeListHeader, type ContinueListeningContent } from '@/components/HomeListHeader';
-import { LectureRow } from '@/components/LectureRow';
+import { HomeListHeader } from '@/components/HomeListHeader';
+import { LectureRow, type LectureRowState } from '@/components/LectureRow';
 import { LoadingFooter, SkeletonRow } from '@/components/Skeleton';
-import { mockPlayback, mockPlaybackLecture } from '@/data/mock-ui';
 import { lectureSeries, type LectureSummary } from '@/data/sample';
 import { lectureRowMetaLabel } from '@/features/lectures/lecture-labels';
-import { useLatestLecturesQuery } from '@/features/lectures/lectures.queries';
+import { useLatestLecturesQuery, useLectureQuery } from '@/features/lectures/lectures.queries';
+import { toggle } from '@/features/player/audio-engine';
+import { buildContinueListeningContent } from '@/features/player/continue-listening';
+import { useListeningHistoryStore } from '@/features/player/listening-history.store';
 import { openNowPlaying } from '@/features/player/open-now-playing';
+import { selectActiveLectureSlug, usePlayerStore } from '@/features/player/player.store';
+import { useMiniPlayerSpace } from '@/features/player/use-mini-player-space';
 import { openSearch } from '@/features/search/open-search';
-
-// TODO(player stage): calculated from progressById + lecture data, hidden on first launch.
-const continueListening: ContinueListeningContent = {
-  title: mockPlaybackLecture.title,
-  author: mockPlaybackLecture.author,
-  state: 'paused',
-  progress: mockPlayback.progress,
-  elapsedLabel: mockPlayback.elapsed,
-  minutesLeftLabel: mockPlayback.minutesLeft,
-};
 
 // TODO(series stage): useState for the selected chip, plus filtering and the empty-series state.
 const seriesLabels = lectureSeries.map((series) => series.label);
 const selectedSeriesLabel = lectureSeries[0].label;
 
 const bottomSpacing = 24;
-
-function renderLectureRow({ item }: ListRenderItemInfo<LectureSummary>) {
-  // TODO(player stage): the active row comes from the player store.
-  let rowState: 'idle' | 'active-paused' = 'idle';
-  if (item.slug === mockPlayback.lectureSlug) {
-    rowState = 'active-paused';
-  }
-
-  // Until the player stage, every tap on a lecture opens Now Playing for it (Stage 5).
-  function handleOpen() {
-    openNowPlaying(item.slug);
-  }
-
-  return (
-    <View className="px-gutter">
-      <LectureRow
-        title={item.title}
-        author={item.author}
-        metaLabel={lectureRowMetaLabel(item)}
-        state={rowState}
-        onPress={handleOpen}
-        onPlayPress={handleOpen}
-      />
-    </View>
-  );
-}
-
-function handleContinueListeningPress() {
-  openNowPlaying(mockPlaybackLecture.slug);
-}
 
 function handleSearchPress() {
   openSearch('lectures');
@@ -79,9 +43,34 @@ function LoadingMoreFooter() {
   );
 }
 
+function pickRowState(slug: string, activeLectureSlug: string | null, isPlaying: boolean): LectureRowState {
+  if (slug !== activeLectureSlug) {
+    return 'idle';
+  }
+  if (isPlaying) {
+    return 'active-playing';
+  }
+  return 'active-paused';
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const miniPlayerSpace = useMiniPlayerSpace();
   const { data, hasNextPage, isFetchingNextPage, fetchNextPage } = useLatestLecturesQuery();
+
+  // Read once here and passed to the rows, rather than each row subscribing to the store.
+  const activeLectureSlug = usePlayerStore(selectActiveLectureSlug);
+  const isPlaying = usePlayerStore((state) => state.isPlaying);
+
+  // Continue listening: the last lecture with a saved resume point.
+  const lastPlayedSlug = useListeningHistoryStore((state) => state.lastPlayedSlug);
+  const savedPositionSec = useListeningHistoryStore((state) => {
+    if (state.lastPlayedSlug === null) {
+      return 0;
+    }
+    return state.progressById[state.lastPlayedSlug] ?? 0;
+  });
+  const { data: lastPlayedLecture } = useLectureQuery(lastPlayedSlug ?? undefined);
 
   const loadedLectures: LectureSummary[] = [];
   let lectureCountLabel: string | undefined = undefined;
@@ -93,10 +82,62 @@ export default function HomeScreen() {
     lectureCountLabel = `${data.pages[0].total} lectures`;
   }
 
+  const isLastPlayedActive = lastPlayedSlug !== null && lastPlayedSlug === activeLectureSlug;
+  const continueListening = buildContinueListeningContent({
+    lecture: lastPlayedLecture,
+    savedPositionSec,
+    isActive: isLastPlayedActive,
+    isPlaying,
+  });
+
+  // The play button on Continue listening. If its lecture is the loaded one (the mini player
+  // already shows it), play/pause in place. Otherwise open Now Playing like a row: the mini
+  // player never introduces a lecture.
+  function handleContinueListeningPress() {
+    if (isLastPlayedActive) {
+      toggle();
+      return;
+    }
+    if (!lastPlayedLecture) {
+      return;
+    }
+    openNowPlaying({
+      lecture: lastPlayedLecture,
+      queue: loadedLectures,
+      source: { kind: 'latest' },
+      resumeIfPaused: true,
+    });
+  }
+
   function handleEndReached() {
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
+  }
+
+  function renderLectureRow({ item }: ListRenderItemInfo<LectureSummary>) {
+    // The row body opens Now Playing. The play button also resumes the lecture if it's the
+    // loaded one and paused.
+    function handleOpen() {
+      openNowPlaying({ lecture: item, queue: loadedLectures, source: { kind: 'latest' }, resumeIfPaused: false });
+    }
+
+    function handlePlayPress() {
+      openNowPlaying({ lecture: item, queue: loadedLectures, source: { kind: 'latest' }, resumeIfPaused: true });
+    }
+
+    return (
+      <View className="px-gutter">
+        <LectureRow
+          title={item.title}
+          author={item.author}
+          metaLabel={lectureRowMetaLabel(item)}
+          state={pickRowState(item.slug, activeLectureSlug, isPlaying)}
+          onPress={handleOpen}
+          onPlayPress={handlePlayPress}
+        />
+      </View>
+    );
   }
 
   let footer = undefined;
@@ -110,6 +151,8 @@ export default function HomeScreen() {
       <FlatList
         data={loadedLectures}
         renderItem={renderLectureRow}
+        // The rows' look depends on the player, which isn't part of `data`.
+        extraData={`${activeLectureSlug}:${isPlaying}`}
         keyExtractor={lectureKey}
         ItemSeparatorComponent={RowGap}
         ListHeaderComponent={
@@ -126,10 +169,11 @@ export default function HomeScreen() {
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
         // The tab screen has no header, so it owns the top inset. The tab bar below the screen
-        // owns the bottom inset, so the list only adds normal spacing there.
+        // owns the bottom inset. The list adds normal spacing, plus room for the floating mini
+        // player so the last row scrolls clear of it.
         contentContainerStyle={{
           paddingTop: insets.top,
-          paddingBottom: bottomSpacing,
+          paddingBottom: bottomSpacing + miniPlayerSpace,
           width: '100%',
           maxWidth: 600,
           alignSelf: 'center',

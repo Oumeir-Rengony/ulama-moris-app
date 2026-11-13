@@ -234,6 +234,8 @@ export const lightShadows = {
   artwork: '0px 28px 48px -26px rgba(41, 45, 37, 0.55)',
   playButton: '0px 14px 28px -16px rgba(41, 45, 37, 0.6)',
   offlineSheet: '0px 30px 60px -30px rgba(0, 0, 0, 0.6)',
+  // The mini player floating over the content, above the tab bar.
+  miniPlayer: '0px 14px 30px -14px rgba(41, 45, 37, 0.6)',
 };
 
 // Dark mode drops shadows: a dark shadow on the charcoal ground can't be seen.
@@ -241,6 +243,8 @@ export const darkShadows: Record<keyof typeof lightShadows, string | undefined> 
   artwork: undefined,
   playButton: undefined,
   offlineSheet: undefined,
+  // Dark keeps the bar's 1px outline instead.
+  miniPlayer: undefined,
 };
 
 export function useThemeShadows() {
