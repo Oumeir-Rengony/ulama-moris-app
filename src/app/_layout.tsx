@@ -9,6 +9,7 @@ import {
   useFonts,
 } from '@expo-google-fonts/manrope';
 import { Stack, ThemeProvider } from 'expo-router';
+import { NavigationBar } from 'expo-navigation-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
@@ -75,6 +76,10 @@ export default function RootLayout() {
     <AppProviders>
       <ThemeProvider value={navigationTheme}>
         <StatusBar style="auto" />
+        {/* Android draws a translucent contrast scrim over the 3-button navigation bar unless
+            the plugin sets enforceContrast: false (app.json), so the tab bar's colour shows
+            through. With the scrim gone, "auto" keeps the buttons readable in both themes. */}
+        <NavigationBar style="auto" />
         <PlayerStatusBridge />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
           <Stack.Screen name="(tabs)" />
