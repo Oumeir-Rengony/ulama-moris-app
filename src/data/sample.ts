@@ -30,6 +30,9 @@ export type Lecture = LectureSummary & {
   id: string;
   // The title of the event this lecture belongs to. Missing when it isn't part of an event.
   event?: string;
+  // The slug of that event, so Now Playing's event pill can open it. MOCK field: the API returns
+  // only the title so far. Rename it to the API's field name once the API adds the link.
+  eventSlug?: string;
   // Topic strings ("sahaba r.a"). The first one is the lecture's topic. Empty when it has none.
   category: string[];
 };
@@ -64,6 +67,7 @@ const sacrificesAudioUrl =
   'https://assets.ctfassets.net/n7lbwg9xm90s/xtKHdICdGePSFGwWeF6sU/2c2c6bf9726cc1821d7c767dd52a7449/b4e8c60f-d0e4-41b1-a309-3b113785f976.m4a';
 
 const sahabaEventTitle = 'The Sahaba Radiyyallahu Anhum';
+const sahabaEventSlug = 'the-sahaba-radiyyallahu-anhum';
 
 // ---------- Lectures (newest first, the order the API returns them) ----------
 
@@ -73,6 +77,7 @@ export const lectures: Lecture[] = [
     title: "Gravity of Talking Bad about the Şahābā Radiyallāhu 'Anhum",
     slug: 'gravity-of-talking-bad-about-the-sahaba-radiyallahu-anhum',
     event: sahabaEventTitle,
+    eventSlug: sahabaEventSlug,
     date: '2026-10-31T21:15:00.000+04:00',
     author: 'Mufti Houzeifa Mamoojee',
     duration: '35:48',
@@ -86,6 +91,7 @@ export const lectures: Lecture[] = [
     title: "Sacrifices of the Şahābā Radiyallāhu 'Anhum for Islam",
     slug: 'sacrifices-of-the-sahaba-radiyallahu-anhum-for-islam',
     event: sahabaEventTitle,
+    eventSlug: sahabaEventSlug,
     date: '2026-10-31T20:15:00.000+04:00',
     author: 'Mawlana Zyad Ally Quenette',
     duration: '46:21',
@@ -112,6 +118,7 @@ export const lectures: Lecture[] = [
     title: 'Favours of the Ṣaḥābā Radiyallāhu ’Anhum upon the Ummah',
     slug: 'favours-of-the-sahaba-radiyallahu-anhum-upon-the-ummah',
     event: sahabaEventTitle,
+    eventSlug: sahabaEventSlug,
     date: '2026-10-24T21:00:00.000+04:00',
     author: 'Mufti Houzeifa Mamoojee',
     duration: '32:14',
@@ -127,6 +134,7 @@ export const lectures: Lecture[] = [
     title: 'Who were the ṣaḥābā Radiyallāhu ’Anhum',
     slug: 'who-were-the-sahaba-radiyallahu-anhum',
     event: sahabaEventTitle,
+    eventSlug: sahabaEventSlug,
     date: '2026-10-24T20:00:00.000+04:00',
     author: 'Mufti Yasin Doomah',
     duration: '39:37',
@@ -228,7 +236,7 @@ export const lectures: Lecture[] = [
 
 export const events: EventSummary[] = [
   {
-    slug: 'the-sahaba-radiyyallahu-anhum',
+    slug: sahabaEventSlug,
     title: sahabaEventTitle,
     total: 4,
     duration: '2h 34m',

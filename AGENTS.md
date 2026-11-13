@@ -66,6 +66,7 @@ src/
 - Tabs use the JS navigator: `import { Tabs } from 'expo-router/js-tabs'` (the `Tabs` export from `expo-router` is deprecated in SDK 58), not `NativeTabs`, because the mini player must stack above the tab bar. The custom tab bar receives `{ state, emitter, navigateToTab }`.
 - `unstable_settings` uses `anchor` (SDK 58). `initialRouteName` is deprecated.
 - Every screen hides the native header and draws its own top bar, so every screen owns its top inset.
+- **Now Playing is not a route.** It is an overlay in `src/app/(tabs)/_layout.tsx` (`PlayerSurface`), drawn over the tabs together with the mini player, because the bar has to morph into Now Playing and the tabs behind have to shrink and dim (`TuckedContent`); a native modal can't do either. `src/app/player.tsx` exists only for deep links (`/player?slug=…`): it loads the lecture, calls `showNowPlayingFromDeepLink()` and steps back. Nothing in the app navigates to `/player`.
 - `src/app/+html.tsx` (web only) must render `headNodes` and `bodyNodes` from `useServerDocumentContext()`, or the page loads no JavaScript.
 - Docs: https://docs.expo.dev/router/introduction.md
 
@@ -113,7 +114,8 @@ If you can't choose between `useState` and Zustand, start with `useState`. Move 
 | Light/dark theme | NativeWind `dark:` classes + `useColorScheme()`. JS colour values come from `useThemeColors()` (`src/theme/tokens.ts`) | Set by the OS. No ThemeContext and no theme store |
 | Lecture pages, event pages, event detail, search results | TanStack Query | Server data (static stubs today, real API later) |
 | Player queue, `currentIndex`, queue `source` | Zustand `player.store.ts` (not persisted) | The mini player, Now Playing and the list rows on every screen read it. Not persisted, so a launch shows no mini player |
-| Whether Now Playing is on screen (`isNowPlayingOnScreen`), whether the queue has ended (`hasQueueEnded`) | Zustand `player.store.ts`. `isNowPlayingOnScreen` is written only by `openNowPlaying` and the Now Playing screen hook | The mini player's visibility is calculated from these and the loaded lecture |
+| Where Now Playing is in its motion (`nowPlayingPresentation`: `closed` / `miniLeaving` / `opening` / `open` / `closing`), whether the queue has ended (`hasQueueEnded`) | Zustand `player.store.ts`. `nowPlayingPresentation` is written only by `open-now-playing.ts` | The mini player's visibility is calculated from these and the loaded lecture |
+| Player motion (`expand`, `enterY`, `miniDrop`, `surfaceOpacity`, `reducedMotion`, `surfaceGeometry`) | Reanimated shared values at module scope in `player-surface-motion.ts`. Never in Zustand, never in React state | Every frame is computed on the UI thread; React never renders per frame |
 | Playback status (`isPlaying`, `positionSec`, `durationSec`, buffering) | Comes from expo-audio `useAudioPlayerStatus`, copied into `player.store.ts` by one bridge component | Many components subscribe to it, and it updates several times a second (see below) |
 | Resume points `progressById`, the Continue listening lecture `lastPlayedSlug` | Zustand `listening-history.store.ts`, persisted to AsyncStorage | Must survive a restart. Kept apart from `player.store.ts` (see Zustand rules) |
 | Recent searches per scope | Zustand `recent-searches.store.ts`, persisted | Must survive a restart. The `persist` middleware is simpler than writing your own load/save effects |
@@ -131,16 +133,33 @@ Not in the spec yet: signed-in user, bookmarks, language. Don't add stores or co
 - Status flows in one direction: expo-audio → `PlayerStatusBridge` → store. The bridge is mounted once in the root layout. It runs `useAudioPlayerStatus(player)`, writes `isPlaying` / `positionSec` / `durationSec` into the store, and starts the next lecture when `didJustFinish` is true. Never set `isPlaying` or `positionSec` from a button press. Call the engine and let the next status update show the change. This keeps the UI correct when the OS pauses audio (phone call, headphones unplugged, lock screen).
 - Save to `progressById` (with `saveProgress`) at checkpoints only: on pause, on seek, on track change, and every ~10 s while playing. Each change rewrites AsyncStorage, so don't save on every status update.
 
-### Mini player
+### Mini player and Now Playing (one surface)
 
-- It floats above the tab bar, rendered once in `src/app/(tabs)/_layout.tsx` (not inside the tab bar footer, not in the root layout). Search and Now Playing are root-stack screens drawn over the tabs, so they cover it without route checks. Tab screen lists add `useMiniPlayerSpace()` to their bottom padding.
-- Whether it shows comes only from `selectIsMiniPlayerVisible`: a lecture is active (loaded, queue not ended) and `isNowPlayingOnScreen` is false. Never from `isPlaying`.
-- Every way into Now Playing goes through `openNowPlaying` / `openNowPlayingForLoadedLecture` (`features/player/open-now-playing.ts`): intent first (hides the bar), then pause the old lecture and wait for the bar to leave, then navigate (`router.navigate`, never `push`), then load.
+- The bar and Now Playing are one surface, `PlayerSurface` (`features/player/player-surface*.tsx`), rendered once in `src/app/(tabs)/_layout.tsx` over `TuckedContent`. Layers, bottom to top: background (grows from the bar's rectangle to the window), full content, the cover (Now Playing's artwork *and* the bar's thumbnail), bar content. The bar floats above the tab bar; tab screen lists add `useMiniPlayerSpace()` to their bottom padding. Search is a root-stack screen, so it covers the surface without route checks.
+- Whether the bar shows comes only from `selectIsMiniPlayerVisible`: a lecture is active (loaded, queue not ended) and `nowPlayingPresentation` is `closed`. Never from `isPlaying`.
+- Every way into and out of Now Playing goes through `features/player/open-now-playing.ts` (`openNowPlaying`, `openNowPlayingForLoadedLecture`, `closeNowPlaying`, `dismissMiniPlayer`, the swipe callbacks): store → engine → motion. Each function starts with an early-return guard on the presentation. A switch to another lecture drops the bar first (`MINI_EXIT_MS`), then loads, then the sheet rises.
+- Motion completion callbacks act only when `finished` is true **and** the presentation is still the one they expect, so a retargeted (interrupted) animation never overwrites the newer state.
+- Now Playing's event pill calls `openEventFromNowPlaying(slug)`: Now Playing collapses into the bar while `router.navigate` opens the event in the Events tab underneath. It uses the lecture's `eventSlug`, a MOCK field next to `event` (the title) until the API returns the link.
 - The bar never introduces a lecture: rows and search results open Now Playing. This overrides HANDOFF §3 "plays in the mini player".
 - A launch shows no bar (the queue isn't persisted). Continue listening shows `lastPlayedSlug`.
-- Closing Now Playing with the chevron (`router.back`) or on web sends no closing `transitionEnd`: the screen unmounts at once while it still slides away. `use-now-playing-presentation.ts` then waits `NOW_PLAYING_CLOSE_ANIMATION_MS` before the bar may show. Native dismissals (swipe, Android back) do send the event.
-- Swipe the bar down to dismiss: React Native `PanResponder`, not Gesture Handler (its v3 detector received no touches on the floating bar on iOS). Screen readers get a "Stop and close player" action.
-- Components that read the player stores live in `src/features/player/*.tsx` (`mini-player-slot`, `now-playing-controls` …), because `src/components` never reads stores.
+- Swipe the bar down to dismiss: React Native `PanResponder` writing `miniDrop`, not Gesture Handler (its v3 detector received no touches on the floating bar on iOS). Screen readers get a "Stop and close player" action. The swipe down on Now Playing uses Gesture Handler's `usePanGesture` and runs on the UI thread.
+- Android back while Now Playing is open collapses it (`BackHandler` in `PlayerSurface`). Web has no back handler.
+
+### Player motion rules
+
+- Every number lives in `features/player/player-motion-config.ts`. Tune there only.
+- Shared values: `.get()` / `.set()` only, never `.value`. `scheduleOnRN` (from `react-native-worklets`), never `runOnJS`, and never inside a gesture's `onUpdate`. `player-rules.test.ts` checks these.
+- `player-surface-motion.ts` never imports the store or the engine.
+- NativeWind `className` doesn't reach Reanimated's `Animated.View` here: give Animated views plain `style`s (or put the classes on a plain child `View`).
+- React Compiler + worklets: a worklet that *captures another inline worklet* (e.g. an animation callback written inline inside a gesture callback) crashes at load with "Cannot access '_temp' before initialization". Make the inner one a named module-level worklet declared above.
+- Components that read the player stores live in `src/features/player/*.tsx` (`player-surface*`, `tucked-content`, `now-playing-controls` …), because `src/components` never reads stores.
+- Geometry is three shared values (`windowSizeValue`, `miniRectValue`, `coverRectValue`), each written whole and read in worklets through `readSurfaceGeometry()`. Never "read, change one field, write back" a shared object: on native a JS write reaches the UI thread later, so the read can be stale and erase a field (this put the bar's thumbnail at the top-left on iOS while web looked fine).
+- `miniRect` comes from the floating bar's own `onLayout`. `coverRect` is calculated from the measured Now Playing body (the artwork is a centred square below the body's top), so the body must stay a direct child of the full layer's root. Never `measureInWindow`: it includes the entrance offset.
+- The swipe range is how far the cover's centre travels to the thumbnail, so a point on the cover stays under the finger. Now Playing's body is a plain `View`, not a `ScrollView`, so it never competes with the swipe (the artwork shrinks to fit instead).
+- Now Playing's content rides down with the sheet's top edge, and its morph fade is squared: otherwise text stays behind during a swipe or shows below the shrinking sheet.
+- `AccessibilityInfo.sendAccessibilityEvent` doesn't exist on react-native-web: guard it with `Platform.OS`.
+- Deliberately not built (Stage 12): the big play button morph, the progress sweep on entrance, the moonlight reveal, haptics.
+- Not yet checked: a release-build performance pass (Perf Monitor; the motion must stay smooth while JS is busy), VoiceOver focus landing on the chevron, the largest text size, and on real devices Android back, TalkBack and 120 Hz. Seen once on iOS and not reproduced: the Home list behind ended up scrolled ~200 pt after opening and closing the player.
 
 ### Zustand rules
 
@@ -242,7 +261,9 @@ These render outside the normal screen tree and do **not** inherit any padding f
   - After `xcrun simctl ui booted content_size …`, terminate and reopen Expo Go (`xcrun simctl terminate booted host.exp.Exponent`); the running app doesn't pick up the new size.
   - In Expo Go, deep links are `exp://127.0.0.1:8081/--/<path>`. The app's own `ulamamoris://` scheme only works in a development build.
 - Audio in the iOS simulator: this Mac's network goes through Netskope, which re-signs HTTPS. The simulator must trust its root certificate or every lecture fails with "The certificate for this server is invalid": `xcrun simctl keychain booted add-root-cert ~/Desktop/caadmin.netskope.com.cer` (done once per simulator; `xcrun simctl keychain booted reset` undoes it).
-- AXe `swipe` doesn't deliver touch moves to React Native's JS responders (PanResponder, Pressable). Use `axe drag` for drags on JS-handled views.
+- AXe `swipe` doesn't deliver touch moves to React Native's JS responders (PanResponder, Pressable). Use `axe drag` for drags on JS-handled views. Gesture Handler gestures (Now Playing's swipe) do receive `axe swipe`.
+- Screenshots take about a second, too slow for motion. Record with `xcrun simctl io booted recordVideo <file>.mov` (stop with `kill -INT`), then look at frames tiled with `ffmpeg -i <file>.mov -vf "fps=6,scale=180:-1,tile=10x6" -frames:v 1 sheet.png`.
+- Player motion unit tests can't check timing: the test Reanimated stand-in finishes every animation at once. Check motion on a device or recording.
 - Run Metro without `CI=1` while testing: with it, Metro doesn't watch files and edits never reach the app.
 - Web: drive `localhost:8081` with `playwright-cli` at 390 × 844. React Native Web renders the screen in an inner scroll container, so full-page screenshots need the viewport made taller or the container scrolled.
 - Known web-dev-only warning: "Can't perform a React state update on a component that hasn't mounted yet", from NativeWind's `useColorScheme` (react-native-css-interop). It fires only when the colour scheme changes at runtime (e.g. `emulateMedia({ colorScheme: 'dark' })` in a test) while a lazily loaded route is rendering. Without a theme switch it doesn't appear, and iOS never shows it. Not caused by app code; don't chase it.

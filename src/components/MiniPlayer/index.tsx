@@ -22,13 +22,18 @@ type MiniPlayerProps = {
   onSkipForwardPress?: () => void;
   // The screen-reader way to dismiss (the swipe down isn't reachable with VoiceOver / TalkBack).
   onDismiss?: () => void;
+  // The 44 px square on the left. The player surface passes an empty space of that size and
+  // draws the cover over it (the cover morphs into Now Playing's artwork). Leave out for no thumb.
+  thumbnail?: ReactNode;
+  // 'filled' draws the bar's own background, outline and shadow. 'transparent' leaves them to the
+  // player surface, whose background view grows into Now Playing.
+  background?: 'filled' | 'transparent';
 };
 
 const dismissActionName = 'dismiss';
 
 // The floating bar above the tab bar on every tab screen (HANDOFF §4.6). Charcoal in light,
-// forest with a hairline outline in dark (miniPlayer tokens). Deliberate difference from the
-// artboard: no cover thumbnail, so the text starts near the left edge.
+// forest with a hairline outline in dark (miniPlayer tokens).
 export function MiniPlayer({
   title,
   author,
@@ -38,6 +43,8 @@ export function MiniPlayer({
   onTogglePress,
   onSkipForwardPress,
   onDismiss,
+  thumbnail,
+  background = 'filled',
 }: MiniPlayerProps) {
   const { colorScheme } = useColorScheme();
   const colors = useThemeColors();
@@ -74,11 +81,19 @@ export function MiniPlayer({
     );
   }
 
+  let backgroundClass = '';
+  let backgroundStyle = undefined;
+  if (background === 'filled') {
+    backgroundClass = `${miniPlayer.bg} ${miniPlayer.outline}`;
+    backgroundStyle = { boxShadow: shadows.miniPlayer };
+  }
+
   return (
     <View
-      className={`flex-row items-center gap-1 overflow-hidden rounded-mini pb-2.5 pl-2 pr-2 pt-2 ${miniPlayer.bg} ${miniPlayer.outline}`}
-      style={{ boxShadow: shadows.miniPlayer }}
+      className={`flex-row items-center gap-1 overflow-hidden rounded-mini pb-2.5 pl-2 pr-2 pt-2 ${backgroundClass}`}
+      style={backgroundStyle}
     >
+      {thumbnail}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`Open player: ${title}, ${author}`}

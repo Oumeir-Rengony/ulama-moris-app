@@ -139,6 +139,14 @@ function Example({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+// The bar's 44 px cover thumbnail. In the app the player surface draws the cover over an empty
+// space instead, so the cover can grow into Now Playing's artwork.
+const miniPlayerThumbnail = (
+  <View className="h-11 w-11 overflow-hidden rounded-[10px] bg-emphasis">
+    <CoverArt />
+  </View>
+);
+
 // The floating mini player above the tab bar footer, drawn statically. In the app the bar is a
 // separate layer in the tabs layout, 8px above the tab bar; the footer is the tab bar alone.
 function FooterMock({ selectedTab }: { selectedTab: 'home' | 'events' }) {
@@ -150,6 +158,7 @@ function FooterMock({ selectedTab }: { selectedTab: 'home' | 'events' }) {
           author={playingLecture.author}
           playState="paused"
           progressLine={<ProgressBar progress={mockPlayback.progress} variant="miniLine" />}
+          thumbnail={miniPlayerThumbnail}
         />
       </View>
       <View className={`flex-row gap-1 bg-bg px-bar pb-6 pt-2 ${tabBar.divider}`}>
@@ -750,6 +759,7 @@ function SharedBarSection() {
           author={playingLecture.author}
           playState="paused"
           progressLine={<ProgressBar progress={mockPlayback.progress} variant="miniLine" />}
+          thumbnail={miniPlayerThumbnail}
         />
       </Example>
       <Example label="MiniPlayer playing">
@@ -758,6 +768,7 @@ function SharedBarSection() {
           author={playingLecture.author}
           playState="playing"
           progressLine={<ProgressBar progress={0.62} variant="miniLine" />}
+          thumbnail={miniPlayerThumbnail}
         />
       </Example>
       <Example label="MiniPlayer loading (TODO(design): not designed)">
@@ -766,6 +777,7 @@ function SharedBarSection() {
           author={playingLecture.author}
           playState="loading"
           progressLine={<ProgressBar progress={0} variant="miniLine" />}
+          thumbnail={miniPlayerThumbnail}
         />
       </Example>
       <Example label="Footer: mini player + tabs (Home active)">

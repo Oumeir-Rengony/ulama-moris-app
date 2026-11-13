@@ -121,7 +121,7 @@ function LectureResult({ result, query }: { result: LectureSearchResult; query: 
       queue: [lecture],
       source: { kind: 'search', query },
       resumeIfPaused: true,
-      replaceCurrentScreen: true,
+      leaveSearchFirst: true,
     });
   }
 

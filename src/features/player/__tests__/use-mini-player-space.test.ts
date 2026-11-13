@@ -26,7 +26,7 @@ describe('useMiniPlayerSpace', () => {
 
   it('keeps the space while Now Playing hides the bar, so the list does not jump', async () => {
     usePlayerStore.getState().startQueue(queueOfThree, 0, latestSource);
-    usePlayerStore.getState().setIsNowPlayingOnScreen(true);
+    usePlayerStore.getState().setNowPlayingPresentation('open');
     expect(await readSpace()).toBe(MINI_PLAYER_SPACE);
   });
 

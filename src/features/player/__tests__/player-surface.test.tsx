@@ -1,20 +1,31 @@
 import { act, fireEvent, screen } from '@testing-library/react-native';
+import { BackHandler } from 'react-native';
 
 import { MiniPlayer } from '@/components/MiniPlayer';
 import * as engine from '@/features/player/audio-engine';
-import { MiniPlayerSlot } from '@/features/player/mini-player-slot';
 import * as entryPoint from '@/features/player/open-now-playing';
-import { initialPlayerState, usePlayerStore, type MirroredStatus } from '@/features/player/player.store';
+import { PlayerSurface } from '@/features/player/player-surface';
+import {
+  initialPlayerState,
+  usePlayerStore,
+  type MirroredStatus,
+  type NowPlayingPresentation,
+} from '@/features/player/player.store';
 import { latestSource, queueOfThree } from '@/test-utils/fixtures';
 import { renderWithProviders } from '@/test-utils/render-with-providers';
 
 jest.mock('@/features/player/audio-engine', () => ({
   toggle: jest.fn(),
   skipForward15: jest.fn(),
-  stopAndClear: jest.fn(),
+  skipBack15: jest.fn(),
+  seek: jest.fn(),
 }));
 jest.mock('@/features/player/open-now-playing', () => ({
   openNowPlayingForLoadedLecture: jest.fn(),
+  closeNowPlaying: jest.fn(),
+  dismissMiniPlayer: jest.fn(),
+  beginCloseAfterSwipe: jest.fn(),
+  finishCloseAfterSwipe: jest.fn(),
 }));
 // The real MiniPlayer, wrapped so a test can count how often it renders.
 jest.mock('@/components/MiniPlayer', () => {
@@ -38,8 +49,12 @@ function loadFirst(status: MirroredStatus = pausedAndLoaded) {
   usePlayerStore.getState().applyStatus(status);
 }
 
-async function renderSlot() {
-  await renderWithProviders(<MiniPlayerSlot bottomOffset={90} />);
+function setPresentation(presentation: NowPlayingPresentation) {
+  usePlayerStore.getState().setNowPlayingPresentation(presentation);
+}
+
+async function renderSurface() {
+  await renderWithProviders(<PlayerSurface bottomOffset={90} />);
 }
 
 beforeEach(() => {
@@ -47,55 +62,82 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe('MiniPlayerSlot', () => {
+describe('PlayerSurface', () => {
   it('renders nothing when nothing is loaded', async () => {
-    await renderSlot();
+    await renderSurface();
+
     expect(screen.queryByRole('button', { name: /Open player/ })).not.toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Minimise player' })).not.toBeOnTheScreen();
   });
 
-  it('shows the loaded lecture', async () => {
+  it('closed: the bar is reachable, Now Playing is hidden from screen readers', async () => {
     loadFirst();
-    await renderSlot();
+    await renderSurface();
 
     expect(screen.getByRole('button', { name: openLabel })).toBeOnTheScreen();
-    expect(screen.getByText(first.title)).toBeOnTheScreen();
-    expect(screen.getByText(first.author)).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Minimise player' })).not.toBeOnTheScreen();
   });
 
-  it('waits for the tab bar to be measured before showing', async () => {
+  it('open: Now Playing is reachable, the bar is hidden from screen readers', async () => {
     loadFirst();
-    await renderWithProviders(<MiniPlayerSlot bottomOffset={0} />);
+    setPresentation('open');
+    await renderSurface();
+
+    expect(await screen.findByRole('button', { name: 'Minimise player' })).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: openLabel })).not.toBeOnTheScreen();
   });
 
-  it('is hidden while Now Playing is on screen, and when the queue has ended', async () => {
+  it('the chevron collapses Now Playing', async () => {
     loadFirst();
-    usePlayerStore.getState().setIsNowPlayingOnScreen(true);
-    await renderSlot();
-    expect(screen.queryByRole('button', { name: openLabel })).not.toBeOnTheScreen();
+    setPresentation('open');
+    await renderSurface();
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Minimise player' }));
+
+    expect(entryPoint.closeNowPlaying).toHaveBeenCalledTimes(1);
+  });
+
+  it('Android back collapses Now Playing while it is open, and is not handled while closed', async () => {
+    const addListener = jest.spyOn(BackHandler, 'addEventListener');
+    loadFirst();
+    await renderSurface();
+    expect(addListener).not.toHaveBeenCalled();
 
     await act(async () => {
-      usePlayerStore.getState().setIsNowPlayingOnScreen(false);
+      setPresentation('open');
     });
-    expect(screen.getByRole('button', { name: openLabel })).toBeOnTheScreen();
+    expect(addListener).toHaveBeenCalledTimes(1);
 
-    await act(async () => {
-      usePlayerStore.getState().setHasQueueEnded(true);
-    });
-    expect(screen.queryByRole('button', { name: openLabel })).not.toBeOnTheScreen();
+    // The handler ignores its argument; the type asks for the back-press event.
+    const onBackPress = addListener.mock.calls[0][1] as () => boolean;
+    const wasHandled = onBackPress();
+    expect(wasHandled).toBe(true);
+    expect(entryPoint.closeNowPlaying).toHaveBeenCalledTimes(1);
+    addListener.mockRestore();
   });
 
   it('the text area opens Now Playing for the loaded lecture', async () => {
     loadFirst();
-    await renderSlot();
+    await renderSurface();
     await fireEvent.press(screen.getByRole('button', { name: openLabel }));
 
     expect(entryPoint.openNowPlayingForLoadedLecture).toHaveBeenCalledTimes(1);
   });
 
+  it('the bar keeps rendering while the bar drops away, so the drop is visible', async () => {
+    loadFirst();
+    await renderSurface();
+    await act(async () => {
+      setPresentation('miniLeaving');
+    });
+
+    // Still mounted (hidden from screen readers while it falls).
+    expect(screen.getByRole('button', { name: openLabel, hidden: true })).toBeOnTheScreen();
+  });
+
   it('play/pause and forward 15 never open Now Playing', async () => {
     loadFirst();
-    await renderSlot();
+    await renderSurface();
     await fireEvent.press(screen.getByRole('button', { name: 'Play' }));
     await fireEvent.press(screen.getByRole('button', { name: 'Skip forward 15 seconds' }));
 
@@ -104,40 +146,26 @@ describe('MiniPlayerSlot', () => {
     expect(entryPoint.openNowPlayingForLoadedLecture).not.toHaveBeenCalled();
   });
 
-  it('shows what the player reports, not what was pressed', async () => {
-    loadFirst({ ...pausedAndLoaded, isPlaying: true });
-    await renderSlot();
-
-    await fireEvent.press(screen.getByRole('button', { name: 'Pause' }));
-    expect(engine.toggle).toHaveBeenCalledTimes(1);
-    // Still "Pause": only the next status update changes it.
-    expect(screen.getByRole('button', { name: 'Pause' })).toBeOnTheScreen();
-
-    await act(async () => {
-      usePlayerStore.getState().applyStatus(pausedAndLoaded);
-    });
-    expect(screen.getByRole('button', { name: 'Play' })).toBeOnTheScreen();
-  });
-
   it('shows "Loading" until the audio has loaded', async () => {
     loadFirst({ ...pausedAndLoaded, isLoaded: false });
-    await renderSlot();
+    await renderSurface();
+
     expect(screen.getByLabelText('Loading')).toBeOnTheScreen();
   });
 
-  it('the screen-reader dismiss action stops and clears the session', async () => {
+  it('the screen-reader dismiss action drops the bar and stops the session', async () => {
     loadFirst();
-    await renderSlot();
+    await renderSurface();
     await fireEvent(screen.getByRole('button', { name: openLabel }), 'accessibilityAction', {
       nativeEvent: { actionName: 'dismiss' },
     });
 
-    expect(engine.stopAndClear).toHaveBeenCalledTimes(1);
+    expect(entryPoint.dismissMiniPlayer).toHaveBeenCalledTimes(1);
   });
 
-  it('position updates move the progress line without re-rendering the bar', async () => {
+  it('position updates do not re-render the bar', async () => {
     loadFirst();
-    await renderSlot();
+    await renderSurface();
     const barRendersBefore = jest.mocked(MiniPlayer).mock.calls.length;
 
     await act(async () => {
@@ -145,6 +173,5 @@ describe('MiniPlayerSlot', () => {
     });
 
     expect(jest.mocked(MiniPlayer).mock.calls.length).toBe(barRendersBefore);
-    expect(screen.getByRole('progressbar')).toHaveAccessibilityValue({ now: 50 });
   });
 });

@@ -8,6 +8,7 @@ import {
   selectSourceLabel,
   usePlayerStore,
   type MirroredStatus,
+  type NowPlayingPresentation,
 } from '@/features/player/player.store';
 import { eventSource, latestSource, queueOfThree, searchSource } from '@/test-utils/fixtures';
 
@@ -64,7 +65,7 @@ describe('player store', () => {
     for (let update = 0; update < 100; update++) {
       usePlayerStore.getState().applyStatus({ ...pausedAndLoaded, positionSec: update });
     }
-    usePlayerStore.getState().setIsNowPlayingOnScreen(true);
+    usePlayerStore.getState().setNowPlayingPresentation('open');
     usePlayerStore.getState().setHasQueueEnded(true);
 
     expect(AsyncStorage.setItem).not.toHaveBeenCalled();
@@ -105,10 +106,13 @@ describe('selectIsMiniPlayerVisible', () => {
     expect(selectIsMiniPlayerVisible(usePlayerStore.getState())).toBe(true);
   });
 
-  it('is hidden while Now Playing is on screen (opening, open or closing)', () => {
+  it('is hidden while the bar drops away and while Now Playing opens, is open or closes', () => {
     loadSecondLecture();
-    usePlayerStore.getState().setIsNowPlayingOnScreen(true);
-    expect(selectIsMiniPlayerVisible(usePlayerStore.getState())).toBe(false);
+    const presentations: NowPlayingPresentation[] = ['miniLeaving', 'opening', 'open', 'closing'];
+    for (const presentation of presentations) {
+      usePlayerStore.getState().setNowPlayingPresentation(presentation);
+      expect(selectIsMiniPlayerVisible(usePlayerStore.getState())).toBe(false);
+    }
   });
 
   it('stays visible while loading, buffering, playing and paused', () => {
