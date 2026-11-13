@@ -79,15 +79,8 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="search" options={{ animation: 'slide_from_right' }} />
-          <Stack.Screen
-            name="player"
-            options={{
-              presentation: 'fullScreenModal',
-              animation: 'slide_from_bottom',
-              gestureEnabled: true,
-              gestureDirection: 'vertical',
-            }}
-          />
+          {/* Deep links only. Now Playing itself is an overlay in the tabs layout. */}
+          <Stack.Screen name="player" options={{ animation: 'none' }} />
         </Stack>
       </ThemeProvider>
     </AppProviders>

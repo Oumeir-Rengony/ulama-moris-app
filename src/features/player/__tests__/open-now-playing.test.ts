@@ -1,31 +1,73 @@
 import { router } from 'expo-router';
 
 import * as engine from '@/features/player/audio-engine';
-import { MINI_PLAYER_EXIT_MS } from '@/features/player/mini-player-motion';
-import { openNowPlaying, openNowPlayingForLoadedLecture } from '@/features/player/open-now-playing';
+import {
+  beginCloseAfterSwipe,
+  closeNowPlaying,
+  dismissMiniPlayer,
+  finishCloseAfterSwipe,
+  openEventFromNowPlaying,
+  openNowPlaying,
+  openNowPlayingForLoadedLecture,
+  showNowPlayingFromDeepLink,
+} from '@/features/player/open-now-playing';
+import { MINI_EXIT_MS } from '@/features/player/player-motion-config';
+import * as motion from '@/features/player/player-surface-motion';
+import type { OnMotionFinished } from '@/features/player/player-surface-motion';
 import {
   initialPlayerState,
   selectCurrentLecture,
   selectIsMiniPlayerVisible,
   usePlayerStore,
+  type NowPlayingPresentation,
 } from '@/features/player/player.store';
 import { eventSource, latestSource, queueOfThree, searchSource } from '@/test-utils/fixtures';
 
 jest.mock('expo-router', () => ({
-  router: { navigate: jest.fn(), replace: jest.fn(), push: jest.fn() },
+  router: { navigate: jest.fn(), replace: jest.fn(), push: jest.fn(), back: jest.fn() },
 }));
 jest.mock('@/features/player/audio-engine', () => ({
   playLecture: jest.fn(),
   pause: jest.fn(),
   resume: jest.fn(),
+  stopAndClear: jest.fn(),
+}));
+// The motion commands only record their calls. Tests finish an animation by calling the
+// onFinished they were given.
+jest.mock('@/features/player/player-surface-motion', () => ({
+  enterFresh: jest.fn(),
+  expandFromMini: jest.fn(),
+  collapseToMini: jest.fn(),
+  dropMini: jest.fn(),
+  showNowPlayingWithoutMotion: jest.fn(),
 }));
 
 const [first, second] = queueOfThree;
 const navigate = jest.mocked(router.navigate);
-const replace = jest.mocked(router.replace);
+const back = jest.mocked(router.back);
 const playLecture = jest.mocked(engine.playLecture);
 const pause = jest.mocked(engine.pause);
 const resume = jest.mocked(engine.resume);
+const stopAndClear = jest.mocked(engine.stopAndClear);
+const enterFresh = jest.mocked(motion.enterFresh);
+const expandFromMini = jest.mocked(motion.expandFromMini);
+const collapseToMini = jest.mocked(motion.collapseToMini);
+const dropMini = jest.mocked(motion.dropMini);
+const showNowPlayingWithoutMotion = jest.mocked(motion.showNowPlayingWithoutMotion);
+
+function presentation(): NowPlayingPresentation {
+  return usePlayerStore.getState().nowPlayingPresentation;
+}
+
+function setPresentation(value: NowPlayingPresentation) {
+  usePlayerStore.getState().setNowPlayingPresentation(value);
+}
+
+// The onFinished the latest call to a motion command received.
+function lastOnFinished(command: jest.MockedFunction<(args: { onFinished: OnMotionFinished }) => void>): OnMotionFinished {
+  const calls = command.mock.calls;
+  return calls[calls.length - 1][0].onFinished;
+}
 
 // A session with `first` loaded and paused, the mini player showing.
 function loadFirstWithMiniPlayerShowing() {
@@ -39,14 +81,12 @@ function loadFirstWithMiniPlayerShowing() {
   });
 }
 
+const openSecond = { lecture: second, queue: queueOfThree, source: latestSource, resumeIfPaused: false };
+
 beforeEach(() => {
   jest.useFakeTimers();
   usePlayerStore.setState(initialPlayerState);
-  navigate.mockReset();
-  replace.mockReset();
-  playLecture.mockReset();
-  pause.mockReset();
-  resume.mockReset();
+  jest.resetAllMocks();
 });
 
 afterEach(() => {
@@ -54,130 +94,286 @@ afterEach(() => {
 });
 
 describe('openNowPlaying', () => {
-  it('with nothing loaded: records the intent, then navigates, then loads, with no wait', async () => {
-    let wasOnScreenWhenNavigating = false;
-    navigate.mockImplementation(() => {
-      wasOnScreenWhenNavigating = usePlayerStore.getState().isNowPlayingOnScreen;
+  it('with nothing loaded: intent, then audio, then the entrance, and no navigation at all', async () => {
+    let presentationAtLoad: NowPlayingPresentation | null = null;
+    playLecture.mockImplementation(() => {
+      presentationAtLoad = presentation();
     });
 
     await openNowPlaying({ lecture: second, queue: queueOfThree, source: eventSource, resumeIfPaused: false });
 
-    expect(wasOnScreenWhenNavigating).toBe(true);
-    expect(navigate).toHaveBeenCalledWith('/player');
+    expect(presentationAtLoad).toBe('opening');
     expect(playLecture).toHaveBeenCalledWith(second, queueOfThree, eventSource);
-    expect(navigate.mock.invocationCallOrder[0]).toBeLessThan(playLecture.mock.invocationCallOrder[0]);
+    expect(enterFresh).toHaveBeenCalledTimes(1);
+    expect(playLecture.mock.invocationCallOrder[0]).toBeLessThan(enterFresh.mock.invocationCallOrder[0]);
+    expect(navigate).not.toHaveBeenCalled();
     expect(pause).not.toHaveBeenCalled();
   });
 
-  it('records the intent before any audio, so the mini player is already hidden', async () => {
-    loadFirstWithMiniPlayerShowing();
-    let wasMiniPlayerVisibleAtLoad = true;
-    playLecture.mockImplementation(() => {
-      wasMiniPlayerVisibleAtLoad = selectIsMiniPlayerVisible(usePlayerStore.getState());
-    });
+  it('the entrance finishing opens Now Playing; a replaced entrance does not', async () => {
+    await openNowPlaying(openSecond);
 
-    const opening = openNowPlaying({ lecture: second, queue: queueOfThree, source: latestSource, resumeIfPaused: false });
-    await jest.advanceTimersByTimeAsync(MINI_PLAYER_EXIT_MS);
-    await opening;
+    lastOnFinished(enterFresh)(false);
+    expect(presentation()).toBe('opening');
 
-    expect(playLecture).toHaveBeenCalledTimes(1);
-    expect(wasMiniPlayerVisibleAtLoad).toBe(false);
+    lastOnFinished(enterFresh)(true);
+    expect(presentation()).toBe('open');
   });
 
-  it('for the loaded lecture: shows it without reloading, and resumes only from a play button', async () => {
+  it('the loaded lecture with the bar showing: the bar grows, nothing reloads or pauses', async () => {
     loadFirstWithMiniPlayerShowing();
+
     await openNowPlaying({ lecture: first, queue: queueOfThree, source: latestSource, resumeIfPaused: false });
-    expect(navigate).toHaveBeenCalledTimes(1);
+
+    expect(presentation()).toBe('opening');
+    expect(expandFromMini).toHaveBeenCalledTimes(1);
+    expect(enterFresh).not.toHaveBeenCalled();
     expect(playLecture).not.toHaveBeenCalled();
     expect(pause).not.toHaveBeenCalled();
     expect(resume).not.toHaveBeenCalled();
-
-    usePlayerStore.getState().setIsNowPlayingOnScreen(false);
-    await openNowPlaying({ lecture: first, queue: queueOfThree, source: latestSource, resumeIfPaused: true });
-    expect(resume).toHaveBeenCalledTimes(1);
-    expect(playLecture).not.toHaveBeenCalled();
   });
 
-  it('for a different lecture while the bar shows: hides the bar, pauses, waits for it to leave, then opens', async () => {
+  it('a play button on the loaded, paused lecture also resumes it, once', async () => {
     loadFirstWithMiniPlayerShowing();
 
-    const opening = openNowPlaying({ lecture: second, queue: queueOfThree, source: latestSource, resumeIfPaused: false });
+    await openNowPlaying({ lecture: first, queue: queueOfThree, source: latestSource, resumeIfPaused: true });
 
-    // At once: the bar is hidden and the old lecture stops.
-    expect(selectIsMiniPlayerVisible(usePlayerStore.getState())).toBe(false);
+    expect(resume).toHaveBeenCalledTimes(1);
+  });
+
+  it('a switch: the bar drops first, and the new lecture loads only after it has gone', async () => {
+    loadFirstWithMiniPlayerShowing();
+
+    const opening = openNowPlaying(openSecond);
+
+    expect(presentation()).toBe('miniLeaving');
     expect(pause).toHaveBeenCalledTimes(1);
-    expect(navigate).not.toHaveBeenCalled();
-    expect(playLecture).not.toHaveBeenCalled();
+    expect(dropMini).toHaveBeenCalledTimes(1);
 
-    // During the wait, the bar would still show the OLD lecture, but it's hidden.
-    await jest.advanceTimersByTimeAsync(MINI_PLAYER_EXIT_MS - 1);
-    expect(selectCurrentLecture(usePlayerStore.getState())).toBe(first);
-    expect(selectIsMiniPlayerVisible(usePlayerStore.getState())).toBe(false);
+    await jest.advanceTimersByTimeAsync(MINI_EXIT_MS - 1);
     expect(playLecture).not.toHaveBeenCalled();
+    expect(enterFresh).not.toHaveBeenCalled();
 
     await jest.advanceTimersByTimeAsync(1);
     await opening;
-    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(presentation()).toBe('opening');
     expect(playLecture).toHaveBeenCalledWith(second, queueOfThree, latestSource);
-    expect(navigate.mock.invocationCallOrder[0]).toBeLessThan(playLecture.mock.invocationCallOrder[0]);
+    expect(playLecture.mock.invocationCallOrder[0]).toBeLessThan(enterFresh.mock.invocationCallOrder[0]);
   });
 
-  it('ignores a double tap', async () => {
-    const request = { lecture: second, queue: queueOfThree, source: latestSource, resumeIfPaused: false };
-    await openNowPlaying(request);
-    await openNowPlaying(request);
+  it('the bar never shows the new lecture during a switch', async () => {
+    loadFirstWithMiniPlayerShowing();
 
-    expect(navigate).toHaveBeenCalledTimes(1);
-    expect(playLecture).toHaveBeenCalledTimes(1);
+    const opening = openNowPlaying(openSecond);
+    await jest.advanceTimersByTimeAsync(MINI_EXIT_MS / 2);
+
+    const stateDuringDrop = usePlayerStore.getState();
+    expect(selectCurrentLecture(stateDuringDrop)?.slug).toBe(first.slug);
+    expect(selectIsMiniPlayerVisible(stateDuringDrop)).toBe(false);
+
+    await jest.advanceTimersByTimeAsync(MINI_EXIT_MS);
+    await opening;
   });
 
-  it('ignores a tap while Now Playing is still on screen (for example closing)', async () => {
-    usePlayerStore.getState().setIsNowPlayingOnScreen(true);
-    await openNowPlaying({ lecture: second, queue: queueOfThree, source: latestSource, resumeIfPaused: false });
-
-    expect(navigate).not.toHaveBeenCalled();
-    expect(playLecture).not.toHaveBeenCalled();
-  });
-
-  it('a failure does not leave the app unable to open anything', async () => {
-    const failure = new Error('navigation failed');
-    navigate.mockImplementation(() => {
-      throw failure;
-    });
-
-    await expect(
-      openNowPlaying({ lecture: second, queue: queueOfThree, source: latestSource, resumeIfPaused: false }),
-    ).rejects.toBe(failure);
-    expect(usePlayerStore.getState().isNowPlayingOnScreen).toBe(false);
-  });
-
-  it('from Search, replaces the Search screen instead of stacking on it', async () => {
+  it('from Search: Search leaves before the sheet rises', async () => {
     await openNowPlaying({
       lecture: second,
       queue: [second],
       source: searchSource,
       resumeIfPaused: true,
-      replaceCurrentScreen: true,
+      leaveSearchFirst: true,
     });
 
-    expect(replace).toHaveBeenCalledWith('/player');
-    expect(navigate).not.toHaveBeenCalled();
+    expect(back).toHaveBeenCalledTimes(1);
+    expect(back.mock.invocationCallOrder[0]).toBeLessThan(enterFresh.mock.invocationCallOrder[0]);
+  });
+
+  it.each<NowPlayingPresentation>(['miniLeaving', 'opening', 'open', 'closing'])(
+    'is ignored while the presentation is %s (one action at a time, double taps)',
+    async (busyPresentation) => {
+      loadFirstWithMiniPlayerShowing();
+      setPresentation(busyPresentation);
+
+      await openNowPlaying(openSecond);
+
+      expect(presentation()).toBe(busyPresentation);
+      expect(playLecture).not.toHaveBeenCalled();
+      expect(enterFresh).not.toHaveBeenCalled();
+      expect(dropMini).not.toHaveBeenCalled();
+    },
+  );
+
+  it('a double tap opens one sheet', async () => {
+    await openNowPlaying(openSecond);
+    await openNowPlaying(openSecond);
+
+    expect(enterFresh).toHaveBeenCalledTimes(1);
+    expect(playLecture).toHaveBeenCalledTimes(1);
+  });
+
+  it('puts the presentation back to closed and rethrows when loading fails', async () => {
+    playLecture.mockImplementation(() => {
+      throw new Error('load failed');
+    });
+
+    await expect(openNowPlaying(openSecond)).rejects.toThrow('load failed');
+    expect(presentation()).toBe('closed');
   });
 });
 
-describe('openNowPlayingForLoadedLecture', () => {
-  it('opens Now Playing without loading or playing anything', () => {
+describe('openNowPlayingForLoadedLecture (tap the bar)', () => {
+  it('grows the bar into Now Playing, no reload', () => {
     loadFirstWithMiniPlayerShowing();
+
     openNowPlayingForLoadedLecture();
 
-    expect(navigate).toHaveBeenCalledWith('/player');
-    expect(usePlayerStore.getState().isNowPlayingOnScreen).toBe(true);
+    expect(presentation()).toBe('opening');
+    expect(expandFromMini).toHaveBeenCalledTimes(1);
     expect(playLecture).not.toHaveBeenCalled();
-    expect(resume).not.toHaveBeenCalled();
+  });
+
+  it('retargets a collapse: the collapse finishing late does not close the reopened player', () => {
+    loadFirstWithMiniPlayerShowing();
+    setPresentation('open');
+    closeNowPlaying();
+    const collapseFinished = lastOnFinished(collapseToMini);
+
+    openNowPlayingForLoadedLecture();
+    expect(presentation()).toBe('opening');
+    expect(expandFromMini).toHaveBeenCalledTimes(1);
+
+    collapseFinished(false);
+    expect(presentation()).toBe('opening');
+  });
+
+  it.each<NowPlayingPresentation>(['miniLeaving', 'opening', 'open'])('is ignored while %s', (busyPresentation) => {
+    loadFirstWithMiniPlayerShowing();
+    setPresentation(busyPresentation);
+
+    openNowPlayingForLoadedLecture();
+
+    expect(presentation()).toBe(busyPresentation);
+    expect(expandFromMini).not.toHaveBeenCalled();
   });
 
   it('does nothing when nothing is loaded', () => {
     openNowPlayingForLoadedLecture();
+
+    expect(presentation()).toBe('closed');
+    expect(expandFromMini).not.toHaveBeenCalled();
+  });
+});
+
+describe('closeNowPlaying (chevron, Android back)', () => {
+  it('collapses into the bar, and is closed once the collapse finishes', () => {
+    loadFirstWithMiniPlayerShowing();
+    setPresentation('open');
+
+    closeNowPlaying();
+    expect(presentation()).toBe('closing');
+    expect(collapseToMini).toHaveBeenCalledTimes(1);
+
+    lastOnFinished(collapseToMini)(true);
+    expect(presentation()).toBe('closed');
+    expect(pause).not.toHaveBeenCalled();
+  });
+
+  it('retargets an entrance: the entrance finishing afterwards does not reopen it', async () => {
+    await openNowPlaying(openSecond);
+    const entranceFinished = lastOnFinished(enterFresh);
+
+    closeNowPlaying();
+    expect(presentation()).toBe('closing');
+
+    entranceFinished(true);
+    expect(presentation()).toBe('closing');
+  });
+
+  it.each<NowPlayingPresentation>(['closed', 'miniLeaving', 'closing'])('is ignored while %s', (presentationBefore) => {
+    loadFirstWithMiniPlayerShowing();
+    setPresentation(presentationBefore);
+
+    closeNowPlaying();
+
+    expect(presentation()).toBe(presentationBefore);
+    expect(collapseToMini).not.toHaveBeenCalled();
+  });
+});
+
+describe('the swipe down on Now Playing', () => {
+  it('records closing on release, and closed when the spring finishes', () => {
+    loadFirstWithMiniPlayerShowing();
+    setPresentation('open');
+
+    beginCloseAfterSwipe();
+    expect(presentation()).toBe('closing');
+    // The gesture already started the spring: no second animation.
+    expect(collapseToMini).not.toHaveBeenCalled();
+
+    finishCloseAfterSwipe(true);
+    expect(presentation()).toBe('closed');
+  });
+});
+
+describe('dismissMiniPlayer (swipe the bar down)', () => {
+  it('drops the bar, then stops and clears once it has gone', async () => {
+    loadFirstWithMiniPlayerShowing();
+
+    const dismissing = dismissMiniPlayer();
+    expect(presentation()).toBe('miniLeaving');
+    expect(dropMini).toHaveBeenCalledTimes(1);
+    expect(stopAndClear).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(MINI_EXIT_MS);
+    await dismissing;
+    expect(stopAndClear).toHaveBeenCalledTimes(1);
+    expect(presentation()).toBe('closed');
+  });
+
+  it('is ignored when the bar is not showing', async () => {
+    loadFirstWithMiniPlayerShowing();
+    setPresentation('open');
+
+    await dismissMiniPlayer();
+
+    expect(dropMini).not.toHaveBeenCalled();
+    expect(presentation()).toBe('open');
+  });
+});
+
+describe('openEventFromNowPlaying (the event pill)', () => {
+  it('collapses Now Playing into the bar and opens the event underneath', () => {
+    loadFirstWithMiniPlayerShowing();
+    setPresentation('open');
+
+    openEventFromNowPlaying('the-sahaba-radiyyallahu-anhum');
+
+    expect(presentation()).toBe('closing');
+    expect(collapseToMini).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith({
+      pathname: '/events/[slug]',
+      params: { slug: 'the-sahaba-radiyyallahu-anhum' },
+    });
+  });
+
+  it('is ignored while Now Playing is not in front', () => {
+    loadFirstWithMiniPlayerShowing();
+
+    openEventFromNowPlaying('the-sahaba-radiyyallahu-anhum');
+
     expect(navigate).not.toHaveBeenCalled();
+    expect(collapseToMini).not.toHaveBeenCalled();
+  });
+});
+
+describe('showNowPlayingFromDeepLink', () => {
+  it('opens at once, with no entrance', () => {
+    loadFirstWithMiniPlayerShowing();
+
+    showNowPlayingFromDeepLink();
+
+    expect(presentation()).toBe('open');
+    expect(showNowPlayingWithoutMotion).toHaveBeenCalledTimes(1);
+    expect(enterFresh).not.toHaveBeenCalled();
   });
 });

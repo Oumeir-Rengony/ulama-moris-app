@@ -84,11 +84,40 @@ describe('player rules', () => {
     expect(filesContaining(/router\.push\([^)]*player/)).toEqual([]);
   });
 
-  it('only the entry point and the Now Playing screen hook say whether Now Playing is on screen', () => {
-    const callers = filesContaining('setIsNowPlayingOnScreen(').filter(
+  it('only the entry point sets the Now Playing presentation', () => {
+    const callers = filesContaining('setNowPlayingPresentation(').filter(
       (file) => file !== 'features/player/player.store.ts',
     );
-    expect(callers).toEqual(['features/player/open-now-playing.ts', 'features/player/use-now-playing-presentation.ts']);
+    expect(callers).toEqual(['features/player/open-now-playing.ts']);
+  });
+
+  it('nothing in the app navigates to /player: Now Playing is an overlay, the route is for deep links', () => {
+    expect(filesContaining(/router\.(navigate|push|replace)\(['"]\/player/)).toEqual([]);
+  });
+
+  it('the motion module never imports the store or the engine', () => {
+    const source = readSource('features/player/player-surface-motion.ts');
+    expect(source).not.toMatch(/player\.store/);
+    expect(source).not.toMatch(/audio-engine/);
+  });
+
+  it('player motion uses scheduleOnRN and .get()/.set(), never runOnJS or .value', () => {
+    const motionFiles = filesContaining(/react-native-reanimated/).filter((file) => file.startsWith('features/player/'));
+    expect(motionFiles.length).toBeGreaterThan(0);
+    for (const file of motionFiles) {
+      const source = readSource(file);
+      expect(source).not.toMatch(/runOnJS/);
+      expect(source).not.toMatch(/\.value\b/);
+    }
+  });
+
+  it('a gesture never calls back into JS on every frame (no scheduleOnRN inside onUpdate)', () => {
+    const source = readSource('features/player/player-surface-full-layer.tsx');
+    const onUpdateStart = source.indexOf('onUpdate:');
+    const onDeactivateStart = source.indexOf('onDeactivate:');
+    expect(onUpdateStart).toBeGreaterThan(-1);
+    const onUpdateBody = source.slice(onUpdateStart, onDeactivateStart);
+    expect(onUpdateBody).not.toMatch(/scheduleOnRN/);
   });
 
   it('no component in src/components reads the player stores', () => {

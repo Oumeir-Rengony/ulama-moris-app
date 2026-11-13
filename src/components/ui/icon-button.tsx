@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { Pressable } from 'react-native';
 
 type IconButtonSize = 'md' | 'lg';
@@ -25,11 +25,14 @@ type IconButtonProps = {
   size?: IconButtonSize;
   tone?: IconButtonTone;
   onPress?: () => void;
+  // Lets a screen move screen-reader focus to this button (Now Playing's chevron on open).
+  ref?: ComponentProps<typeof Pressable>['ref'];
 };
 
-export function IconButton({ children, accessibilityLabel, size = 'md', tone = 'surface', onPress }: IconButtonProps) {
+export function IconButton({ children, accessibilityLabel, size = 'md', tone = 'surface', onPress, ref }: IconButtonProps) {
   return (
     <Pressable
+      ref={ref}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}

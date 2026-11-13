@@ -85,6 +85,8 @@ export type TrackInfoContent = {
   topicLabel?: string;
   topicCategory?: Category;
   eventTitle?: string;
+  // Opens the event from Now Playing's pill. Missing when the lecture has no event.
+  eventSlug?: string;
 };
 
 // The lines and pills under the title. Anything the data doesn't have is left out.
@@ -109,5 +111,6 @@ export function nowPlayingTrackInfo(lecture: Lecture): TrackInfoContent {
     topicLabel,
     topicCategory,
     eventTitle: lecture.event,
+    eventSlug: lecture.eventSlug,
   };
 }

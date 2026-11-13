@@ -8,6 +8,14 @@ jest.mock('react-native-safe-area-context', () => require('react-native-safe-are
 // preset. A small stand-in covers the parts the app uses (src/test-utils/reanimated-mock.ts).
 jest.mock('react-native-reanimated', () => require('./src/test-utils/reanimated-mock'));
 
+// The player's motion hands animation results back to JS with react-native-worklets'
+// scheduleOnRN, whose real module needs the native worklets runtime. In tests, call at once.
+jest.mock('react-native-worklets', () => ({
+  scheduleOnRN: (callback: (...args: unknown[]) => unknown, ...args: unknown[]) => {
+    callback(...args);
+  },
+}));
+
 // Gesture Handler's native module isn't available in Jest. Its own setup swaps in mocks.
 require('react-native-gesture-handler/jestSetup');
 
