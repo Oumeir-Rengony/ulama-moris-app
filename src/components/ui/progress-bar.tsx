@@ -11,18 +11,21 @@ type ProgressBarProps = {
   variant: 'onEmphasis' | 'miniLine';
 };
 
-function toPercent(progress: number): `${number}%` {
-  const clamped = Math.min(Math.max(progress, 0), 1);
-  return `${clamped * 100}%`;
+function clampProgress(progress: number): number {
+  return Math.min(Math.max(progress, 0), 1);
 }
 
 export function ProgressBar({ progress, variant }: ProgressBarProps) {
-  const width = toPercent(progress);
-  const accessibilityValue = { min: 0, max: 100, now: Math.round(progress * 100) };
+  const clampedProgress = clampProgress(progress);
+  const width: `${number}%` = `${clampedProgress * 100}%`;
+  const accessibilityValue = { min: 0, max: 100, now: Math.round(clampedProgress * 100) };
 
+  // `accessible` makes the bar one element a screen reader can find and read. A View with only
+  // a role is skipped by VoiceOver.
   if (variant === 'miniLine') {
     return (
       <View
+        accessible
         accessibilityRole="progressbar"
         accessibilityValue={accessibilityValue}
         className={`absolute bottom-0 left-0 h-[3px] ${miniPlayer.progress}`}
@@ -33,6 +36,7 @@ export function ProgressBar({ progress, variant }: ProgressBarProps) {
 
   return (
     <View
+      accessible
       accessibilityRole="progressbar"
       accessibilityValue={accessibilityValue}
       className="h-1 overflow-hidden rounded-full bg-emphasis-fg/[0.18]"
