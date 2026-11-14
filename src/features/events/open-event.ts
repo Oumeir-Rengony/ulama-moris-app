@@ -1,8 +1,8 @@
 import { router } from 'expo-router';
 
 type OpenEventOptions = {
-  // Set when opening from Search, so Search doesn't stay in the history behind Event detail
-  // (HANDOFF §4.5: "closes Search").
+  // Set when opening from Search: a result closes Search, so Search doesn't stay in the
+  // history behind Event detail.
   replaceSearch?: boolean;
 };
 

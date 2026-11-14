@@ -29,7 +29,7 @@ type HomeListHeaderProps = {
 };
 
 // Everything on Home above the lecture rows: the FlatList's ListHeaderComponent.
-// Spacing between sections from ARTBOARD-MAP §1: 24, 18, 24, 34, 8, then 14 before the rows.
+// Spacing between sections, from the design: 24, 18, 24, 34, 8, then 14 before the rows.
 export function HomeListHeader({
   continueListening,
   lectureCountLabel,

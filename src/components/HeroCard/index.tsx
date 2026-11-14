@@ -6,8 +6,8 @@ import { Rosette } from '@/components/artwork/rosette';
 import { Pill } from '@/components/ui/pill';
 import { Text, type TextVariant } from '@/components/ui/text';
 
-// One forest card shell for Continue listening, Latest event and the Event hero
-// (DESIGN-SYSTEM §12). The preset sets the rosette, the title size and the title's right inset.
+// One forest card shell for Continue listening, Latest event and the Event hero.
+// The preset sets the rosette, the title size and the title's right inset.
 export type HeroCardPreset = 'continueListening' | 'latestEvent' | 'eventHero';
 
 type RosettePlacement = {

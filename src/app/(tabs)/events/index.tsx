@@ -58,7 +58,7 @@ function RowGap() {
 }
 
 // The year header sticks while its rows scroll under it, so it needs the ground colour behind it.
-// 16 above the first year and 22 above the others (ARTBOARD-MAP §2); 10 below each.
+// 16 above the first year and 22 above the others; 10 below each.
 function YearHeader({ title, isFirstYear }: { title: string; isFirstYear: boolean }) {
   let topSpacingClass = 'pt-[22px]';
   if (isFirstYear) {

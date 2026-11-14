@@ -1,4 +1,4 @@
-// Accent-insensitive title matching for Search (HANDOFF §4.5). Pure functions, no React.
+// Accent-insensitive title matching for Search. Pure functions, no React.
 //
 // "Folding" turns text into a plain, comparable form: lower case, no accents, one apostrophe.
 // "sahaba", "Şahābā" (S-cedilla, as in the data) and "Ṣaḥābā" (S-dot-below, as in the designs)

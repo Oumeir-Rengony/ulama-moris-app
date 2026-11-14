@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // One client for the whole app, created once at module scope.
-// No caching while the fetchers read static data (AGENTS.md "TanStack Query rules"):
+// No caching while the fetchers read static data:
 // staleTime 0 and gcTime 0 drop query data as soon as no screen uses it, so every mount reads
 // the stub again. Choose real caching settings when the API replaces the stubs.
 // TODO(error-states stage): connect onlineManager to NetInfo and focusManager to AppState.

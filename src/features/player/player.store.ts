@@ -34,7 +34,7 @@ export type MirroredStatus = {
 
 type PlayerData = MirroredStatus & {
   // The lectures the user chose to play, in data order. The one place where query data is
-  // copied (AGENTS.md): it's a snapshot the user picked, not a cache.
+  // copied: it's a snapshot the user picked, not a cache.
   queue: LectureSummary[];
   // null when nothing is loaded.
   currentIndex: number | null;

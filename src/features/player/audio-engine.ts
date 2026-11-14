@@ -34,7 +34,7 @@ export function getPlayer(): AudioPlayer {
 
 const SKIP_SECONDS = 15;
 
-// Play/pause, a seek bar, and back / forward 15 seconds. No next/previous track (HANDOFF §3).
+// Play/pause, a seek bar, and back / forward 15 seconds. No next/previous track.
 const lockScreenOptions: AudioLockScreenOptions = {
   showSeekBackward: true,
   showSeekForward: true,

@@ -1,6 +1,6 @@
 import { Text as NativeText, type TextProps as NativeTextProps } from 'react-native';
 
-// One entry per step of the type scale (DESIGN-SYSTEM.md §10, `type` in src/theme/tokens.ts).
+// One entry per step of the type scale (`type` in src/theme/tokens.ts).
 // Each variant sets the font file, size, line height and tracking in one place.
 const variantFontClass = {
   display: 'font-manrope-extrabold',
@@ -111,7 +111,7 @@ function buildClassName(variant: TextVariant, callerClassName: string | undefine
 
 export type TextProps = NativeTextProps & {
   variant?: TextVariant;
-  // Tabular numbers keep digits from jiggling. Use it for every time value (HANDOFF §1).
+  // Tabular numbers keep digits from jiggling. Use it for every time value.
   tabular?: boolean;
   className?: string;
 };

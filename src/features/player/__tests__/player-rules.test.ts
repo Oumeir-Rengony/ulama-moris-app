@@ -1,7 +1,8 @@
 /// <reference types="node" />
 // Node types for fs and path: this test reads source files. (@types/node comes with Jest.)
-// Guards for the player rules in AGENTS.md ("Audio: expo-audio plays, Zustand remembers" and
-// "Zustand rules"). They read the app's source files, so breaking a rule fails a test.
+// Guards for the player's architecture rules: one audio player, status flowing one way into the
+// store, and selector-only store reads. They read the app's source files, so breaking a rule
+// fails a test.
 import fs from 'fs';
 import path from 'path';
 

@@ -1,6 +1,6 @@
 // UI-only mock snapshots for the dev component gallery (src/app/dev/components.tsx).
 // Components take display-ready strings ("35:48", "31 Oct", "2h 34m"). Until the screen stages
-// add the formatting helpers (HANDOFF §4.7) and the player, these strings are written by hand.
+// add the formatting helpers and the player, these strings are written by hand.
 // The screen stages replace each value with a computed one, then delete this file.
 
 import { lectures, type Lecture } from './sample';
@@ -67,7 +67,7 @@ export const mockLatestEventMeta = '24 – 31 Oct 2026 · Masjid Muswalla, Highl
 
 // Search results for the query "Ṣaḥābā", with the matched part of each title precomputed, so the
 // components need no matching logic. The two real records spell it "Şahābā" (S-cedilla); the
-// match still covers it once accent-insensitive matching is built (HANDOFF §4.5).
+// match still covers it once accent-insensitive matching is built.
 export type MockLectureResult = {
   slug: string;
   titleParts: TitlePart[];

@@ -28,7 +28,7 @@ type EventDetailHeaderProps = {
 };
 
 // Everything on Event detail above the numbered rows: the FlatList's ListHeaderComponent.
-// Spacing from ARTBOARD-MAP §3: hero 14 below the top bar, the heading 30 below the hero,
+// Spacing from the design: hero 14 below the top bar, the heading 30 below the hero,
 // 12 before the first row.
 export function EventDetailHeader({ hero, lectureCount, onBackPress, onSharePress }: EventDetailHeaderProps) {
   return (

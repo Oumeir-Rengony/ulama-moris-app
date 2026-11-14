@@ -127,7 +127,7 @@ function NowPlayingTopBar({ isOpen }: { isOpen: boolean }) {
   const sourceLabel = usePlayerStore(selectSourceLabel);
   const chevronRef = useRef<ComponentRef<typeof View>>(null);
 
-  // On open, screen readers start at the chevron, like a native modal (Stage 12 §8).
+  // On open, screen readers start at the chevron, like a native modal.
   useEffect(() => {
     if (!isOpen) {
       return;

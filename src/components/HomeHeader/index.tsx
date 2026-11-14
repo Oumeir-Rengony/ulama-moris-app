@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { LogoBadge } from '@/components/icons/logo-badge';
 import { Text } from '@/components/ui/text';
 
-// Home header: logo badge + app name and tagline. 20 left / 12 right (HANDOFF §4.1).
+// Home header: logo badge + app name and tagline. 20 left / 12 right.
 export function HomeHeader() {
   return (
     <View className="flex-row items-center gap-2.5 pl-5 pr-bar">

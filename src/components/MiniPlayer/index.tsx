@@ -32,7 +32,7 @@ type MiniPlayerProps = {
 
 const dismissActionName = 'dismiss';
 
-// The floating bar above the tab bar on every tab screen (HANDOFF §4.6). Charcoal in light,
+// The floating bar above the tab bar on every tab screen. Charcoal in light,
 // forest with a hairline outline in dark (miniPlayer tokens).
 export function MiniPlayer({
   title,
@@ -103,7 +103,7 @@ export function MiniPlayer({
         className="min-h-touch flex-1 justify-center gap-0.5 pl-2 active:opacity-80"
       >
         {/* The bar is always on screen above the tabs, so its text is capped like the tab labels
-            (AGENTS.md "Text & font scaling"); uncapped, it would cover too much of the list. */}
+            at 1.3×; uncapped, it would cover too much of the list. */}
         <Text
           variant="bodySm"
           numberOfLines={1}

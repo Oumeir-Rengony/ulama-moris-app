@@ -54,7 +54,7 @@ Nothing else changes. A primitive does nothing until a semantic or component tok
 3. `tailwind.config.js`: add `'name': c('name')` to `colors`.
 4. `src/theme/tokens.ts`: add the camelCase key to `lightColors` **and** `darkColors`, pointing at the same primitives.
 5. Check contrast against DESIGN-SYSTEM §8 floors (4.5:1 text, 3:1 icons and lines) and add the pair to the §8 table.
-6. Update `docs/html/design-system.html` and add a swatch to `src/app/dev/tokens.tsx`.
+6. Add a swatch to `src/app/dev/tokens.tsx`.
 7. Run `npm run check:theme`.
 
 ### 5. Promote a component token

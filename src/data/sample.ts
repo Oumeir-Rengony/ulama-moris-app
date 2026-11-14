@@ -7,7 +7,7 @@
 
 // ---------- Types ----------
 
-// The home filter chips. Not an API field yet; added for the series filter (HANDOFF §4.1).
+// The home filter chips. Not an API field yet; added for the series filter.
 export type LectureSeries = 'local' | 'guest' | 'islahi-majlis';
 
 // A lecture as it appears in a list (the API's `Lectures` items).
@@ -130,7 +130,7 @@ export const lectures: Lecture[] = [
   {
     id: 'mock-lecture-05',
     // Assumed to be the 4th lecture of the Sahaba event, 2377 s derived from the event total
-    // (HANDOFF §6: confirm both).
+    // (9240 − 2148 − 2781 − 1934). Both are unconfirmed.
     title: 'Who were the ṣaḥābā Radiyallāhu ’Anhum',
     slug: 'who-were-the-sahaba-radiyallahu-anhum',
     event: sahabaEventTitle,
@@ -145,7 +145,7 @@ export const lectures: Lecture[] = [
   },
   {
     id: 'mock-lecture-06',
-    // No duration: it wasn't in the screenshots (HANDOFF §6).
+    // No duration: it wasn't in the screenshots. Unconfirmed.
     title: 'A Country on Fire: Analysis and Lessons',
     slug: 'a-country-on-fire-analysis-and-lessons',
     date: '2026-10-16T19:30:00.000+04:00',
@@ -289,7 +289,7 @@ export const events: EventSummary[] = [
     latestTime: 1768064400000,
   },
   {
-    // No single venue, and it spans several years (HANDOFF §4.2).
+    // No single venue, and it spans several years, so the row shows the date range instead.
     slug: 'jummah',
     title: 'Jummah',
     total: 8,
@@ -425,7 +425,7 @@ export const topicOrder: string[] = buildTopicOrder(lectures);
 // ---------- Search ----------
 
 // Placeholder recent searches per scope. The lectures list is the design's; the events list has
-// no design and is made up from event titles. They are not real searches (HANDOFF §6).
+// no design and is made up from event titles. They are not real searches.
 export const seedRecentSearches: { lectures: string[]; events: string[] } = {
   lectures: ['Ṣaḥābā', 'Islamic finance', 'Fire', 'Sacrifices', 'Ummah'],
   events: ['Jummah', 'Sahaba', 'Islahi'],

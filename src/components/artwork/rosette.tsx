@@ -2,7 +2,7 @@ import Svg, { Circle, G, Path } from 'react-native-svg';
 
 import { palette } from '@/theme/tokens';
 
-// The decorative rosette on the emphasis cards (html/screens/events.html, event-detail.html):
+// The decorative rosette on the emphasis cards (Continue listening, Latest event, Event hero):
 // six leaves alternating olive / leaf around an ochre centre, inside a faint ivory ring.
 // Artwork: fixed `palette` colours, the same in both themes (it always sits on forest).
 const leafShape = 'M0 0 C 26 -30 76 -30 106 0 C 76 30 26 30 0 0 Z';

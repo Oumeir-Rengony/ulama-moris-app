@@ -9,7 +9,7 @@ type IconProps = {
   size?: number;
   // A semantic colour name, so callers never pass hex and the icon follows the theme.
   color?: SemanticColor;
-  // Play and Pause are drawn filled (HANDOFF §1).
+  // Play and Pause are drawn filled.
   filled?: boolean;
   strokeWidth?: number;
 };

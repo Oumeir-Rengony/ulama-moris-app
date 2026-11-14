@@ -1,4 +1,4 @@
-// Formatting helpers for times and dates (HANDOFF §4.7). One plain function per format.
+// Formatting helpers for times and dates. One plain function per format.
 // totalLabel is added by the stage that first needs it. Month and weekday names are written out here instead of using
 // toLocaleDateString, so the output is the same in every device language.
 

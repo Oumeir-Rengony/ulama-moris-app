@@ -15,7 +15,7 @@ Colours live in **three tiers**, and each tier may only point at the one below i
 | `tailwind.config.js` (project root) | Maps the semantic tokens to classes (`bg-surface-1`, `text-fg-muted`, `bg-cat-4-bg`, `border-border-strong` …), plus fonts, type scale, radii, spacing |
 | `src/theme/tokens.ts` | The same semantic colours in JS (`useThemeColors()`) for places classes can't reach (SVG fills, icon colours, StatusBar, navigation theme, animations), the category helpers (`catAt`, `catForTopic`, `catClasses`), the offline `scrim`, the artwork `palette`, shadows (`useThemeShadows()`), type, spacing, radii, sizes |
 | `src/components/<Name>/tokens.ts` | Tier 3: component tokens for MiniPlayer, TabBar, Skeleton and Search |
-| `html/design-system.html` | The colour board: light and dark semantic tokens, categories, sample components, primitives and component tokens. Image: `artboards/design-system.png` |
+| `artboards/design-system.png` | The colour board: light and dark semantic tokens, categories, sample components, primitives and component tokens. In the app, `/dev/tokens` shows the live tokens |
 
 ## 1. Naming rules
 
@@ -188,7 +188,7 @@ Everything else uses semantic tokens directly (the emphasis card is just `bg-emp
 1. **Add a primitive first**, in its ramp with a step number.
 2. **One component needs it?** Use it through that component's tokens, with a comment that it points at a primitive.
 3. **Second use? Promote it** to a semantic token named by role, with light and dark values and a contrast check (4.5:1 text, 3:1 icons/lines).
-4. **Update** `primitives.ts`, `global.css`, `tailwind.config.js`, `tokens.ts` and the board (`html/design-system.html`).
+4. **Update** `primitives.ts`, `global.css`, `tailwind.config.js`, `tokens.ts` and the swatches in `src/app/dev/tokens.tsx`.
 
 ## 8. Contrast (WCAG)
 
@@ -358,7 +358,7 @@ Custom SVG (lucide has no "15" icon). 24 × 24 viewBox, stroke 2, round caps and
 - **Forward 15:** arc `M20 12a8 8 0 1 1-2.3-5.6` + arrow `M20 4v4h-4`.
 - **Back 15:** the arc and arrow mirrored (`M4 12a8 8 0 1 0 2.3-5.6`, `M4 4v4h4`). The **digits are not mirrored**, so "15" still reads normally.
 - **Digits** (stroke 1.8): "1" `M8.6 10.3l1.3-.9v5.6`; "5" `M15.5 9.4h-2.8l-.35 2.6c.35-.25.8-.4 1.3-.4a1.7 1.7 0 0 1 0 3.4c-.65 0-1.25-.3-1.55-.75` (top bar, stem down the left, rounded base).
-- The "5" has a top bar, a stem down the left side and a rounded base, so it reads clearly as "15" at small sizes. Copy the paths from `html/screens/now-playing.html` (L93 back, L102 forward) or the mini player in `html/screens/home.html` (L278).
+- The "5" has a top bar, a stem down the left side and a rounded base, so it reads clearly as "15" at small sizes. Built in `src/components/icons/skip-15-icon.tsx`.
 - Sizes: 26 in the Now Playing 60px buttons, 22 in the mini player.
 
 ## 14. NativeWind setup (v4)

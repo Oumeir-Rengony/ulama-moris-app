@@ -1,7 +1,7 @@
 import { Easing, type WithSpringConfig, type WithTimingConfig } from 'react-native-reanimated';
 
 // Every number that shapes the player's motion, in one file, so tuning on a device is one edit.
-// Values come from docs/Audio-Player-Animations.md §5.4 unless a comment says otherwise.
+// The springs and timings were tuned in the motion prototype; change them only after checking on a device.
 
 // The fresh entrance: the sheet springs up from below the screen, with a slight overshoot.
 export const SHEET_SPRING: WithSpringConfig = { stiffness: 230, damping: 25, mass: 1 };
@@ -23,7 +23,7 @@ export const MINI_EXIT_LIFT_SHARE = 0.18;
 export const MINI_EXIT_LIFT_PX = 5;
 // How far the bar falls while it fades out.
 export const MINI_DROP_DISTANCE_PX = 70;
-// Accelerates away. The spec's choice for a short dismissal that leaves the screen.
+// Accelerates away, as a short dismissal that leaves the screen should.
 export const MINI_EXIT_EASING = Easing.bezier(0.4, 0, 0.9, 0.6);
 
 // The bar coming back on its own (it mounts without a collapse).
@@ -41,11 +41,11 @@ export const TUCK = {
   dimOpacity: 0.3,
 } as const;
 
-// Not in the spec: SHEET_SPRING overshoots upwards, and without this extra height below the
+// SHEET_SPRING overshoots upwards, and without this extra height below the
 // window a strip of the tucked list shows under the sheet for a few frames.
 export const BACKGROUND_BLEED = 48;
 
-// The bar's shape (HANDOFF §4.6): radius 20, a 44 px thumbnail 8 px from its left and top
+// The bar's shape: radius 20, a 44 px thumbnail 8 px from its left and top
 // edges, radius 10. The full cover has radius 28.
 export const MINI_BAR_RADIUS = 20;
 export const MINI_THUMB_SIZE = 44;

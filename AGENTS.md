@@ -24,6 +24,20 @@ npm run test:watch          # the same, re-running on save
 
 Run lint, typecheck, `npm run check:theme` and `npm test` before declaring any task done.
 
+## Where to look
+
+Start with [docs/CONTEXT.md](docs/CONTEXT.md): how the app works, what was decided, what's still open. Then, by task:
+
+| Task | Read |
+|---|---|
+| Colours, tokens, type, spacing, shadows, any visual style | [src/theme/README.md](src/theme/README.md) (recipes), then [docs/DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md) (full reference) |
+| Changing a screen's layout | Its design screenshot (the table in CONTEXT.md "Design screenshots") and the existing code |
+| Error and offline states (next stage) | [docs/ERROR-STATES.md](docs/ERROR-STATES.md) and `docs/artboards/error-states/*.png` |
+| Audio playback, lock screen, background | [docs/expo-audio.md](docs/expo-audio.md) |
+| Player motion | CONTEXT.md "Motion", then [docs/Audio-Player-Animations.md](docs/Audio-Player-Animations.md) |
+
+Code comments never cite a doc. Docs change; a comment states the fact it needs.
+
 ## Project structure
 
 The rule: **`components/` renders, `features/` owns state, data and logic.** Target tree (create a folder only when the stage that needs it starts):
@@ -86,7 +100,7 @@ Read [src/theme/README.md](src/theme/README.md) before adding or changing any co
 - Generic primitives with no domain knowledge are kebab-case files in `src/components/ui/` (`icon-button.tsx`, `pill.tsx`, `play-pause-button.tsx` …). Custom SVG icons live in `components/icons/`, illustrations in `components/artwork/`. Composites (`HeroCard`, `LectureRow`, `MiniPlayer` …) have PascalCase folders. Screens only put these together and connect them.
 - **Components are static presentation.** They render what their props say: visual state is a prop (`state: 'idle' | 'active-paused' | 'active-playing'`, `selected`), never internal `useState`. No navigation, data fetching, stores or audio inside `src/components`.
 - Every future control is already a `Pressable` with `accessibilityRole="button"` and its final `accessibilityLabel`, and takes an optional `onPress?`. Screens wire behaviour by passing handlers; they don't change the component.
-- Props take **display-ready strings** ("35:48", "31 Oct", "2h 34m", "Masjid Muswalla, Highlands"). Formatting happens in the screen with the helpers in `src/utils/` (`formatVenue`, and the time helpers in HANDOFF §4.7).
+- Props take **display-ready strings** ("35:48", "31 Oct", "2h 34m", "Masjid Muswalla, Highlands"). Formatting happens in the screen with the helpers in `src/utils/` (`formatVenue`, and the time helpers in `format-time.ts`).
 - Category colours are chosen by the caller and passed as `category: Category`: `catAt(index)` by position, `catForTopic(topic, topicOrder)` by topic.
 - Icons: `<Icon icon={…} color="fgMuted" />` with a semantic colour name. Import lucide icons one by one (`import Play from 'lucide-react-native/icons/play'`), never from the package root, which bundles every icon.
 - `react-native-svg` on web passes unknown props to the DOM, so don't put `accessible` / `importantForAccessibility` on `<Svg>`; the button around an icon carries the label.
@@ -139,7 +153,7 @@ Not in the spec yet: signed-in user, bookmarks, language. Don't add stores or co
 - Every way into and out of Now Playing goes through `features/player/open-now-playing.ts` (`openNowPlaying`, `openNowPlayingForLoadedLecture`, `closeNowPlaying`, `dismissMiniPlayer`, the swipe callbacks): store → engine → motion. Each function starts with an early-return guard on the presentation. A switch to another lecture drops the bar first (`MINI_EXIT_MS`), then loads, then the sheet rises.
 - Motion completion callbacks act only when `finished` is true **and** the presentation is still the one they expect, so a retargeted (interrupted) animation never overwrites the newer state.
 - Now Playing's event pill calls `openEventFromNowPlaying(slug)`: Now Playing collapses into the bar while `router.navigate` opens the event in the Events tab underneath. It uses the lecture's `eventSlug`, a MOCK field next to `event` (the title) until the API returns the link.
-- The bar never introduces a lecture: rows and search results open Now Playing. This overrides HANDOFF §3 "plays in the mini player".
+- The bar never introduces a lecture: rows and search results open Now Playing.
 - A launch shows no bar (the queue isn't persisted). Continue listening shows `lastPlayedSlug`.
 - Swipe the bar down to dismiss: React Native `PanResponder` writing `miniDrop`, not Gesture Handler (its v3 detector received no touches on the floating bar on iOS). Screen readers get a "Stop and close player" action. The swipe down on Now Playing uses Gesture Handler's `usePanGesture` and runs on the UI thread.
 - Android back while Now Playing is open collapses it (`BackHandler` in `PlayerSurface`). Web has no back handler.

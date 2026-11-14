@@ -2,7 +2,7 @@ import Svg, { Path, Rect } from 'react-native-svg';
 
 import { useThemeColors, type SemanticColor } from '@/theme/tokens';
 
-// Tab bar icons, copied from the designs (html/screens/home.html, events.html). They are custom
+// Tab bar icons, copied from the designs. They are custom
 // because the active tab shows a FILLED icon: filling lucide's Calendar would hide its header
 // line, and lucide's House has no door cut-out when filled.
 

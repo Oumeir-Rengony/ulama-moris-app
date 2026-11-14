@@ -26,7 +26,7 @@ type EventsListHeaderProps = {
 };
 
 // Everything on Events above the year sections: the SectionList's ListHeaderComponent.
-// Spacing from ARTBOARD-MAP §2: count chip 14 below the title, card 20, "All events" 34.
+// Spacing from the design: count chip 14 below the title, card 20, "All events" 34.
 export function EventsListHeader({
   eventCountLabel,
   latestEvent,

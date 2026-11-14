@@ -4,7 +4,7 @@ import { shortDateLabel } from '@/utils/format-time';
 
 import type { SearchScope } from './scope';
 
-// The input's placeholder (HANDOFF §4.5).
+// The input's placeholder.
 export function searchPlaceholder(scope: SearchScope): string {
   if (scope === 'events') {
     return 'Search events by name';

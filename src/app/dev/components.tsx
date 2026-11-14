@@ -1,6 +1,6 @@
 // Development-only gallery: every reusable component in every visual state, filled with mock
-// data, on the real ground and gutters. Compare each section with its PNG region
-// (docs/ARTBOARD-MAP.md) in light and dark. Nothing here is wired up: no presses, no state.
+// data, on the real ground and gutters. Compare each section with the screen designs in light
+// and dark. Nothing here is wired up: no presses, no state.
 import ArrowRight from 'lucide-react-native/icons/arrow-right';
 import ChevronDown from 'lucide-react-native/icons/chevron-down';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
@@ -794,8 +794,8 @@ function SharedBarSection() {
   );
 }
 
-// The components stacked in Home's order with the mock data, to compare with
-// docs/artboards/screens/home.png and catch spacing problems between components.
+// The components stacked in Home's order with the mock data, to compare with the Home design
+// and catch spacing problems between components.
 function HomeScreenMock() {
   return (
     <View nativeID="home-screen-mock" className="-mx-gutter bg-bg pt-11">

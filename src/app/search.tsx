@@ -31,7 +31,7 @@ import { pickSearchView, type SearchView } from '@/features/search/search-view';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { catAt, catForTopic } from '@/theme/tokens';
 
-// HANDOFF §4.5: a live filter that waits for a short pause in typing.
+// A live filter that waits for a short pause in typing.
 const searchDebounceMs = 150;
 const bottomSpacing = 24;
 const contentMaxWidth = 600;
@@ -79,7 +79,7 @@ function ResultsHeading({ label }: { label: string }) {
   );
 }
 
-// TODO(design): the no-results card has no artboard (HANDOFF §8.2 item 5).
+// TODO(design): the no-results card isn't designed.
 function NoResults({ title, message }: { title: string; message: string }) {
   return (
     <View className="mt-[18px] px-gutter">
@@ -138,7 +138,7 @@ function LectureResult({ result, query }: { result: LectureSearchResult; query: 
   );
 }
 
-// TODO(design): the event result row has no artboard (HANDOFF §8.2 item 5).
+// TODO(design): the event result row isn't designed.
 function EventResult({ result, position }: { result: EventSearchResult; position: number }) {
   const { event } = result;
 

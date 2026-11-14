@@ -1,4 +1,4 @@
-// Development-only preview of the design tokens: the in-app version of docs/html/design-system.html.
+// Development-only preview of the design tokens: every colour, in the current theme.
 // Open it in light and dark to check a new token visually.
 import { Redirect, router } from 'expo-router';
 import { useColorScheme } from 'nativewind';

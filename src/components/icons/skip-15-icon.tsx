@@ -2,7 +2,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { useThemeColors, type SemanticColor } from '@/theme/tokens';
 
-// Custom "15" icons: lucide has none (DESIGN-SYSTEM §13). 24 × 24, stroke 2, round caps.
+// Custom "15" icons: lucide has none. 24 × 24, stroke 2, round caps.
 // Back mirrors only the arc and arrow; the digits are not mirrored, so "15" reads normally.
 const forwardArc = 'M20 12a8 8 0 1 1-2.3-5.6';
 const forwardArrow = 'M20 4v4h-4';

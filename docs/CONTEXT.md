@@ -1,8 +1,8 @@
 # Ulama Moris: app context
 
-A short orientation for picking the app up again. It says how things work and where they live.
-Rules and recipes are in [AGENTS.md](../AGENTS.md), the full spec in [HANDOFF.md](HANDOFF.md),
-and the motion spec in [Audio-Player-Animations.md](Audio-Player-Animations.md).
+A short orientation for picking the app up again. It says how things work, what was decided, and
+what's still open. Rules are in [AGENTS.md](../AGENTS.md). For visual style (colours, tokens, type)
+go to [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md); for the motion spec, [Audio-Player-Animations.md](Audio-Player-Animations.md).
 
 ## What the app is
 
@@ -19,9 +19,8 @@ Build stages 1–12 are done and merged. Their plan files were deleted once this
 they decided; they are in git history before the commit that removed `plan/`. Lint, typecheck,
 `check:theme` and `npm test` (43 suites, 449 tests) pass.
 
-Next stage: **error and offline states** ([ERROR-STATES.md](ERROR-STATES.md), HANDOFF §9).
-The stub is in `src/providers/app-providers.tsx`: connect `onlineManager` to NetInfo and
-`focusManager` to AppState.
+Next stage: **error and offline states**. [ERROR-STATES.md](ERROR-STATES.md) has the spec, the
+build order and the checklist; the screenshots are in `artboards/error-states/`.
 
 Built but not yet checked. Everything was verified in Expo Go on the iOS simulator and on web;
 no development build exists yet. The checks below need one (`npx expo run:ios --device`,
@@ -57,6 +56,15 @@ fail or not checked.
 - expo-audio 58 has no notification-tap or notification-stop event. Tapping the notification opens the app where it was.
 - Seen once on iOS, not reproduced: the Home list ended up scrolled about 200 pt after opening and closing the player.
 
+**Open questions and gaps** (decide before release; don't build without asking):
+- **Data to confirm:** "Who were the ṣaḥābā…" is assumed to be the Sahaba event's 4th lecture, with 2377 s derived from the event total. "A Country on Fire" has no duration.
+- **Recent searches:** the 5 seeds are invented. Ship an empty list, or keep them as hints that real searches replace?
+- **Share and mic:** the Event detail share button and the Search mic are visual only. Their behaviour (and the share payload) is undecided.
+- **App icons:** `app.json` still has Expo's default icons and Android adaptive background `#E6F4FE`. Derive them from the logo, on the ivory background.
+- **Spelling:** titles are kept exactly as on the website ("Sahaba Radiyyallahu Anhum" vs "Ṣaḥābā Radiyallāhu ’Anhum"; "Islahi" vs "Islāhi"). Don't "fix" one side; accent-insensitive search covers both.
+- **Not designed, improvised with a `// TODO(design)`:** the loading look in the mini player, Continue listening with nothing played, the events-scope search results, the no-results and empty-recents cards. Still missing: full-screen skeletons for the first load of Home and Events, and how the fixed heights (40 chips, 34 tags, 32 tab pill, 52 search field) behave at the largest text sizes.
+- **Only the Sahaba event** has a designed detail page; the other events use the same template.
+
 ## Routes (`src/app/`)
 
 | Route | What |
@@ -68,11 +76,29 @@ fail or not checked.
 | `(tabs)/_layout.tsx` | JS tabs (`expo-router/js-tabs`) wrapped in `TuckedContent`, with `PlayerSurface` drawn over them |
 | `dev/components`, `dev/tokens` | Development-only galleries, opened by URL |
 
-## Decisions that override HANDOFF.md
+## Design screenshots
 
-HANDOFF.md is the original spec. Where it disagrees with this list, this list is what was built:
+The visual reference for each screen, 2× PNGs in a 390-wide frame. The top 44 pt is a fake status
+bar: use safe-area insets instead. Where a screenshot disagrees with the built screen or with this
+file, the built screen and this file win (the decisions below list the deliberate differences).
 
-- **Lectures:** the bar never introduces a lecture. Rows and search results open Now Playing; HANDOFF §3 says "plays in the mini player".
+| Screenshot | Screen (route) | State shown |
+|---|---|---|
+| `artboards/screens/home.png` | Home (`(tabs)/index.tsx`) | "Local" chip selected, first lecture active and paused |
+| `artboards/screens/events.png` | Events (`(tabs)/events/index.tsx`) | Default list |
+| `artboards/screens/event-detail.png` | Event detail (`(tabs)/events/[slug].tsx`) | Lecture 02 active and paused |
+| `artboards/screens/now-playing.png`, `now-playing-dark.png` | Now Playing (`PlayerSurface`, not a route) | Playing, light and dark |
+| `artboards/screens/search.png` | Search (`search.tsx`) | Lectures scope, empty query, recent searches |
+| `artboards/screens/search-results.png` | Search (`search.tsx`) | "Ṣaḥābā" typed, results |
+| `artboards/design-system.png` | — | The colour board (see DESIGN-SYSTEM.md) |
+| `artboards/error-states/*.png` | The next stage | See ERROR-STATES.md |
+| `videos/mini-player.mov` | Mini player ↔ Now Playing | The reference motion |
+
+## Decisions
+
+What was built, where it differs from the original design spec:
+
+- **Lectures:** the bar never introduces a lecture. Rows and search results open Now Playing.
 - **Event date tiles:** show the data's `day` / `month` as given, which is the start day ("24"), not the end day.
 - **Venues:** all-caps venue strings are title-cased for display by `formatVenue`. Mixed-case strings are kept as they are, so diacritics survive.
 - **Category colours:** rotate cat-1 → cat-5 and wrap. There is no fixed topic → colour map. By topic: `catForTopic(topic, topicOrder)`; by position: `catAt(index)`.
@@ -174,8 +200,7 @@ taps. The order is always **store → engine → motion**.
 | Search result | Search slides back (`router.back`) while the sheet rises behind it |
 | Deep link `/player?slug=` | Shown at once with no entrance (`showNowPlayingWithoutMotion`) |
 
-The bar never introduces a lecture: rows and results always open Now Playing. This overrides
-HANDOFF §3.
+The bar never introduces a lecture: rows and results always open Now Playing.
 
 ## Motion: how it should behave
 

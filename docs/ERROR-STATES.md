@@ -1,10 +1,10 @@
 # Ulama Moris: Error and Offline States
 
-Each state has a working page in `html/error-states/<name>.html` (opens in any browser, offline) and an image in `artboards/error-states/<name>.png`.
+The next build stage. Every screen is built; this stage adds the error and offline states on top of them.
 
-These states are built as a separate stage, after every screen is done. See HANDOFF.md §9 for when and in what order.
+Each state has a design screenshot in `artboards/error-states/<name>.png`. This file is the source of truth for copy, colours, layout and behaviour; where a screenshot disagrees, this file wins.
 
-| File (`.html` / `.png`) | When it shows |
+| Screenshot (`.png`) | When it shows |
 |---|---|
 | `offline` | App opened (or resumed) with **no internet** |
 | `lecture-didnt-load` | Had a connection, but the **first page of lectures** failed |
@@ -68,3 +68,35 @@ Colour names follow the three-tier system in DESIGN-SYSTEM.md: screens use seman
 
 ## Icons
 lucide-react-native: `WifiOff` (offline), `CloudOff` (list/search card; the design draws a cloud with an exclamation mark, so swap in a custom SVG if you want that exact icon), `AlertCircle` (audio row), `RotateCw` (retry). The 15-second skip icons are custom SVG (see DESIGN-SYSTEM.md).
+
+## Where each state plugs in
+
+| State | Where it plugs in | Screen it changes |
+|---|---|---|
+| `offline` | Root layout: blocking bottom sheet over the Home skeleton, on launch and on return to foreground | Whole app |
+| `lecture-didnt-load` | Home list area below the chips, when the first page fails. Same card for Events ("Events didn’t load") | Home, Events |
+| `more-lectures-didnt-load` / `more-events-didnt-load` | Replaces the "Loading more" footer when a next page fails. **One shared footer component** for both lists | Home, Events |
+| `search-results-didnt-load` | Search results area, same card as `lecture-didnt-load`, titled "Results didn’t load" | Search |
+| `audio-didnt-load` | Replaces the Now Playing progress bar; play/pause becomes "Try again"; skip buttons disabled | Now Playing |
+| `mini-player-lecture-didnt-load` | Mini player scholar line, play button and progress line | Mini player |
+
+## Build order
+
+One step at a time; show each step before moving on.
+
+1. Install `@react-native-community/netinfo` with `npx expo install`. Add error and retry to the data layer (the paginated stub fetchers and the player), so each list and the player can report "failed" and expose a `retry()`. Add a way to force failures in development, to test each state.
+2. In `src/providers/app-providers.tsx`, connect TanStack Query's `onlineManager` to NetInfo and `focusManager` to `AppState`.
+3. Shared pieces: the `danger-subtle` error card, the "Try again" button with its retrying state (spinner, "Trying again", `busy`), and the announce-for-accessibility helper.
+4. List states: first page failed (Home, Events), next page failed (shared footer), search results.
+5. Player states: Now Playing audio, mini player.
+6. Offline pop-up (root layout, NetInfo, foreground check, auto-retry once when the connection comes back).
+7. Check every state in light and dark, on the iOS simulator and the web build.
+
+## Checklist
+
+- [ ] Every error has one "Try again". Retrying shows a spinner and "Trying again" and ignores extra taps; a second failure shows the "Still no connection…" copy.
+- [ ] No retry loops: retry on tap, or automatically once when NetInfo reports the connection is back.
+- [ ] Rows already loaded stay when a next page fails. Now Playing resumes from the saved position after a successful retry.
+- [ ] The offline sheet blocks the app (no dismiss, Android back does nothing), is modal for screen readers, and owns its bottom inset.
+- [ ] Errors are announced (Android live region, iOS `announceForAccessibility`); disabled controls expose `disabled`.
+- [ ] Error colours only: `bg-danger-subtle` / `text-danger-subtle-fg` on screen grounds and `danger` for lines and icons; `miniPlayer.errorFg` / `miniPlayer.errorLine` on the mini player; `scrim` from tokens.ts for the offline pop-up. Never a category colour, no hex in components, no separate red.

@@ -46,7 +46,7 @@ export function TabBarItem({ tab, label, isSelected, onPress }: TabBarItemProps)
       className="min-h-touch flex-1 items-center gap-1 pt-1"
     >
       <View className={`h-8 w-[60px] items-center justify-center rounded-full ${pillClass}`}>{icon}</View>
-      {/* The tab bar can't grow much, so its label is capped (AGENTS.md "Text & font scaling"). */}
+      {/* The tab bar can't grow much, so its label is capped. */}
       <Text variant="caption" maxFontSizeMultiplier={1.3} numberOfLines={1} className={labelClass}>
         {label}
       </Text>
