@@ -52,6 +52,10 @@ async function sendStatus(changes: Partial<fakeAudio.FakeStatus>) {
   });
 }
 
+function lastPlayedSlug(): string | null {
+  return useListeningHistoryStore.getState().lastPlayedSlug;
+}
+
 function savedPositionOf(slug: string): number | undefined {
   return useListeningHistoryStore.getState().progressById[slug];
 }
@@ -94,7 +98,33 @@ describe('PlayerStatusBridge', () => {
     expect(fakePlayer.replace).toHaveBeenCalledTimes(1);
     expect(fakePlayer.replace).toHaveBeenCalledWith({ uri: second.url, name: second.title });
     expect(usePlayerStore.getState().currentIndex).toBe(1);
-    expect(savedPositionOf(first.slug)).toBe(0);
+    // No resume point left: it starts from 0 next time.
+    expect(savedPositionOf(first.slug)).toBeUndefined();
+  });
+
+  it('shows the lecture in Continue listening as soon as it starts playing', async () => {
+    playLecture(first, queueOfThree, latestSource);
+    await renderBridge();
+    expect(lastPlayedSlug()).toBeNull();
+
+    fakePlayer.currentTime = 0;
+    await sendStatus({ ...loadedStatus, playing: true, currentTime: 0 });
+
+    expect(lastPlayedSlug()).toBe(first.slug);
+  });
+
+  it('a finished lecture hides Continue listening when the queue ends', async () => {
+    useListeningHistoryStore.getState().saveProgress(second.slug, 300);
+    playLecture(third, queueOfThree, latestSource);
+    await renderBridge();
+    await sendStatus({ ...loadedStatus, playing: true, currentTime: 0 });
+    expect(lastPlayedSlug()).toBe(third.slug);
+
+    await sendStatus({ ...loadedStatus, playing: false, didJustFinish: true });
+
+    expect(lastPlayedSlug()).toBeNull();
+    // The older unfinished lecture keeps its resume point.
+    expect(savedPositionOf(second.slug)).toBe(300);
   });
 
   it('when the last lecture finishes, loads nothing new and ends the queue', async () => {

@@ -63,6 +63,8 @@ export function PlayerStatusBridge() {
     const didStartPlaying = !wasPlaying && status.playing;
     if (didStartPlaying) {
       lastCheckpointTimeRef.current = now;
+      // Start checkpoint: Continue listening switches to this lecture as soon as it plays.
+      saveCurrentProgress();
       // Played again after the queue ended (for example from the lock screen): the session is back.
       if (playerStore.hasQueueEnded) {
         playerStore.setHasQueueEnded(false);

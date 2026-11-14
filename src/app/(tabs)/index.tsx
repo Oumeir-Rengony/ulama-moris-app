@@ -7,10 +7,8 @@ import { LectureRow, type LectureRowState } from '@/components/LectureRow';
 import { LoadingFooter, SkeletonRow } from '@/components/Skeleton';
 import { lectureSeries, type LectureSummary } from '@/data/sample';
 import { lectureRowMetaLabel } from '@/features/lectures/lecture-labels';
-import { useLatestLecturesQuery, useLectureQuery } from '@/features/lectures/lectures.queries';
-import { toggle } from '@/features/player/audio-engine';
-import { buildContinueListeningContent } from '@/features/player/continue-listening';
-import { useListeningHistoryStore } from '@/features/player/listening-history.store';
+import { useLatestLecturesQuery } from '@/features/lectures/lectures.queries';
+import { ContinueListeningSection } from '@/features/player/continue-listening-section';
 import { openNowPlaying } from '@/features/player/open-now-playing';
 import { selectActiveLectureSlug, usePlayerStore } from '@/features/player/player.store';
 import { useMiniPlayerSpace } from '@/features/player/use-mini-player-space';
@@ -62,16 +60,6 @@ export default function HomeScreen() {
   const activeLectureSlug = usePlayerStore(selectActiveLectureSlug);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
 
-  // Continue listening: the last lecture with a saved resume point.
-  const lastPlayedSlug = useListeningHistoryStore((state) => state.lastPlayedSlug);
-  const savedPositionSec = useListeningHistoryStore((state) => {
-    if (state.lastPlayedSlug === null) {
-      return 0;
-    }
-    return state.progressById[state.lastPlayedSlug] ?? 0;
-  });
-  const { data: lastPlayedLecture } = useLectureQuery(lastPlayedSlug ?? undefined);
-
   const loadedLectures: LectureSummary[] = [];
   let lectureCountLabel: string | undefined = undefined;
   if (data) {
@@ -80,33 +68,6 @@ export default function HomeScreen() {
     }
     // The total comes from the API; the app never counts.
     lectureCountLabel = `${data.pages[0].total} lectures`;
-  }
-
-  const isLastPlayedActive = lastPlayedSlug !== null && lastPlayedSlug === activeLectureSlug;
-  const continueListening = buildContinueListeningContent({
-    lecture: lastPlayedLecture,
-    savedPositionSec,
-    isActive: isLastPlayedActive,
-    isPlaying,
-  });
-
-  // The play button on Continue listening. If its lecture is the loaded one (the mini player
-  // already shows it), play/pause in place. Otherwise open Now Playing like a row: the mini
-  // player never introduces a lecture.
-  function handleContinueListeningPress() {
-    if (isLastPlayedActive) {
-      toggle();
-      return;
-    }
-    if (!lastPlayedLecture) {
-      return;
-    }
-    openNowPlaying({
-      lecture: lastPlayedLecture,
-      queue: loadedLectures,
-      source: { kind: 'latest' },
-      resumeIfPaused: true,
-    });
   }
 
   function handleEndReached() {
@@ -157,11 +118,10 @@ export default function HomeScreen() {
         ItemSeparatorComponent={RowGap}
         ListHeaderComponent={
           <HomeListHeader
-            continueListening={continueListening}
+            continueListening={<ContinueListeningSection queue={loadedLectures} />}
             lectureCountLabel={lectureCountLabel}
             seriesLabels={seriesLabels}
             selectedSeriesLabel={selectedSeriesLabel}
-            onContinueListeningPress={handleContinueListeningPress}
             onSearchPress={handleSearchPress}
           />
         }

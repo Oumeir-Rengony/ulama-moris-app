@@ -158,7 +158,7 @@ const everyComponent: { name: string; element: ReactElement }[] = [
     name: 'HomeListHeader',
     element: (
       <HomeListHeader
-        continueListening={continueListening}
+        continueListening={<ContinueListeningCard {...continueListening} />}
         lectureCountLabel="81 lectures"
         seriesLabels={['Local', 'Guest']}
         selectedSeriesLabel="Local"

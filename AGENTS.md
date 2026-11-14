@@ -144,7 +144,7 @@ Not in the spec yet: signed-in user, bookmarks, language. Don't add stores or co
 - Lock screen / notification: back and forward step 15 s through `seekBackwardIntervalSeconds` / `seekForwardIntervalSeconds` (expo-audio 58). No next/previous track.
 - The Zustand store holds data only. It never holds the player object, and it never calls `play()`, `pause()` or `seekTo()`. Components call the engine commands. The commands control the player and update the queue in the store.
 - Status flows in one direction: expo-audio → `PlayerStatusBridge` → store. The bridge is mounted once in the root layout. It runs `useAudioPlayerStatus(player)`, writes `isPlaying` / `positionSec` / `durationSec` into the store, and starts the next lecture when `didJustFinish` is true. Never set `isPlaying` or `positionSec` from a button press. Call the engine and let the next status update show the change. This keeps the UI correct when the OS pauses audio (phone call, headphones unplugged, lock screen).
-- Save to `progressById` (with `saveProgress`) at checkpoints only: on pause, on seek, on track change, and every ~10 s while playing. Each change rewrites AsyncStorage, so don't save on every status update.
+- Save to `progressById` (with `saveProgress`) at checkpoints only: on start, on pause, on seek, on track change, and every ~10 s while playing. Each change rewrites AsyncStorage, so don't save on every status update.
 
 ### Mini player and Now Playing (one surface)
 
@@ -154,7 +154,7 @@ Not in the spec yet: signed-in user, bookmarks, language. Don't add stores or co
 - Motion completion callbacks act only when `finished` is true **and** the presentation is still the one they expect, so a retargeted (interrupted) animation never overwrites the newer state.
 - Now Playing's event pill calls `openEventFromNowPlaying(slug)`: Now Playing collapses into the bar while `router.navigate` opens the event in the Events tab underneath. It uses the lecture's `eventSlug`, a MOCK field next to `event` (the title) until the API returns the link.
 - The bar never introduces a lecture: rows and search results open Now Playing.
-- A launch shows no bar (the queue isn't persisted). Continue listening shows `lastPlayedSlug`.
+- A launch shows no bar (the queue isn't persisted). Continue listening (`ContinueListeningSection`) shows `lastPlayedSlug`: hidden until something plays, switched as soon as a lecture starts, hidden again when that lecture finishes (`markFinished`). Its progress follows the live position while its lecture plays, the saved resume point otherwise, and its play button resumes from there.
 - Swipe the bar down to dismiss: React Native `PanResponder` writing `miniDrop`, not Gesture Handler (its v3 detector received no touches on the floating bar on iOS). Screen readers get a "Stop and close player" action. The swipe down on Now Playing uses Gesture Handler's `usePanGesture` and runs on the UI thread.
 - Android back while Now Playing is open collapses it (`BackHandler` in `PlayerSurface`). Web has no back handler.
 

@@ -1,30 +1,21 @@
+import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
-import { ContinueListeningCard } from '@/components/ContinueListeningCard';
 import { HomeHeader } from '@/components/HomeHeader';
 import { SearchFieldButton } from '@/components/Search/search-field-button';
 import { Chip } from '@/components/ui/chip';
 import { SectionHeader, SectionHeaderCount } from '@/components/ui/section-header';
 import { Text } from '@/components/ui/text';
 
-export type ContinueListeningContent = {
-  title: string;
-  author: string;
-  state: 'playing' | 'paused';
-  progress: number;
-  elapsedLabel: string;
-  minutesLeftLabel: string;
-};
-
 type HomeListHeaderProps = {
-  // Left out when nothing has been listened to yet: the card is hidden.
+  // The Continue listening card, with its own top spacing. Left out (or rendering nothing) when
+  // there is nothing to continue.
   // TODO(design): no empty state is designed for Continue listening.
-  continueListening?: ContinueListeningContent;
+  continueListening?: ReactNode;
   // "81 lectures". Left out until the first page has arrived.
   lectureCountLabel?: string;
   seriesLabels: string[];
   selectedSeriesLabel: string;
-  onContinueListeningPress?: () => void;
   onSearchPress?: () => void;
 };
 
@@ -35,7 +26,6 @@ export function HomeListHeader({
   lectureCountLabel,
   seriesLabels,
   selectedSeriesLabel,
-  onContinueListeningPress,
   onSearchPress,
 }: HomeListHeaderProps) {
   let countTrailing = null;
@@ -60,19 +50,7 @@ export function HomeListHeader({
         <SearchFieldButton label="Search by topic" onPress={onSearchPress} />
       </View>
 
-      {continueListening ? (
-        <View className="mt-6 px-gutter">
-          <ContinueListeningCard
-            title={continueListening.title}
-            author={continueListening.author}
-            state={continueListening.state}
-            progress={continueListening.progress}
-            elapsedLabel={continueListening.elapsedLabel}
-            minutesLeftLabel={continueListening.minutesLeftLabel}
-            onTogglePress={onContinueListeningPress}
-          />
-        </View>
-      ) : null}
+      {continueListening}
 
       <View className="mt-[34px] px-gutter">
         <SectionHeader title="Latest lectures" trailing={countTrailing} />

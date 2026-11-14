@@ -1,23 +1,30 @@
-import type { ContinueListeningContent } from '@/components/HomeListHeader';
 import type { LectureSummary } from '@/data/sample';
 import { clockLabel, clockToSeconds, minutesLeftLabel } from '@/utils/format-time';
+
+export type ContinueListeningContent = {
+  title: string;
+  author: string;
+  state: 'playing' | 'paused';
+  progress: number;
+  elapsedLabel: string;
+  minutesLeftLabel: string;
+};
 
 type ContinueListeningInput = {
   // The last played lecture (from listening history), or undefined until it has been looked up.
   lecture: LectureSummary | null | undefined;
-  // Its saved resume point, in seconds.
-  savedPositionSec: number;
+  // Where it is, in seconds: the live position while it plays, otherwise its saved resume point.
+  positionSec: number;
   // Whether it's the lecture loaded in the player right now, and playing.
   isActive: boolean;
   isPlaying: boolean;
 };
 
-// The Continue listening card's strings, or undefined when there is nothing to continue (a first
-// launch, or the lecture can't be found). The progress comes from the saved resume point, which
-// is updated at checkpoints (about every 10 s while playing), not four times a second.
+// The Continue listening card's strings, or undefined when there is nothing to continue (nothing
+// played yet, the last one was finished, or the lecture can't be found).
 export function buildContinueListeningContent({
   lecture,
-  savedPositionSec,
+  positionSec,
   isActive,
   isPlaying,
 }: ContinueListeningInput): ContinueListeningContent | undefined {
@@ -35,8 +42,8 @@ export function buildContinueListeningContent({
   let progress = 0;
   let minutesLeft = '';
   if (durationSec !== null && durationSec > 0) {
-    progress = savedPositionSec / durationSec;
-    minutesLeft = minutesLeftLabel(durationSec - savedPositionSec);
+    progress = positionSec / durationSec;
+    minutesLeft = minutesLeftLabel(durationSec - positionSec);
   }
 
   return {
@@ -44,7 +51,7 @@ export function buildContinueListeningContent({
     author: lecture.author,
     state,
     progress,
-    elapsedLabel: clockLabel(savedPositionSec),
+    elapsedLabel: clockLabel(positionSec),
     minutesLeftLabel: minutesLeft,
   };
 }

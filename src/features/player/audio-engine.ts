@@ -90,8 +90,8 @@ function findLectureIndex(queue: LectureSummary[], slug: string): number {
   return -1;
 }
 
-// Saves where the loaded lecture is, as its resume point. Called at checkpoints only (pause,
-// seek, track change, every ~10 s, app background, stop), because each save rewrites storage.
+// Saves where the loaded lecture is, as its resume point. Called at checkpoints only (start,
+// pause, seek, track change, every ~10 s, app background, stop), because each save rewrites storage.
 export function saveCurrentProgress(): void {
   const player = getPlayer();
   const lecture = selectCurrentLecture(usePlayerStore.getState());
@@ -105,13 +105,14 @@ export function saveCurrentProgress(): void {
   useListeningHistoryStore.getState().saveProgress(lecture.slug, player.currentTime);
 }
 
-// A finished lecture starts from the beginning next time, not at its last second.
+// A finished lecture starts from the beginning next time, not at its last second, and leaves
+// Continue listening.
 export function saveCurrentLectureAsFinished(): void {
   const lecture = selectCurrentLecture(usePlayerStore.getState());
   if (lecture === null) {
     return;
   }
-  useListeningHistoryStore.getState().saveProgress(lecture.slug, 0);
+  useListeningHistoryStore.getState().markFinished(lecture.slug);
 }
 
 // Loads the store's current lecture into the player and registers it with the lock screen.

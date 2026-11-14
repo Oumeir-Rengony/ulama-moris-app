@@ -24,9 +24,32 @@ describe('listening history store', () => {
     expect(useListeningHistoryStore.getState().progressById).toEqual({ a: 150, b: 300 });
   });
 
+  it('has no lecture for Continue listening before anything is played', () => {
+    expect(useListeningHistoryStore.getState().lastPlayedSlug).toBeNull();
+  });
+
   it('remembers the lecture saved most recently, for Continue listening', () => {
     useListeningHistoryStore.getState().saveProgress('b', 300);
     useListeningHistoryStore.getState().saveProgress('a', 120);
+
+    expect(useListeningHistoryStore.getState().lastPlayedSlug).toBe('a');
+  });
+
+  it('markFinished drops the resume point and hides Continue listening', () => {
+    useListeningHistoryStore.getState().saveProgress('b', 300);
+    useListeningHistoryStore.getState().saveProgress('a', 120);
+
+    useListeningHistoryStore.getState().markFinished('a');
+
+    expect(useListeningHistoryStore.getState().progressById).toEqual({ b: 300 });
+    expect(useListeningHistoryStore.getState().lastPlayedSlug).toBeNull();
+  });
+
+  it('markFinished on an older lecture keeps the last played one', () => {
+    useListeningHistoryStore.getState().saveProgress('b', 300);
+    useListeningHistoryStore.getState().saveProgress('a', 120);
+
+    useListeningHistoryStore.getState().markFinished('b');
 
     expect(useListeningHistoryStore.getState().lastPlayedSlug).toBe('a');
   });
