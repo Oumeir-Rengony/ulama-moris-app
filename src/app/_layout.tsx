@@ -14,8 +14,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { useColorScheme } from 'nativewind';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
+import { LaunchScreen } from '@/features/launch/launch-screen';
 import { PlayerStatusBridge } from '@/features/player/player-status-bridge';
 import { setupAudio } from '@/features/player/setup-audio';
 import { AppProviders } from '@/providers/app-providers';
@@ -45,17 +46,17 @@ export default function RootLayout() {
 
   const fontsAreSettled = fontsLoaded || fontError !== null;
 
+  // The branded launch screen covers the app on every cold start, then removes itself.
+  const [isLaunchScreenVisible, setIsLaunchScreenVisible] = useState(true);
+  const hideLaunchScreen = useCallback(() => {
+    setIsLaunchScreenVisible(false);
+  }, []);
+
   useEffect(() => {
     if (fontError) {
       console.error('Manrope failed to load. Falling back to system fonts.', fontError);
     }
   }, [fontError]);
-
-  useEffect(() => {
-    if (fontsAreSettled) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsAreSettled]);
 
   // The audio mode is global and set once, when the app starts (in the browser, not on the
   // web server render).
@@ -68,6 +69,8 @@ export default function RootLayout() {
     SystemUI.setBackgroundColorAsync(colors.bg);
   }, [colors.bg]);
 
+  // The native splash stays up until the launch screen has drawn its first frame (the launch
+  // screen hides it), so nothing shows before the fonts are ready.
   if (!fontsAreSettled) {
     return null;
   }
@@ -87,6 +90,7 @@ export default function RootLayout() {
           {/* Deep links only. Now Playing itself is an overlay in the tabs layout. */}
           <Stack.Screen name="player" options={{ animation: 'none' }} />
         </Stack>
+        {isLaunchScreenVisible && <LaunchScreen onFinished={hideLaunchScreen} />}
       </ThemeProvider>
     </AppProviders>
   );

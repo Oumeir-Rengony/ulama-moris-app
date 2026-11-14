@@ -231,6 +231,7 @@ These render outside the normal screen tree and do **not** inherit any padding f
 
 - Layout with Flexbox (`flex: 1`, `gap`, percentages). No hardcoded screen-sized widths/heights. Fixed sizes are fine only for small things (icons, avatars, hit areas).
 - Use `useWindowDimensions()` in components, never `Dimensions.get()`. The hook updates on rotation, split screen and foldables; `Dimensions.get()` is a one-time snapshot. Use `window` dimensions, not `screen`, for layout (they differ on Android by the system bars).
+- Exception: anything that must cover the whole drawing area, edge to edge (the player surface), takes its size from `useSafeAreaFrame()`. On Android, React Native's `window` leaves out the status and navigation bars unless its edge-to-edge flag is on (off in Expo Go), so a full-screen sheet sized from it stops short and shows what's behind under the navigation buttons.
 - Content on wide screens (Android tablets/foldables, and iPad if `supportsTablet` is ever enabled): wrap screen content in a centered container with a `maxWidth` (~600) so it doesn't stretch.
 - Orientation is locked to portrait. If one screen ever needs landscape, use `expo-screen-orientation` to unlock it on that screen and re-lock on leave, and make that screen's layout react to `useWindowDimensions()`.
 
