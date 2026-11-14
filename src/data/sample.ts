@@ -1,4 +1,4 @@
-// Static sample data, shaped like the real API (docs/src/data/sample.ts).
+// Static sample data, shaped like the real API.
 // The first two lectures and the first two events are the real records from the website, kept
 // exactly as they are (including the "Ş" spelling and the all-caps venues). Everything marked
 // MOCK was added so the designs can be filled: more rows, two years of events, an event without

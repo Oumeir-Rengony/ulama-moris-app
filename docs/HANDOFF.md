@@ -3,17 +3,17 @@
 An Islamic audio library for Mauritius: lectures by local ulama, grouped into events, with one persistent player.
 Target: **Expo SDK 58, React Native 0.88, TypeScript, expo-router, NativeWind v4.** Design frame: 390 × 844 (iPhone 14/15 size). Lay out with flexbox and safe areas, not fixed heights.
 
-This folder (`docs/updated-doc/`) contains:
+This folder (`docs/`) contains the spec and design references. The theme and data files it names live in the app itself (paths below):
 
 | Path | What it is |
 |---|---|
 | `HANDOFF.md` | This brief: the source of truth for structure and behaviour |
 | `DESIGN-SYSTEM.md` | **Read second.** Three-tier colour system (primitives → semantic → component), naming rules, categories, contrast, type, shadows, NativeWind setup, class recipes |
-| `COLOUR-SYSTEM-CHANGES.md` | Change log from the old flat colour names to the three-tier system, with the full migration map |
 | `ARTBOARD-MAP.md` | Every region of every artboard mapped to its HTML line, spacing and token classes |
 | `expo-audio.md` | Audio playback guide (background playback, lock screen, Android notification) |
+| `CONTEXT.md` | How the built app works: state, Now Playing, motion, decisions that override this brief, pending checks |
 | `ERROR-STATES.md` | Error and offline states. **Built as a separate stage after all screens are done** (§7 step 10, §9). Don't read it during the screen phase |
-| `global.css`, `tailwind.config.js` | NativeWind theme: the semantic tier as classes that switch light/dark |
+| `src/global.css`, `tailwind.config.js` (project root) | NativeWind theme: the semantic tier as classes that switch light/dark |
 | `src/theme/primitives.ts` | Tier 1: raw colour ramps (never used in screens) |
 | `src/theme/tokens.ts` | Tier 2 in JS (`useThemeColors()`, `useThemeShadows()`, `catAt()`, `catForTopic()`, `catClasses`) for SVG fills, icon colours, StatusBar, shadows, animation; plus the artwork `palette`, type, spacing, radii, sizes |
 | `src/components/*/tokens.ts` | Tier 3: component tokens (MiniPlayer, TabBar, Skeleton, Search) |
@@ -30,7 +30,7 @@ Error-state files (separate stage, §9; `html/error-states/` and `artboards/erro
 
 ## 0. Colour names used in this brief → NativeWind tokens
 
-ivory ground → `bg-bg` · charcoal text → `text-fg` · muted text → `text-fg-muted` · olive text, olive fills and olive graphics (progress, play button) → `text-primary` / `bg-primary` with `primary-fg` on top · rows and cards → `bg-surface-1` · chips, fields, round buttons → `bg-surface-2` · forest card → `bg-emphasis` · ochre button and ochre progress → `bg-secondary` · sage track → `track` · mini player → `miniPlayer.*` component tokens · tab pill → `tabBar.*` component tokens · hairlines → `border`, outlines → `border-strong` · list tiles and tags → the categories `bg-cat-1-bg` … `bg-cat-5-bg` with the matching `text-cat-N-fg` · errors → `danger`, `danger-subtle`, `danger-subtle-fg`. Every one of these has a dark value; see DESIGN-SYSTEM.md. Old names (`hero`, `cta`, `tint-sage` …) are mapped in COLOUR-SYSTEM-CHANGES.md.
+ivory ground → `bg-bg` · charcoal text → `text-fg` · muted text → `text-fg-muted` · olive text, olive fills and olive graphics (progress, play button) → `text-primary` / `bg-primary` with `primary-fg` on top · rows and cards → `bg-surface-1` · chips, fields, round buttons → `bg-surface-2` · forest card → `bg-emphasis` · ochre button and ochre progress → `bg-secondary` · sage track → `track` · mini player → `miniPlayer.*` component tokens · tab pill → `tabBar.*` component tokens · hairlines → `border`, outlines → `border-strong` · list tiles and tags → the categories `bg-cat-1-bg` … `bg-cat-5-bg` with the matching `text-cat-N-fg` · errors → `danger`, `danger-subtle`, `danger-subtle-fg`. Every one of these has a dark value; see DESIGN-SYSTEM.md.
 
 ## 1. Design principles
 
@@ -235,7 +235,7 @@ Until these are designed, improvise from the existing components and tokens, kee
 4. **Initial load:** full-screen skeletons for Home and Events, not just the footer row.
 5. **Search:** the events-scope results, the no-results card and the empty-recents card have no PNG or HTML page. Build them from the copy and tokens in §4.5.
 6. **Event detail share:** the share payload.
-7. ~~**Lock-screen / notification artwork**~~: decided. The OS media controls use a hosted `https` PNG of the cover art (`LOCK_SCREEN_ARTWORK_URL`, Stage 10 plan §3.1), not a bundled asset. In-app screens keep the bundled `assets/images/cover-art.jpg`.
+7. ~~**Lock-screen / notification artwork**~~: decided. The OS media controls use a hosted `https` PNG of the cover art (`LOCK_SCREEN_ARTWORK_URL` in `src/features/player/lock-screen-artwork.ts`), not a bundled asset. In-app screens keep the bundled `assets/images/cover-art.jpg`.
 8. **Large text:** fixed heights (40 chips, 34 tags, 32 tab pill, 52 search field) need behaviour defined at large Dynamic Type sizes.
 9. **Reduced motion:** turn off the play-button radius animation and the search slide-in.
 10. **Accessibility labels in §5:** check the curly quotes in the example labels.

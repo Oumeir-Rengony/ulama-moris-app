@@ -15,7 +15,7 @@ import {
 // Every way into and out of Now Playing goes through this file: Home rows, Continue listening,
 // Event detail rows, Search results, the mini player, the chevron, Android back and the swipes.
 // One place decides the order of the steps, because the bugs come from callers each mixing
-// "load" and "show" their own way (MINI-PLAYER.md).
+// "load" and "show" their own way.
 //
 // The order is store → engine → motion. The intent is recorded first (it hides the mini player
 // in the same update), then the audio is asked to change, then the motion starts. The motion

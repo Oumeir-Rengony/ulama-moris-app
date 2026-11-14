@@ -57,7 +57,6 @@ src/
 - A component used by only one screen still goes in `components/`, not `app/`.
 - `features/*` never imports from `app/`. `components/*` may read hooks from `features/*`.
 - Import through the `@/` alias. No barrel `index.ts` re-export files (they hurt tree-shaking).
-- `components/PlaceholderScreen/` is temporary Stage 1 scaffolding. Each screen stage replaces its placeholder; delete the folder once no route imports it.
 
 ## Navigation & Routing
 

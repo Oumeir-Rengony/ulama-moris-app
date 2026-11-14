@@ -5,18 +5,17 @@ Colours live in **three tiers**, and each tier may only point at the one below i
 | Tier | What it holds | Where it lives | Used by |
 |---|---|---|---|
 | 1. Primitives | Raw hex values in hue ramps, no meaning (`ochre-400`) | `src/theme/primitives.ts` | Semantic and component tokens only |
-| 2. Semantic | Roles mapped per theme to primitives (`secondary` → `ochre-400`) | `global.css`, `tailwind.config.js`, `src/theme/tokens.ts` | Screens and components |
+| 2. Semantic | Roles mapped per theme to primitives (`secondary` → `ochre-400`) | `src/global.css`, `tailwind.config.js`, `src/theme/tokens.ts` | Screens and components |
 | 3. Component | Per-component hooks onto semantic tokens (`miniPlayer.progress` → `secondary`) | `src/components/<Name>/tokens.ts` | That one component |
 
 | File | Role |
 |---|---|
 | `src/theme/primitives.ts` | Tier 1: the 35 raw colours in eight ramps |
-| `global.css` | Tier 2 as CSS variables (`:root` = light, `@media (prefers-color-scheme: dark)` = dark) |
-| `tailwind.config.js` | Maps the semantic tokens to classes (`bg-surface-1`, `text-fg-muted`, `bg-cat-4-bg`, `border-border-strong` …), plus fonts, type scale, radii, spacing |
+| `src/global.css` | Tier 2 as CSS variables (`:root` = light, `@media (prefers-color-scheme: dark)` = dark) |
+| `tailwind.config.js` (project root) | Maps the semantic tokens to classes (`bg-surface-1`, `text-fg-muted`, `bg-cat-4-bg`, `border-border-strong` …), plus fonts, type scale, radii, spacing |
 | `src/theme/tokens.ts` | The same semantic colours in JS (`useThemeColors()`) for places classes can't reach (SVG fills, icon colours, StatusBar, navigation theme, animations), the category helpers (`catAt`, `catForTopic`, `catClasses`), the offline `scrim`, the artwork `palette`, shadows (`useThemeShadows()`), type, spacing, radii, sizes |
 | `src/components/<Name>/tokens.ts` | Tier 3: component tokens for MiniPlayer, TabBar, Skeleton and Search |
 | `html/design-system.html` | The colour board: light and dark semantic tokens, categories, sample components, primitives and component tokens. Image: `artboards/design-system.png` |
-| `COLOUR-SYSTEM-CHANGES.md` | Change log from the old flat token names to this system, with the migration map |
 
 ## 1. Naming rules
 
@@ -368,7 +367,7 @@ Custom SVG (lucide has no "15" icon). 24 × 24 viewBox, stroke 2, round caps and
 
 **Version check (7 Nov 2026):** the NativeWind docs list v4.2.7 as stable with support up to Expo SDK 57. This project is on **SDK 58**, which isn't listed yet. A test install of exactly the setup below on this project's dependencies (SDK 58, React Native 0.88.1, Reanimated 4.7.1, Worklets 0.13.0) installed with no peer conflicts, and `expo export` bundled iOS and Android cleanly. Every token class compiled, including opacity modifiers (`bg-emphasis-fg/[0.12]`) and dark variants. Not yet checked: rendering on a device or simulator. Run the app on iOS and Android once after setup, before building screens. Official guide: https://www.nativewind.dev/docs/getting-started/installation.
 
-Steps for this project (it uses `package-lock.json`, so `npx`):
+Steps for this project (it uses `package-lock.json`, so `npx`). **Already done:** they record how the app was set up. The handoff copies of the theme files mentioned in steps 2–3 have been removed; the app's own files are the source now.
 
 1. `npx expo install nativewind@4.2.7` (pin it so a future v5 `latest` tag isn't picked up), then `npm i -D tailwindcss@^3.4.17 prettier-plugin-tailwindcss@^0.5.11` (resolves to Tailwind 3.4.19). Reanimated, Worklets and safe-area-context are already in package.json at SDK 58 versions; if you ever reinstall them, use `npx expo install`.
 2. Copy `tailwind.config.js` to the project root. **Replace** the template's `src/global.css` with this package's `global.css`. (The template's font variables in it are only used by the starter's `src/constants/theme.ts`, which Manrope replaces.)
@@ -397,7 +396,7 @@ Every interactive element in the app is listed below. Build these and only these
 
 ## 16. Open decisions
 
-From the change log (COLOUR-SYSTEM-CHANGES.md). None blocks the build; the values above are the current answer.
+Carried over from the colour-system change log (since removed). None blocks the build; the values above are the current answer.
 
 - Remove ochre from the category cycle? (It's also `secondary`, which dilutes the "act here" signal.)
 - Merge `olive-850` into `olive-800`?
