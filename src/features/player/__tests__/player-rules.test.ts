@@ -120,6 +120,22 @@ describe('player rules', () => {
     expect(onUpdateBody).not.toMatch(/scheduleOnRN/);
   });
 
+  // On Android (development build) a Reanimated view with a boxShadow wasn't drawn at all: Now
+  // Playing lost its sheet and artwork, and the tabs behind showed through its text.
+  it('player motion files never put a boxShadow on an animated view', () => {
+    const motionFiles = filesContaining(/react-native-reanimated/).filter((file) => file.startsWith('features/player/'));
+    expect(motionFiles.length).toBeGreaterThan(0);
+
+    const filesWithShadow: string[] = [];
+    for (const file of motionFiles) {
+      const source = readSource(file);
+      if (source.includes('boxShadow')) {
+        filesWithShadow.push(file);
+      }
+    }
+    expect(filesWithShadow).toEqual([]);
+  });
+
   it('no component in src/components reads the player stores', () => {
     const componentFilesUsingStores = filesContaining(/usePlayerStore|useListeningHistoryStore/).filter((file) =>
       file.startsWith('components/'),

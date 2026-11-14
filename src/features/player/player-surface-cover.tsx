@@ -3,11 +3,11 @@ import { View } from 'react-native';
 import Animated, { Extrapolation, interpolate, useAnimatedStyle } from 'react-native-reanimated';
 
 import { CoverArt } from '@/components/artwork/cover-art';
-import { useThemeColors, useThemeShadows } from '@/theme/tokens';
+import { useThemeColors } from '@/theme/tokens';
 
 import { MINI_DROP_DISTANCE_PX } from './player-motion-config';
 import { getCoverTransform, getEntranceProgress, getThumbRect, type Rect } from './player-surface-geometry';
-import { enterY, expand, miniDrop, reducedMotion, readSurfaceGeometry } from './player-surface-motion';
+import { enterY, expand, miniDrop, readSurfaceGeometry, reducedMotion } from './player-surface-motion';
 
 // During a fresh entrance the cover rises 40 px and grows from 90 % as it arrives.
 const ENTRANCE_RISE_PX = 40;
@@ -20,9 +20,10 @@ type SurfaceCoverProps = {
 };
 
 // The one cover for both states: Now Playing's artwork, and the bar's thumbnail. Only transforms,
-// opacity and its corner radius animate. The shadow stays at its final value.
+// opacity and its corner radius animate.
+// No shadow: on Android (development build) a Reanimated view with a shadow style wasn't drawn at
+// all, so the artwork and the bar's thumbnail were missing.
 export const SurfaceCover = memo(function SurfaceCover({ coverRect }: SurfaceCoverProps) {
-  const shadows = useThemeShadows();
   const colors = useThemeColors();
 
   const outerStyle = useAnimatedStyle(() => {
@@ -61,13 +62,12 @@ export const SurfaceCover = memo(function SurfaceCover({ coverRect }: SurfaceCov
     return { borderRadius: morph.borderRadius };
   });
 
-  // Two views: the outer one carries the shadow, the inner one clips the image to the radius.
+  // Two views: the outer one moves and scales, the inner one clips the image to the radius.
   return (
     <Animated.View
       pointerEvents="none"
       style={[
         { position: 'absolute', left: coverRect.x, top: coverRect.y, width: coverRect.width, height: coverRect.height },
-        { boxShadow: shadows.artwork },
         outerStyle,
       ]}
     >

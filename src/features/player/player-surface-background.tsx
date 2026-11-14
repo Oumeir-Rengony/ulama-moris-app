@@ -3,11 +3,11 @@ import { memo } from 'react';
 import { View } from 'react-native';
 import Animated, { Extrapolation, interpolate, interpolateColor, useAnimatedStyle } from 'react-native-reanimated';
 
-import { useThemeColors, useThemeShadows } from '@/theme/tokens';
+import { useThemeColors } from '@/theme/tokens';
 
 import { MINI_DROP_DISTANCE_PX } from './player-motion-config';
 import { getBackgroundFrame } from './player-surface-geometry';
-import { enterY, expand, miniDrop, reducedMotion, readSurfaceGeometry } from './player-surface-motion';
+import { enterY, expand, miniDrop, readSurfaceGeometry, reducedMotion } from './player-surface-motion';
 
 function clampShare(value: number): number {
   'worklet';
@@ -21,7 +21,6 @@ function clampShare(value: number): number {
 export const SurfaceBackground = memo(function SurfaceBackground() {
   const { colorScheme } = useColorScheme();
   const colors = useThemeColors();
-  const shadows = useThemeShadows();
   const isDark = colorScheme === 'dark';
 
   // The bar is inverse (charcoal) in light and emphasis (forest) in dark; Now Playing is bg.
@@ -77,7 +76,9 @@ export const SurfaceBackground = memo(function SurfaceBackground() {
 
   return (
     <>
-      <Animated.View pointerEvents="none" style={[{ position: 'absolute', boxShadow: shadows.miniPlayer }, frameStyle]} />
+      {/* No shadow: on Android (development build) a Reanimated view with a shadow style wasn't
+          drawn at all, so Now Playing had no sheet and the tabs showed through its text. */}
+      <Animated.View pointerEvents="none" style={[{ position: 'absolute' }, frameStyle]} />
       {isDark ? (
         <Animated.View pointerEvents="none" style={[{ position: 'absolute' }, outlineStyle]}>
           {/* A plain View carries the classes. Its radius stays at the bar's 20: the outline has
