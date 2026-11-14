@@ -27,7 +27,7 @@ no development build exists yet. The checks below need one (`npx expo run:ios --
 `npx expo run:android --device` or `eas build --profile development`). Report each as pass,
 fail or not checked.
 
-**Audio on real devices** (also [expo-audio.md](expo-audio.md) §7):
+**Audio on real devices** (after any change to the `expo-audio` plugin settings in `app.json`, rebuild the app: Expo Go and a JS reload don't pick them up):
 - [ ] iOS lock screen and Control Center: title, author, artwork; play/pause, scrub and ±15 s skip work.
 - [ ] iOS plays with the silent switch on.
 - [ ] Android media notification: play/pause, seek and skip work from it.
@@ -37,6 +37,8 @@ fail or not checked.
 - [ ] An incoming call pauses, and the play button shows "Play" afterwards.
 - [ ] Unplugging headphones pauses, and the UI shows it.
 - [ ] A pause from the lock screen shows in the app when it's reopened.
+- [ ] Moving between screens doesn't stop playback.
+- [ ] Stopping (swiping the bar away) clears the notification and the lock-screen card.
 
 **Motion on real devices:**
 - [ ] Android release build on the slowest phone: open, close, swipe and interrupt flows stay under 16 ms per frame (8 ms at 120 Hz).

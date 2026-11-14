@@ -125,7 +125,8 @@ function loadCurrent(shouldPlay: boolean): void {
 
   state.setHasQueueEnded(false);
   player.replace({ uri: lecture.url, name: lecture.title });
-  // Called again on every track change, so the notification never shows the previous title.
+  // Required, not cosmetic: on Android, without it the OS kills background playback after about
+  // 3 minutes. Called again on every track change, so the notification never shows the previous title.
   player.setActiveForLockScreen(true, buildLockScreenMetadata(lecture, selectSourceLabel(state)), lockScreenOptions);
 
   const savedPositionSec = useListeningHistoryStore.getState().progressById[lecture.slug] ?? 0;

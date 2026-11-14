@@ -33,7 +33,7 @@ Start with [docs/CONTEXT.md](docs/CONTEXT.md): how the app works, what was decid
 | Colours, tokens, type, spacing, shadows, any visual style | [src/theme/README.md](src/theme/README.md) (recipes), then [docs/DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md) (full reference) |
 | Changing a screen's layout | Its design screenshot (the table in CONTEXT.md "Design screenshots") and the existing code |
 | Error and offline states (next stage) | [docs/ERROR-STATES.md](docs/ERROR-STATES.md) and `docs/artboards/error-states/*.png` |
-| Audio playback, lock screen, background | [docs/expo-audio.md](docs/expo-audio.md) |
+| Audio playback, lock screen, background | AGENTS.md "Audio: expo-audio plays, Zustand remembers", the comments in `src/features/player/audio-engine.ts` and `setup-audio.ts`, then the Expo docs: https://docs.expo.dev/versions/latest/sdk/audio.md |
 | Player motion | CONTEXT.md "Motion", then [docs/Audio-Player-Animations.md](docs/Audio-Player-Animations.md) |
 
 Code comments never cite a doc. Docs change; a comment states the fact it needs.
@@ -139,7 +139,7 @@ Not in the spec yet: signed-in user, bookmarks, language. Don't add stores or co
 
 ### Audio: expo-audio plays, Zustand remembers
 
-- `expo-audio` is the audio engine. Follow [docs/expo-audio.md](docs/expo-audio.md). Exactly one player, created by `getPlayer()` in `features/player/audio-engine.ts` on first use (not when the file loads: the web build also renders on the server, where expo-audio's web player can't be created). That file also exports the commands: `playLecture`, `toggle`, `pause`, `resume`, `seek`, `skip`, `playNext`, `stopAndClear`.
+- `expo-audio` is the audio engine. Never add `expo-av` (deprecated) or use `Audio.Sound`. Exactly one player, created by `getPlayer()` in `features/player/audio-engine.ts` on first use (not when the file loads: the web build also renders on the server, where expo-audio's web player can't be created). That file also exports the commands: `playLecture`, `toggle`, `pause`, `resume`, `seek`, `skip`, `playNext`, `stopAndClear`.
 - A saved resume point is applied once the new lecture has loaded (`finishPendingResumeIfReady`, called by the bridge). Seeking an item that hasn't loaded isn't safe on iOS.
 - Lock screen / notification: back and forward step 15 s through `seekBackwardIntervalSeconds` / `seekForwardIntervalSeconds` (expo-audio 58). No next/previous track.
 - The Zustand store holds data only. It never holds the player object, and it never calls `play()`, `pause()` or `seekTo()`. Components call the engine commands. The commands control the player and update the queue in the store.
