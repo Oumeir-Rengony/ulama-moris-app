@@ -7,7 +7,16 @@ import { useThemeColors } from '@/theme/tokens';
 
 import { MINI_DROP_DISTANCE_PX } from './player-motion-config';
 import { getCoverTransform, getEntranceProgress, getThumbRect, type Rect } from './player-surface-geometry';
-import { enterY, expand, miniDrop, readSurfaceGeometry, reducedMotion } from './player-surface-motion';
+import {
+  combineSurfaceGeometry,
+  coverRectValue,
+  enterY,
+  expand,
+  miniDrop,
+  miniRectValue,
+  reducedMotion,
+  windowSizeValue,
+} from './player-surface-motion';
 
 // During a fresh entrance the cover rises 40 px and grows from 90 % as it arrives.
 const ENTRANCE_RISE_PX = 40;
@@ -27,7 +36,8 @@ export const SurfaceCover = memo(function SurfaceCover({ coverRect }: SurfaceCov
   const colors = useThemeColors();
 
   const outerStyle = useAnimatedStyle(() => {
-    const geometry = readSurfaceGeometry();
+    // Read directly (not through readSurfaceGeometry), so the cover follows a window resize.
+    const geometry = combineSurfaceGeometry(windowSizeValue.get(), miniRectValue.get(), coverRectValue.get());
     const thumbRect = getThumbRect(geometry.miniRect);
     const morph = getCoverTransform(expand.get(), thumbRect, geometry.coverRect);
 
@@ -56,7 +66,8 @@ export const SurfaceCover = memo(function SurfaceCover({ coverRect }: SurfaceCov
   });
 
   const clipStyle = useAnimatedStyle(() => {
-    const geometry = readSurfaceGeometry();
+    // Read directly (not through readSurfaceGeometry), so the radius follows a window resize.
+    const geometry = combineSurfaceGeometry(windowSizeValue.get(), miniRectValue.get(), coverRectValue.get());
     const thumbRect = getThumbRect(geometry.miniRect);
     const morph = getCoverTransform(expand.get(), thumbRect, geometry.coverRect);
     return { borderRadius: morph.borderRadius };

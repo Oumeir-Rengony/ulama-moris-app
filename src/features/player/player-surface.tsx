@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BackHandler, StyleSheet } from 'react-native';
+import { BackHandler, Platform, StyleSheet, useWindowDimensions } from 'react-native';
 import Animated, { FadeOut, useAnimatedStyle, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
 
@@ -31,6 +31,33 @@ type PlayerSurfaceProps = {
   bottomOffset: number;
 };
 
+type DrawingAreaSize = {
+  width: number;
+  height: number;
+};
+
+// The size of the view the app draws in, which Now Playing's background must cover edge to edge.
+//
+// Native: the frame measured by the safe-area provider at the root, rather than
+// useWindowDimensions(). On Android, React Native's "window" leaves out the status bar and the
+// navigation bar unless its edge-to-edge flag is on (it is off in Expo Go), while the app still
+// draws under both bars. Now Playing's background then stopped short of the bottom and the shrunk
+// tabs showed through behind the navigation buttons.
+//
+// Web: the browser window. Expo Router's web safe-area provider never measures; it always reports
+// a 0 × 0 frame. With that size the background shrank into the top-left corner instead of growing,
+// and the tabs showed through Now Playing. A browser has no system bars, so the window is the whole
+// drawing area.
+function useDrawingAreaSize(): DrawingAreaSize {
+  const safeAreaFrame = useSafeAreaFrame();
+  const windowDimensions = useWindowDimensions();
+
+  if (Platform.OS === 'web') {
+    return { width: windowDimensions.width, height: windowDimensions.height };
+  }
+  return { width: safeAreaFrame.width, height: safeAreaFrame.height };
+}
+
 function isNowPlayingInFront(presentation: NowPlayingPresentation): boolean {
   return presentation === 'opening' || presentation === 'open';
 }
@@ -42,12 +69,7 @@ function isNowPlayingInFront(presentation: NowPlayingPresentation): boolean {
 // presentation, the lecture or the bar's visibility changes: a few times per open or close,
 // never per frame.
 export function PlayerSurface({ bottomOffset }: PlayerSurfaceProps) {
-  // The size of the view the app draws in, measured by the safe-area provider at the root, rather
-  // than useWindowDimensions(). On Android, React Native's "window" leaves out the status bar and
-  // the navigation bar unless its edge-to-edge flag is on (it is off in Expo Go), while the app
-  // still draws under both bars. Now Playing's background then stopped short of the bottom and
-  // the shrunk tabs showed through behind the navigation buttons.
-  const { width: windowWidth, height: windowHeight } = useSafeAreaFrame();
+  const { width: windowWidth, height: windowHeight } = useDrawingAreaSize();
   const isReducedMotion = useReducedMotion();
   const lecture = usePlayerStore(selectCurrentLecture);
   const presentation = usePlayerStore((state) => state.nowPlayingPresentation);
@@ -91,15 +113,16 @@ export function PlayerSurface({ bottomOffset }: PlayerSurfaceProps) {
     return null;
   }
 
-  return <SurfaceLayers bottomOffset={bottomOffset} presentation={presentation} />;
+  return <SurfaceLayers bottomOffset={bottomOffset} surfaceWidth={windowWidth} presentation={presentation} />;
 }
 
 type SurfaceLayersProps = {
   bottomOffset: number;
+  surfaceWidth: number;
   presentation: NowPlayingPresentation;
 };
 
-function SurfaceLayers({ bottomOffset, presentation }: SurfaceLayersProps) {
+function SurfaceLayers({ bottomOffset, surfaceWidth, presentation }: SurfaceLayersProps) {
   // Positions the cover with plain layout styles. Changes only when Now Playing's layout does.
   const [coverRect, setCoverRect] = useState<Rect | null>(null);
 
@@ -149,6 +172,7 @@ function SurfaceLayers({ bottomOffset, presentation }: SurfaceLayersProps) {
         {coverRect !== null ? <SurfaceCover coverRect={coverRect} /> : null}
         <MiniLayer
           bottomOffset={bottomOffset}
+          surfaceWidth={surfaceWidth}
           onMiniRectChange={handleMiniRectChange}
           isInteractive={isBarInteractive}
           isHiddenFromScreenReaders={!isClosed}

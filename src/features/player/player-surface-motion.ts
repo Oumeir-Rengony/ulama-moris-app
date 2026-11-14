@@ -50,15 +50,29 @@ export const windowSizeValue = makeMutable({ width: 0, height: 0 });
 export const miniRectValue = makeMutable<Rect>(emptyRect);
 export const coverRectValue = makeMutable<Rect>(emptyRect);
 
-export function readSurfaceGeometry(): SurfaceGeometry {
+type WindowSize = {
+  width: number;
+  height: number;
+};
+
+export function combineSurfaceGeometry(windowSize: WindowSize, miniRect: Rect, coverRect: Rect): SurfaceGeometry {
   'worklet';
-  const windowSize = windowSizeValue.get();
   return {
     windowWidth: windowSize.width,
     windowHeight: windowSize.height,
-    miniRect: miniRectValue.get(),
-    coverRect: coverRectValue.get(),
+    miniRect,
+    coverRect,
   };
+}
+
+// Reads the geometry inside this helper, so an animated style that calls it does NOT re-run when
+// only the geometry changes: Reanimated re-runs a style only when a shared value read directly in
+// that style changes. Fine in gestures, and in styles that use the geometry only while a motion
+// value moves. A style that must follow a new geometry at rest (a browser window resized while the
+// bar shows) reads the three values itself and passes them to combineSurfaceGeometry().
+export function readSurfaceGeometry(): SurfaceGeometry {
+  'worklet';
+  return combineSurfaceGeometry(windowSizeValue.get(), miniRectValue.get(), coverRectValue.get());
 }
 
 // Set by PlayerSurface from useReducedMotion(). A module variable, so the flows' commands can

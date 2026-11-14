@@ -2,7 +2,7 @@ import Pause from 'lucide-react-native/icons/pause';
 import Play from 'lucide-react-native/icons/play';
 import { useColorScheme } from 'nativewind';
 import { useEffect } from 'react';
-import { Pressable } from 'react-native';
+import { Pressable, View } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Icon } from '@/components/ui/icon';
@@ -119,7 +119,13 @@ export function PlayPauseButton({ state, variant, accessibilityLabel, onPress }:
       className={`shrink-0 items-center justify-center active:opacity-80 ${variantStyle.buttonClass}`}
     >
       {shape}
-      <Icon icon={glyph} size={variantStyle.iconSize} color={variantStyle.iconColor} filled />
+      {/* The icon sits in a View so it draws above the Now Playing fill on web. The fill is
+          absolutely positioned, and in CSS a positioned element paints over an unpositioned one
+          (the bare <svg>) whatever their order. react-native-web makes every View positioned, so
+          the order decides again, as it does on iOS and Android. */}
+      <View>
+        <Icon icon={glyph} size={variantStyle.iconSize} color={variantStyle.iconColor} filled />
+      </View>
     </Pressable>
   );
 }

@@ -16,6 +16,8 @@ import { selectCurrentLecture, usePlayerStore } from './player.store';
 type MiniLayerProps = {
   // Distance from the bottom of the tabs layout: the tab bar's measured height plus the gap.
   bottomOffset: number;
+  // The width of the surface the bar is drawn in (the window).
+  surfaceWidth: number;
   // The bar's rectangle in window coordinates, measured from its layout.
   onMiniRectChange: (rect: Rect) => void;
   // Touches and screen readers reach the bar only while Now Playing is closed (or closing, so a
@@ -30,6 +32,24 @@ const DRAG_START_DISTANCE = 10;
 
 // The tailwind `bar` spacing (12 px), as a number: NativeWind classes don't reach Animated.View.
 const BAR_SIDE_INSET = 12;
+
+// The screens' content column (Home, Events, Now Playing) is at most 600 wide and centred. The bar
+// sits in the same column, so on a wide window (web, tablets) it lines up with the content instead
+// of stretching from edge to edge.
+const CONTENT_COLUMN_MAX_WIDTH = 600;
+
+type BarHorizontalPosition = {
+  left: number;
+  width: number;
+};
+
+// On a phone the column is the whole window, so this is the plain 12 px inset on each side.
+function getBarHorizontalPosition(surfaceWidth: number): BarHorizontalPosition {
+  const columnWidth = Math.min(surfaceWidth, CONTENT_COLUMN_MAX_WIDTH);
+  const barWidth = columnWidth - BAR_SIDE_INSET * 2;
+  const left = (surfaceWidth - barWidth) / 2;
+  return { left, width: barWidth };
+}
 
 function isDownwardDrag(gesture: PanResponderGestureState): boolean {
   const isMostlyVertical = Math.abs(gesture.dy) > Math.abs(gesture.dx);
@@ -81,6 +101,7 @@ function handleSkipForwardPress() {
 // the cover thumbnail are separate layers, so they can grow into Now Playing.
 export const MiniLayer = memo(function MiniLayer({
   bottomOffset,
+  surfaceWidth,
   onMiniRectChange,
   isInteractive,
   isHiddenFromScreenReaders,
@@ -125,13 +146,18 @@ export const MiniLayer = memo(function MiniLayer({
     pointerEvents = 'auto';
   }
 
+  const barPosition = getBarHorizontalPosition(surfaceWidth);
+
   return (
     <Animated.View
       onLayout={handleLayout}
       pointerEvents={pointerEvents}
       accessibilityElementsHidden={isHiddenFromScreenReaders}
       importantForAccessibility={isHiddenFromScreenReaders ? 'no-hide-descendants' : 'auto'}
-      style={[{ position: 'absolute', left: BAR_SIDE_INSET, right: BAR_SIDE_INSET, bottom: bottomOffset }, animatedStyle]}
+      style={[
+        { position: 'absolute', left: barPosition.left, width: barPosition.width, bottom: bottomOffset },
+        animatedStyle,
+      ]}
     >
       <View {...dismissResponder.panHandlers}>
         {/* Keyed by slug: when the next lecture starts on its own, its title fades in. */}

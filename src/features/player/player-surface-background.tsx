@@ -7,7 +7,16 @@ import { useThemeColors } from '@/theme/tokens';
 
 import { MINI_DROP_DISTANCE_PX } from './player-motion-config';
 import { getBackgroundFrame } from './player-surface-geometry';
-import { enterY, expand, miniDrop, readSurfaceGeometry, reducedMotion } from './player-surface-motion';
+import {
+  combineSurfaceGeometry,
+  coverRectValue,
+  enterY,
+  expand,
+  miniDrop,
+  miniRectValue,
+  reducedMotion,
+  windowSizeValue,
+} from './player-surface-motion';
 
 function clampShare(value: number): number {
   'worklet';
@@ -31,7 +40,8 @@ export const SurfaceBackground = memo(function SurfaceBackground() {
   const fullColor = colors.bg;
 
   const frameStyle = useAnimatedStyle(() => {
-    const geometry = readSurfaceGeometry();
+    // Read directly (not through readSurfaceGeometry), so the frame follows a window resize.
+    const geometry = combineSurfaceGeometry(windowSizeValue.get(), miniRectValue.get(), coverRectValue.get());
     const expandValue = expand.get();
     const frame = getBackgroundFrame(expandValue, geometry.miniRect, geometry.windowWidth, geometry.windowHeight);
     const drop = miniDrop.get();
@@ -54,7 +64,8 @@ export const SurfaceBackground = memo(function SurfaceBackground() {
 
   // Dark mode only: the bar's 1 px outline, fading out as the bar starts to grow.
   const outlineStyle = useAnimatedStyle(() => {
-    const geometry = readSurfaceGeometry();
+    // Read directly (not through readSurfaceGeometry), so the outline follows a window resize.
+    const geometry = combineSurfaceGeometry(windowSizeValue.get(), miniRectValue.get(), coverRectValue.get());
     const expandValue = expand.get();
     const frame = getBackgroundFrame(expandValue, geometry.miniRect, geometry.windowWidth, geometry.windowHeight);
     const morphHidden = interpolate(expandValue, [0, 0.25], [0, 1], Extrapolation.CLAMP);
