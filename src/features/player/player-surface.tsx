@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BackHandler, StyleSheet, useWindowDimensions } from 'react-native';
+import { BackHandler, StyleSheet } from 'react-native';
 import Animated, { FadeOut, useAnimatedStyle, useReducedMotion } from 'react-native-reanimated';
+import { useSafeAreaFrame } from 'react-native-safe-area-context';
 
 import { closeNowPlaying } from './open-now-playing';
 import { SurfaceBackground } from './player-surface-background';
@@ -41,7 +42,12 @@ function isNowPlayingInFront(presentation: NowPlayingPresentation): boolean {
 // presentation, the lecture or the bar's visibility changes: a few times per open or close,
 // never per frame.
 export function PlayerSurface({ bottomOffset }: PlayerSurfaceProps) {
-  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  // The size of the view the app draws in, measured by the safe-area provider at the root, rather
+  // than useWindowDimensions(). On Android, React Native's "window" leaves out the status bar and
+  // the navigation bar unless its edge-to-edge flag is on (it is off in Expo Go), while the app
+  // still draws under both bars. Now Playing's background then stopped short of the bottom and
+  // the shrunk tabs showed through behind the navigation buttons.
+  const { width: windowWidth, height: windowHeight } = useSafeAreaFrame();
   const isReducedMotion = useReducedMotion();
   const lecture = usePlayerStore(selectCurrentLecture);
   const presentation = usePlayerStore((state) => state.nowPlayingPresentation);
@@ -128,21 +134,26 @@ function SurfaceLayers({ bottomOffset, presentation }: SurfaceLayersProps) {
   // box-none: the tabs underneath stay touchable around the bar.
   // exiting: an unplanned unmount while the bar shows (the queue ended) fades it out. After a
   // planned drop the bar is already transparent, so this is invisible there.
+  // Two views because the exiting fade and rootStyle both drive opacity: on one view Reanimated
+  // warns that the layout animation may overwrite the style. The outer view owns the exit fade,
+  // the inner one the motion-driven opacity.
   return (
-    <Animated.View pointerEvents="box-none" style={[StyleSheet.absoluteFill, rootStyle]} exiting={FadeOut.duration(200)}>
-      <SurfaceBackground />
-      <FullLayer
-        onCoverRectChange={handleCoverRectChange}
-        isInteractive={isFullInteractive}
-        isOpen={presentation === 'open'}
-      />
-      {coverRect !== null ? <SurfaceCover coverRect={coverRect} /> : null}
-      <MiniLayer
-        bottomOffset={bottomOffset}
-        onMiniRectChange={handleMiniRectChange}
-        isInteractive={isBarInteractive}
-        isHiddenFromScreenReaders={!isClosed}
-      />
+    <Animated.View pointerEvents="box-none" style={StyleSheet.absoluteFill} exiting={FadeOut.duration(200)}>
+      <Animated.View pointerEvents="box-none" style={[StyleSheet.absoluteFill, rootStyle]}>
+        <SurfaceBackground />
+        <FullLayer
+          onCoverRectChange={handleCoverRectChange}
+          isInteractive={isFullInteractive}
+          isOpen={presentation === 'open'}
+        />
+        {coverRect !== null ? <SurfaceCover coverRect={coverRect} /> : null}
+        <MiniLayer
+          bottomOffset={bottomOffset}
+          onMiniRectChange={handleMiniRectChange}
+          isInteractive={isBarInteractive}
+          isHiddenFromScreenReaders={!isClosed}
+        />
+      </Animated.View>
     </Animated.View>
   );
 }

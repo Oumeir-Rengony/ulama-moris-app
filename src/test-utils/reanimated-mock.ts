@@ -85,6 +85,10 @@ const Extrapolation = { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' }
 
 const Easing = {
   bezier: () => () => 0,
+  out: () => () => 0,
+  inOut: () => () => 0,
+  cubic: () => 0,
+  quad: () => 0,
 };
 
 function useReducedMotion(): boolean {
