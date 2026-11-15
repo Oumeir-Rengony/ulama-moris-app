@@ -19,6 +19,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { LaunchScreen } from '@/features/launch/launch-screen';
 import { PlayerStatusBridge } from '@/features/player/player-status-bridge';
 import { setupAudio } from '@/features/player/setup-audio';
+import { RemindersBridge } from '@/features/reminders/reminders-bridge';
 import { AppProviders } from '@/providers/app-providers';
 import { useNavigationTheme } from '@/theme/navigation-theme';
 import { useThemeColors } from '@/theme/tokens';
@@ -84,6 +85,8 @@ export default function RootLayout() {
             through. With the scrim gone, "auto" keeps the buttons readable in both themes. */}
         <NavigationBar style="auto" />
         <PlayerStatusBridge />
+        {/* After PlayerStatusBridge, so the resume point is saved before reminders are planned. */}
+        <RemindersBridge />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="search" options={{ animation: 'slide_from_right' }} />

@@ -31,6 +31,11 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
+// expo-notifications has no native module in Jest, and on import it warns that Expo Go lacks
+// push notifications, which fails the test. The player bridge reaches it through the reminders,
+// so every test gets the in-memory stand-in.
+jest.mock('expo-notifications', () => require('./src/test-utils/fake-expo-notifications'));
+
 // A console.error or console.warn during a test is a bug (a missing list key, an update outside
 // act, a bad prop), so it fails the test that caused it instead of scrolling past in the output.
 let consoleMessages: string[] = [];

@@ -9,6 +9,8 @@ import {
   saveCurrentLectureAsFinished,
   saveCurrentProgress,
 } from './audio-engine';
+import { rescheduleRemindersIfInBackground } from '@/features/reminders/reschedule-reminders';
+
 import { usePlayerStore } from './player.store';
 
 // While playing, the resume point is saved this often.
@@ -51,6 +53,8 @@ export function PlayerStatusBridge() {
         hasHandledFinishRef.current = true;
         saveCurrentLectureAsFinished();
         playNext();
+        // A finish from the lock screen may be the last chance to get the reminders right.
+        rescheduleRemindersIfInBackground();
       }
       return;
     }
@@ -76,6 +80,8 @@ export function PlayerStatusBridge() {
     const didPause = wasPlaying && !status.playing;
     if (didPause) {
       saveCurrentProgress();
+      // A pause from the lock screen may be the last chance to get the reminders right.
+      rescheduleRemindersIfInBackground();
       return;
     }
 

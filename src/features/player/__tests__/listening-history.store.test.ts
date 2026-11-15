@@ -55,10 +55,66 @@ describe('listening history store', () => {
   });
 
   it('persists the resume points and the last played lecture under "listening-history"', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-11-13T10:00:00Z'));
     useListeningHistoryStore.getState().saveProgress('a', 120);
+    jest.useRealTimers();
 
     const stored = await readStoredJson();
-    expect(stored.state).toEqual({ progressById: { a: 120 }, lastPlayedSlug: 'a' });
+    expect(stored.state).toEqual({
+      progressById: { a: 120 },
+      lastPlayedSlug: 'a',
+      lastPlayedAt: Date.parse('2026-11-13T10:00:00Z'),
+    });
+  });
+
+  it('remembers when the last played lecture was saved, for the continue listening reminder', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-11-13T10:00:00Z'));
+    useListeningHistoryStore.getState().saveProgress('a', 120);
+    jest.useRealTimers();
+
+    expect(useListeningHistoryStore.getState().lastPlayedAt).toBe(Date.parse('2026-11-13T10:00:00Z'));
+  });
+
+  it('keeps that time when the same position is saved again (leaving the app while paused)', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-11-13T10:00:00Z'));
+    useListeningHistoryStore.getState().saveProgress('a', 120);
+    jest.setSystemTime(new Date('2026-11-13T12:00:00Z'));
+    useListeningHistoryStore.getState().saveProgress('a', 120);
+    jest.useRealTimers();
+
+    expect(useListeningHistoryStore.getState().lastPlayedAt).toBe(Date.parse('2026-11-13T10:00:00Z'));
+  });
+
+  it('moves that time when the position moved', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-11-13T10:00:00Z'));
+    useListeningHistoryStore.getState().saveProgress('a', 120);
+    jest.setSystemTime(new Date('2026-11-13T12:00:00Z'));
+    useListeningHistoryStore.getState().saveProgress('a', 180);
+    jest.useRealTimers();
+
+    expect(useListeningHistoryStore.getState().lastPlayedAt).toBe(Date.parse('2026-11-13T12:00:00Z'));
+  });
+
+  it('forgets that time when the last played lecture is finished', () => {
+    useListeningHistoryStore.getState().saveProgress('a', 120);
+    useListeningHistoryStore.getState().markFinished('a');
+
+    expect(useListeningHistoryStore.getState().lastPlayedAt).toBeNull();
+  });
+
+  it('reads data saved before the last-played time existed, with no time', async () => {
+    await AsyncStorage.setItem(
+      'listening-history',
+      JSON.stringify({ state: { progressById: { a: 120 }, lastPlayedSlug: 'a' }, version: 0 }),
+    );
+
+    await useListeningHistoryStore.persist.rehydrate();
+
+    expect(useListeningHistoryStore.getState().lastPlayedAt).toBeNull();
   });
 
   it('reads them back after a restart', async () => {

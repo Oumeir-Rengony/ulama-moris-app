@@ -18,6 +18,9 @@ type ListeningHistoryData = {
   // Continue listening: null hides the card (nothing played yet, or the last one was finished).
   // A plain object can't say which key was written last, so it's stored.
   lastPlayedSlug: string | null;
+  // When that lecture's resume point was saved (milliseconds since 1970), so the continue
+  // listening reminder can be timed from the last listen. null whenever lastPlayedSlug is null.
+  lastPlayedAt: number | null;
 };
 
 type ListeningHistorySetters = {
@@ -31,6 +34,7 @@ export type ListeningHistoryState = ListeningHistoryData & ListeningHistorySette
 export const initialListeningHistoryState: ListeningHistoryData = {
   progressById: {},
   lastPlayedSlug: null,
+  lastPlayedAt: null,
 };
 
 export const useListeningHistoryStore = create<ListeningHistoryState>()(
@@ -38,11 +42,25 @@ export const useListeningHistoryStore = create<ListeningHistoryState>()(
     (set) => ({
       ...initialListeningHistoryState,
 
+      // The app also saves when it goes to the background, even while paused. Only a position
+      // that moved (or another lecture) counts as listening, so leaving the app doesn't move
+      // lastPlayedAt.
       saveProgress: (slug, positionSec) => {
-        set((state) => ({
-          progressById: { ...state.progressById, [slug]: positionSec },
-          lastPlayedSlug: slug,
-        }));
+        set((state) => {
+          const isSameLecture = state.lastPlayedSlug === slug;
+          const hasPositionMoved = state.progressById[slug] !== positionSec;
+
+          let lastPlayedAt = state.lastPlayedAt;
+          if (!isSameLecture || hasPositionMoved || lastPlayedAt === null) {
+            lastPlayedAt = Date.now();
+          }
+
+          return {
+            progressById: { ...state.progressById, [slug]: positionSec },
+            lastPlayedSlug: slug,
+            lastPlayedAt,
+          };
+        });
       },
 
       // A finished lecture starts from the beginning next time. If it was the last one played,
@@ -53,11 +71,13 @@ export const useListeningHistoryStore = create<ListeningHistoryState>()(
           delete progressById[slug];
 
           let lastPlayedSlug = state.lastPlayedSlug;
+          let lastPlayedAt = state.lastPlayedAt;
           if (lastPlayedSlug === slug) {
             lastPlayedSlug = null;
+            lastPlayedAt = null;
           }
 
-          return { progressById, lastPlayedSlug };
+          return { progressById, lastPlayedSlug, lastPlayedAt };
         });
       },
     }),

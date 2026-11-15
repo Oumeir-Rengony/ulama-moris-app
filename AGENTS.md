@@ -58,7 +58,8 @@ src/
 │   ├── player/          # audio-engine.ts, player.store.ts, listening-history.store.ts, player-status-bridge.tsx
 │   ├── lectures/        # lectures.api.ts, lectures.queries.ts
 │   ├── events/          # events.api.ts, events.queries.ts, group-by-year.ts
-│   └── search/          # scope.ts, match.ts, search.queries.ts, recent-searches.store.ts
+│   ├── search/          # scope.ts, match.ts, search.queries.ts, recent-searches.store.ts
+│   └── reminders/       # reminder-plan.ts (decisions), reminder-scheduler.ts (booking), reschedule-reminders.ts, reminders-bridge.tsx
 ├── providers/           # app-providers.tsx (QueryClientProvider …), rendered once by app/_layout.tsx
 ├── data/                # sample.ts (API-shaped static data) + mock-ui.ts
 ├── hooks/               # Cross-feature hooks only
@@ -133,6 +134,7 @@ If you can't choose between `useState` and Zustand, start with `useState`. Move 
 | Resume points `progressById`, the Continue listening lecture `lastPlayedSlug` | Zustand `listening-history.store.ts`, persisted to AsyncStorage | Must survive a restart. Kept apart from `player.store.ts` (see Zustand rules) |
 | Recent searches per scope | Zustand `recent-searches.store.ts`, persisted | Must survive a restart. The `persist` middleware is simpler than writing your own load/save effects |
 | Search input text, the selected Home filter chip, whether a sheet or menu is open | `useState` | Belongs to one screen |
+| Scheduled reminder notifications | The OS (expo-notifications), rebuilt from `listening-history.store.ts` (`lastPlayedSlug`, `lastPlayedAt`) | A local notification can't run code when it fires, so the schedule is recalculated, never stored |
 | Online/offline (error-states stage) | NetInfo's `useNetInfo()` where it's needed | It's already a subscription. Don't copy it into a store |
 
 Not in the spec yet: signed-in user, bookmarks, language. Don't add stores or contexts for them until a spec asks for them. When it does, use the questions above. A signed-in user would most likely go in Zustand, with tokens in `expo-secure-store`. Bookmarks would go in a persisted Zustand store, or in TanStack Query if they sync with a server. Language would go in Context or a persisted store.
@@ -173,6 +175,19 @@ Not in the spec yet: signed-in user, bookmarks, language. Don't add stores or co
 - `AccessibilityInfo.sendAccessibilityEvent` doesn't exist on react-native-web: guard it with `Platform.OS`.
 - Deliberately not built (Stage 12): the big play button morph, the progress sweep on entrance, the moonlight reveal, haptics.
 - Not yet checked: a release-build performance pass (Perf Monitor; the motion must stay smooth while JS is busy), VoiceOver focus landing on the chevron, the largest text size, and on real devices Android back, TalkBack and 120 Hz. Seen once on iOS and not reproduced: the Home list behind ended up scrolled ~200 pt after opening and closing the player.
+
+### Reminder notifications
+
+Spec: `docs/Audio Player Reminder Notifications — Logic Guide.md`. One type at a time: a continue listening series (10 booked ahead) for the last unfinished lecture, otherwise one inactivity reminder.
+
+- **Decisions and scheduling are separate.** `reminder-plan.ts` is pure: a snapshot goes in, a list of `PlannedReminder` (id, time, text, `openPath`) comes out. `reminder-scheduler.ts` cancels every `reminder-*` notification and books exactly that list; it has no rules. Change the rules in the plan only.
+- Timings live in `reminder-timings.ts`. Development builds (`__DEV__`) use the quick set in minutes (first continue reminder 1 min after the last listen, then every 2 min; inactivity after 3 min); release builds use 24 h / 3 days.
+- The schedule is rebuilt when the app goes to the background (`RemindersBridge`, mounted after `PlayerStatusBridge` so the resume point is saved first), and on a pause or finish while in the background (`rescheduleRemindersIfInBackground`, called by the player bridge). Never on every pause while the app is open. Rebuilds run one after another.
+- `lastPlayedAt` moves only when the position moved: the bridge also saves when the app leaves, even while paused, and that must not count as a listen.
+- A reminder that arrives while the app is open isn't shown (`hideRemindersWhileAppIsOpen`). A tap pushes `openPath` (`/player?slug=…` for continue listening).
+- iOS asks for permission on the first play; Android relies on the audio engine's prompt for the same permission. Without permission the scheduler only cancels.
+- Web has no reminders: `.web.ts(x)` versions do nothing, so expo-notifications never loads there.
+- Expo Go (iOS) shows local notifications; Android needs a development build to be checked.
 
 ### Zustand rules
 

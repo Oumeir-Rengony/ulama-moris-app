@@ -54,6 +54,7 @@
       ],
       "expo-status-bar",
       "expo-web-browser",
+      "expo-notifications",
       [
         "expo-audio",
         {
