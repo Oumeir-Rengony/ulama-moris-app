@@ -8,7 +8,8 @@ type NumberedLectureRowProps = {
   // "01", "02" …
   number: string;
   title: string;
-  author: string;
+  // Hidden when the lecture has no author.
+  author?: string;
   // Display-ready. Idle: "31 Oct · 35:48". Paused: "Paused · 16:05 / 46:21".
   // Playing: "Now playing · 16:05 / 46:21".
   metaLabel: string;
@@ -68,9 +69,11 @@ export function NumberedLectureRow({
         <Text variant="title" numberOfLines={3}>
           {title}
         </Text>
-        <Text variant="meta" numberOfLines={1} className="text-primary">
-          {author}
-        </Text>
+        {author ? (
+          <Text variant="meta" numberOfLines={1} className="text-primary">
+            {author}
+          </Text>
+        ) : null}
         <Text variant="caption" tabular numberOfLines={1} className={`font-manrope-semibold ${metaClass}`}>
           {metaLabel}
         </Text>

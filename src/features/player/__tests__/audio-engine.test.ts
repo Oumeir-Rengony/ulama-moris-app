@@ -121,7 +121,7 @@ describe('playLecture', () => {
   });
 
   it('resumes from the saved point once the lecture has loaded, then plays', async () => {
-    useListeningHistoryStore.getState().saveProgress(second.slug, 300);
+    useListeningHistoryStore.getState().saveProgress(second, 300);
 
     playLecture(second, queueOfThree, eventSource);
     // Not loaded yet: no seek, and no sound from 0:00.
@@ -137,7 +137,7 @@ describe('playLecture', () => {
   });
 
   it('does not overwrite the resume point with 0 while it is still being restored', () => {
-    useListeningHistoryStore.getState().saveProgress(second.slug, 300);
+    useListeningHistoryStore.getState().saveProgress(second, 300);
     playLecture(second, queueOfThree, eventSource);
 
     // A checkpoint before the lecture has loaded (for example the app going to the background).

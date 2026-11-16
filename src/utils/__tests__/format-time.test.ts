@@ -59,6 +59,10 @@ describe('shortDateLabel', () => {
   it('keeps the date from the string, not the device time zone', () => {
     expect(shortDateLabel('2026-11-01T00:30:00.000+04:00')).toBe('1 Nov');
   });
+
+  it('writes September as "Sept", the way the API writes event dates', () => {
+    expect(shortDateLabel('2024-09-21T20:00:00.000+04:00')).toBe('21 Sept');
+  });
 });
 
 describe('longDateLabel', () => {

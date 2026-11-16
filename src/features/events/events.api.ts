@@ -1,70 +1,117 @@
-import { repeatSampleLectures } from '@/data/mock-repeat';
-import { events, eventsTotal, lectures, type EventSummary, type Lecture } from '@/data/sample';
+import { getJson, isNotFound, nullToUndefined } from '@/features/api/api-client';
+import type { Lecture } from '@/features/lectures/lecture.types';
+import { toLecture, type ApiLecture, type ApiPage } from '@/features/lectures/lectures.api';
+
+import type { EventSummary } from './event.types';
 
 export const EVENT_PAGE_SIZE = 10;
 
-export type EventPage = {
-  items: EventSummary[];
-  // The number of events, as the API reports it. The app never counts events.
+// An event as the API sends it. A missing value is null.
+type ApiEvent = {
+  slug: string;
+  title: string;
   total: number;
-  // null once the last page has been returned.
-  nextPageIndex: number | null;
+  duration: string | null;
+  location: string | null;
+  dateRange: string | null;
+  dateRangeLong: string | null;
+  year: string | null;
+  day: string | null;
+  month: string | null;
+  latestTime: number;
 };
 
-// Returns one page of events, newest first, in the order the API gives them (don't sort).
-// Stub: reads the static data directly, with no network and no delay. When the real API arrives,
-// only this function's body changes.
-export async function fetchEventPage(pageIndex: number): Promise<EventPage> {
-  const start = pageIndex * EVENT_PAGE_SIZE;
-  const end = start + EVENT_PAGE_SIZE;
-  const items = events.slice(start, end);
+type ApiEventDetail = {
+  event: ApiEvent;
+  lectures: ApiLecture[];
+};
 
-  let nextPageIndex: number | null = pageIndex + 1;
-  const reachedTheEnd = end >= events.length;
-  if (reachedTheEnd) {
-    nextPageIndex = null;
-  }
-
-  return { items, total: eventsTotal, nextPageIndex };
-}
+export type EventPage = ApiPage<EventSummary>;
 
 export type EventDetail = {
   event: EventSummary;
-  // The event's lectures, in the order the API returns them (don't sort).
+  // The event's lectures, newest first, in the order the API returns them (don't sort).
   lectures: Lecture[];
 };
 
-// Returns one event with its lectures, or null when no event has that slug.
-// Stub: the event's lectures are the sample lectures whose `event` is the event's title, in data
-// order. MOCK ONLY: most mock events have no lectures of their own, so for those the sample
-// lectures are repeated up to the event's `total` (with their own "--<event slug>-N" slugs), so
-// every detail page has rows. The real API replaces this function's body.
+function toEventSummary(apiEvent: ApiEvent): EventSummary {
+  return {
+    slug: apiEvent.slug,
+    title: apiEvent.title,
+    total: apiEvent.total,
+    duration: nullToUndefined(apiEvent.duration),
+    location: nullToUndefined(apiEvent.location),
+    dateRange: nullToUndefined(apiEvent.dateRange),
+    dateRangeLong: nullToUndefined(apiEvent.dateRangeLong),
+    year: nullToUndefined(apiEvent.year),
+    day: nullToUndefined(apiEvent.day),
+    month: nullToUndefined(apiEvent.month),
+    latestTime: apiEvent.latestTime,
+  };
+}
+
+type EventPageRequest = {
+  // 1-based, as the API counts pages.
+  page: number;
+  // Matches the title, ignoring case and accents. Left out for no filter.
+  search?: string;
+};
+
+// One page of events, ordered by their most recent lecture, newest first (don't sort).
+export async function fetchEventPage({ page, search }: EventPageRequest): Promise<EventPage> {
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', String(EVENT_PAGE_SIZE));
+  if (search !== undefined && search.trim() !== '') {
+    params.set('search', search.trim());
+  }
+
+  const body = (await getJson(`/events?${params.toString()}`)) as ApiPage<ApiEvent>;
+
+  const items: EventSummary[] = [];
+  for (const apiEvent of body.items) {
+    items.push(toEventSummary(apiEvent));
+  }
+
+  return { items, total: body.total, page: body.page, hasMore: body.hasMore };
+}
+
+// One event with all its lectures, or null when the API has no event with that slug.
+// Any other failure throws, so the query reports an error the screen can retry.
 export async function fetchEventBySlug(slug: string): Promise<EventDetail | null> {
-  let foundEvent: EventSummary | null = null;
-  for (const event of events) {
-    if (event.slug === slug) {
-      foundEvent = event;
+  let body: ApiEventDetail;
+  try {
+    body = (await getJson(`/events/${encodeURIComponent(slug)}`)) as ApiEventDetail;
+  } catch (error) {
+    if (isNotFound(error)) {
+      return null;
+    }
+    throw error;
+  }
+
+  const lectures: Lecture[] = [];
+  for (const apiLecture of body.lectures) {
+    lectures.push(toLecture(apiLecture));
+  }
+
+  return { event: toEventSummary(body.event), lectures };
+}
+
+// Joins the loaded pages into one list, dropping an event a later page repeats (by slug). See
+// joinLecturePages for why a page can repeat an item.
+export function joinEventPages(pages: EventPage[]): EventSummary[] {
+  const events: EventSummary[] = [];
+  const seenSlugs = new Set<string>();
+
+  for (const page of pages) {
+    for (const event of page.items) {
+      if (seenSlugs.has(event.slug)) {
+        continue;
+      }
+      seenSlugs.add(event.slug);
+      events.push(event);
     }
   }
-  if (foundEvent === null) {
-    return null;
-  }
 
-  const eventLectures: Lecture[] = [];
-  for (const lecture of lectures) {
-    if (lecture.event === foundEvent.title) {
-      eventLectures.push(lecture);
-    }
-  }
-
-  if (eventLectures.length > 0) {
-    return { event: foundEvent, lectures: eventLectures };
-  }
-
-  const generatedLectures = repeatSampleLectures({
-    count: foundEvent.total,
-    copyTag: `${foundEvent.slug}-`,
-    keepRealSlugsOnFirstPass: false,
-  });
-  return { event: foundEvent, lectures: generatedLectures };
+  return events;
 }

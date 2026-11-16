@@ -1,65 +1,10 @@
-// Static sample data, shaped like the real API.
-// The first two lectures and the first two events are the real records from the website, kept
-// exactly as they are (including the "Ş" spelling and the all-caps venues). Everything marked
-// MOCK was added so the designs can be filled: more rows, two years of events, an event without
-// a venue, lectures without a duration or a venue, and 2- and 3-line titles.
-// Mock lectures reuse the two real recordings' audio URLs, so the player has something to play.
+// Static sample data, shaped like the API's. The app reads the real API (features/*/*.api.ts);
+// this file now only feeds the development gallery (/dev/components). The first two lectures and
+// events are real records; everything marked MOCK was added so every component state can be shown.
+// Mock lectures reuse the two real recordings' audio URLs.
 
-// ---------- Types ----------
-
-// The home filter chips. Not an API field yet; added for the series filter.
-export type LectureSeries = 'local' | 'guest' | 'islahi-majlis';
-
-// A lecture as it appears in a list (the API's `Lectures` items).
-export type LectureSummary = {
-  slug: string;
-  title: string;
-  author: string;
-  // ISO date with time and offset: "2026-10-31T21:15:00.000+04:00".
-  date: string;
-  // Clock string: "35:48", or "1:02:05" once it's an hour or more. Missing when unknown.
-  duration?: string;
-  // All caps from the API ("MASJID MUSWALLA, HIGHLANDS"). Show it through formatVenue().
-  masjid?: string;
-  url: string;
-  series: LectureSeries;
-};
-
-// A lecture's detail record (the API's `Lecture`): the summary plus the detail fields.
-export type Lecture = LectureSummary & {
-  id: string;
-  // The title of the event this lecture belongs to. Missing when it isn't part of an event.
-  event?: string;
-  // The slug of that event, so Now Playing's event pill can open it. MOCK field: the API returns
-  // only the title so far. Rename it to the API's field name once the API adds the link.
-  eventSlug?: string;
-  // Topic strings ("sahaba r.a"). The first one is the lecture's topic. Empty when it has none.
-  category: string[];
-};
-
-// An event as it appears in the Events list (the API's `Events` items).
-export type EventSummary = {
-  slug: string;
-  title: string;
-  // Number of recorded lectures.
-  total: number;
-  // Total listening time, already formatted: "2h 34m".
-  duration: string;
-  // Missing when the event has no single venue (e.g. Jummah).
-  location?: string;
-  // "24 Oct – 31 Oct 2026", or "9 May 2026" for a one-day event.
-  dateRange: string;
-  // Long form for the event hero: "24 – 31 October 2026". MOCK field: the API will return it
-  // ready-made. Rename it to the API's field name once that is known.
-  dateRangeLong: string;
-  // The year the event is grouped under in the Events list.
-  year: string;
-  // Date tile: the data's day and month, shown as they are (the start day).
-  day: string;
-  month: string;
-  // Time of the most recent recording, in milliseconds. Newest first.
-  latestTime: number;
-};
+import type { EventSummary } from '@/features/events/event.types';
+import type { Lecture } from '@/features/lectures/lecture.types';
 
 const sahabaAudioUrl =
   'https://assets.ctfassets.net/n7lbwg9xm90s/7lJFzEb2gn6EnvmH9mBuH/fc731919e30ab5fdf593a29e46499de8/9debee86-94dd-4bb1-90ee-a18f944b00bf.m4a';
@@ -381,46 +326,10 @@ export const events: EventSummary[] = [
   },
 ];
 
-// ---------- Totals (the API returns these; the app never counts) ----------
+// ---------- Totals (as the API would report them) ----------
 
 export const latestLecturesTotal = 81;
 export const eventsTotal = 11;
-
-// ---------- Home series filter ----------
-
-export const lectureSeries: { key: LectureSeries; label: string }[] = [
-  { key: 'local', label: 'Local' },
-  { key: 'guest', label: 'Guest' },
-  { key: 'islahi-majlis', label: 'Islāhi Majlis' },
-];
-
-// ---------- Topics ----------
-
-// Display labels for the topic strings in `category`.
-export const topicLabels: Record<string, string> = {
-  'sahaba r.a': 'Ṣaḥābā r.a',
-  'islamic finance': 'Islamic finance',
-  'current affairs': 'Current affairs',
-  seerah: 'Seerah',
-  akhlaq: 'Akhlāq',
-};
-
-// Every distinct topic, in the order it first appears in the data. A topic's colour is its
-// position in this list (catForTopic in src/theme/tokens.ts), so it is the same on every
-// screen. Later this list comes from the API.
-function buildTopicOrder(allLectures: Lecture[]): string[] {
-  const orderedTopics: string[] = [];
-  for (const lecture of allLectures) {
-    for (const topic of lecture.category) {
-      if (!orderedTopics.includes(topic)) {
-        orderedTopics.push(topic);
-      }
-    }
-  }
-  return orderedTopics;
-}
-
-export const topicOrder: string[] = buildTopicOrder(lectures);
 
 // ---------- Search ----------
 

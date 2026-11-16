@@ -1,12 +1,16 @@
 import { StatusBar } from 'expo-status-bar';
+import { useState } from 'react';
 import { FlatList, View, type ListRenderItemInfo } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HomeListHeader } from '@/components/HomeListHeader';
 import { LectureRow, type LectureRowState } from '@/components/LectureRow';
 import { LoadingFooter, SkeletonRow } from '@/components/Skeleton';
-import { lectureSeries, type LectureSummary } from '@/data/sample';
+import { EmptyState } from '@/components/ui/empty-state';
 import { lectureRowMetaLabel } from '@/features/lectures/lecture-labels';
+import { defaultLectureSeries, lectureSeries } from '@/features/lectures/lecture-series';
+import type { Lecture, LectureSeries } from '@/features/lectures/lecture.types';
+import { joinLecturePages } from '@/features/lectures/lectures.api';
 import { useLatestLecturesQuery } from '@/features/lectures/lectures.queries';
 import { ContinueListeningSection } from '@/features/player/continue-listening-section';
 import { openNowPlaying } from '@/features/player/open-now-playing';
@@ -14,9 +18,33 @@ import { selectActiveLectureSlug, usePlayerStore } from '@/features/player/playe
 import { useMiniPlayerSpace } from '@/features/player/use-mini-player-space';
 import { openSearch } from '@/features/search/open-search';
 
-// TODO(series stage): useState for the selected chip, plus filtering and the empty-series state.
 const seriesLabels = lectureSeries.map((series) => series.label);
-const selectedSeriesLabel = lectureSeries[0].label;
+
+function seriesLabelFor(key: LectureSeries): string {
+  for (const series of lectureSeries) {
+    if (series.key === key) {
+      return series.label;
+    }
+  }
+  return key;
+}
+
+function seriesKeyFor(label: string): LectureSeries | undefined {
+  for (const series of lectureSeries) {
+    if (series.label === label) {
+      return series.key;
+    }
+  }
+  return undefined;
+}
+
+// "81 lectures", "1 lecture".
+function lectureCountText(total: number): string {
+  if (total === 1) {
+    return '1 lecture';
+  }
+  return `${total} lectures`;
+}
 
 const bottomSpacing = 24;
 
@@ -24,7 +52,7 @@ function handleSearchPress() {
   openSearch('lectures');
 }
 
-function lectureKey(lecture: LectureSummary) {
+function lectureKey(lecture: Lecture) {
   return lecture.slug;
 }
 
@@ -37,6 +65,27 @@ function LoadingMoreFooter() {
     <View className="gap-2.5 px-gutter pt-2.5">
       <SkeletonRow variant="lecture" />
       <LoadingFooter label="Loading more lectures" />
+    </View>
+  );
+}
+
+// The first page of a series is loading: placeholder rows where the lectures will be.
+// TODO(design): no full-screen Home skeleton is designed; these are the list's skeleton rows.
+function FirstPageLoading() {
+  return (
+    <View className="gap-2.5 px-gutter" accessibilityLabel="Loading lectures">
+      <SkeletonRow variant="lecture" />
+      <SkeletonRow variant="lecture" />
+      <SkeletonRow variant="lecture" />
+    </View>
+  );
+}
+
+// TODO(design): the empty-series card isn't designed.
+function NoLecturesInSeries({ seriesLabel }: { seriesLabel: string }) {
+  return (
+    <View className="px-gutter">
+      <EmptyState title={`No ${seriesLabel} lectures yet`} message="Try another series." />
     </View>
   );
 }
@@ -54,20 +103,28 @@ function pickRowState(slug: string, activeLectureSlug: string | null, isPlaying:
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const miniPlayerSpace = useMiniPlayerSpace();
-  const { data, hasNextPage, isFetchingNextPage, fetchNextPage } = useLatestLecturesQuery();
+  // Home always shows one series; every request sends it.
+  const [selectedSeries, setSelectedSeries] = useState<LectureSeries>(defaultLectureSeries);
+  const { data, isPending, hasNextPage, isFetchingNextPage, fetchNextPage } = useLatestLecturesQuery(selectedSeries);
 
   // Read once here and passed to the rows, rather than each row subscribing to the store.
   const activeLectureSlug = usePlayerStore(selectActiveLectureSlug);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
 
-  const loadedLectures: LectureSummary[] = [];
+  let loadedLectures: Lecture[] = [];
   let lectureCountLabel: string | undefined = undefined;
   if (data) {
-    for (const page of data.pages) {
-      loadedLectures.push(...page.items);
+    loadedLectures = joinLecturePages(data.pages);
+    // The total comes from the API; the app never counts. The first page's total is used:
+    // past the last page the API reports 0.
+    lectureCountLabel = lectureCountText(data.pages[0].total);
+  }
+
+  function handleSeriesPress(label: string) {
+    const series = seriesKeyFor(label);
+    if (series !== undefined) {
+      setSelectedSeries(series);
     }
-    // The total comes from the API; the app never counts.
-    lectureCountLabel = `${data.pages[0].total} lectures`;
   }
 
   function handleEndReached() {
@@ -76,7 +133,7 @@ export default function HomeScreen() {
     }
   }
 
-  function renderLectureRow({ item }: ListRenderItemInfo<LectureSummary>) {
+  function renderLectureRow({ item }: ListRenderItemInfo<Lecture>) {
     // The row body opens Now Playing. The play button also resumes the lecture if it's the
     // loaded one and paused.
     function handleOpen() {
@@ -106,6 +163,15 @@ export default function HomeScreen() {
     footer = <LoadingMoreFooter />;
   }
 
+  // Shown in place of the rows when there are none. A failed first page shows nothing here yet.
+  // TODO(error-states step 4): the "Lectures didn’t load" card.
+  let emptyList = undefined;
+  if (isPending) {
+    emptyList = <FirstPageLoading />;
+  } else if (data) {
+    emptyList = <NoLecturesInSeries seriesLabel={seriesLabelFor(selectedSeries)} />;
+  }
+
   return (
     <View className="flex-1 bg-bg">
       <StatusBar style="auto" />
@@ -121,10 +187,12 @@ export default function HomeScreen() {
             continueListening={<ContinueListeningSection queue={loadedLectures} />}
             lectureCountLabel={lectureCountLabel}
             seriesLabels={seriesLabels}
-            selectedSeriesLabel={selectedSeriesLabel}
+            selectedSeriesLabel={seriesLabelFor(selectedSeries)}
+            onSeriesPress={handleSeriesPress}
             onSearchPress={handleSearchPress}
           />
         }
+        ListEmptyComponent={emptyList}
         ListFooterComponent={footer}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}

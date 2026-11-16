@@ -11,7 +11,7 @@ import { ScreenTopBar } from '@/components/ScreenTopBar';
 import { Icon } from '@/components/ui/icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { Text } from '@/components/ui/text';
-import type { Lecture } from '@/data/sample';
+import type { Lecture } from '@/features/lectures/lecture.types';
 import { useLectureQuery } from '@/features/lectures/lectures.queries';
 
 import { fitArtworkSize, nowPlayingTrackInfo } from './now-playing-content';

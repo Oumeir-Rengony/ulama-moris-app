@@ -5,14 +5,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EventRow } from '@/components/EventRow';
 import { EventsListHeader, type LatestEventContent } from '@/components/EventsListHeader';
 import { LoadingFooter, SkeletonRow } from '@/components/Skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Text } from '@/components/ui/text';
-import type { EventSummary } from '@/data/sample';
+import type { EventSummary } from '@/features/events/event.types';
 import {
   eventLectureCountLabel,
   eventStatsLabel,
   eventVenueLabel,
   latestEventMetaLabel,
 } from '@/features/events/event-labels';
+import { joinEventPages } from '@/features/events/events.api';
 import { useEventsQuery } from '@/features/events/events.queries';
 import { groupEventsByYear, type EventListItem, type EventYearSection } from '@/features/events/group-by-year';
 import { openEvent } from '@/features/events/open-event';
@@ -35,8 +37,9 @@ function renderEventRow({ item }: SectionListRenderItemInfo<EventListItem, Event
         title={event.title}
         statsLabel={eventStatsLabel(event)}
         venue={eventVenueLabel(event)}
-        day={event.day}
-        month={event.month}
+        // An event without a dated lecture has no day or month: its tile stays blank.
+        day={event.day ?? ''}
+        month={event.month ?? ''}
         // By position in the whole list, so the colours keep rotating across years.
         category={catAt(position)}
         onPress={handlePress}
@@ -83,6 +86,35 @@ function LoadingMoreFooter() {
   );
 }
 
+// The first page is loading: placeholder rows where the events will be.
+// TODO(design): no full-screen Events skeleton is designed; these are the list's skeleton rows.
+function FirstPageLoading() {
+  return (
+    <View className="gap-2.5 px-gutter pt-4" accessibilityLabel="Loading events">
+      <SkeletonRow variant="event" />
+      <SkeletonRow variant="event" />
+      <SkeletonRow variant="event" />
+    </View>
+  );
+}
+
+// TODO(design): the no-events card isn't designed.
+function NoEvents() {
+  return (
+    <View className="px-gutter pt-4">
+      <EmptyState title="No events yet" message="Recorded events will appear here." />
+    </View>
+  );
+}
+
+// "9 events", "1 event".
+function eventCountText(total: number): string {
+  if (total === 1) {
+    return '1 event';
+  }
+  return `${total} events`;
+}
+
 function buildLatestEventContent(event: EventSummary): LatestEventContent {
   return {
     title: event.title,
@@ -95,16 +127,14 @@ function buildLatestEventContent(event: EventSummary): LatestEventContent {
 export default function EventsScreen() {
   const insets = useSafeAreaInsets();
   const miniPlayerSpace = useMiniPlayerSpace();
-  const { data, hasNextPage, isFetchingNextPage, fetchNextPage } = useEventsQuery();
+  const { data, isPending, hasNextPage, isFetchingNextPage, fetchNextPage } = useEventsQuery();
 
-  const loadedEvents: EventSummary[] = [];
+  let loadedEvents: EventSummary[] = [];
   let eventCountLabel: string | undefined = undefined;
   if (data) {
-    for (const page of data.pages) {
-      loadedEvents.push(...page.items);
-    }
+    loadedEvents = joinEventPages(data.pages);
     // The total comes from the API; the app never counts.
-    eventCountLabel = `${data.pages[0].total} events`;
+    eventCountLabel = eventCountText(data.pages[0].total);
   }
 
   const sections = groupEventsByYear(loadedEvents);
@@ -137,6 +167,15 @@ export default function EventsScreen() {
     footer = <LoadingMoreFooter />;
   }
 
+  // Shown in place of the rows when there are none. A failed first page shows nothing here yet.
+  // TODO(error-states step 4): the "Events didn’t load" card.
+  let emptyList = undefined;
+  if (isPending) {
+    emptyList = <FirstPageLoading />;
+  } else if (data) {
+    emptyList = <NoEvents />;
+  }
+
   return (
     // The top inset is padding on the screen, not on the list content: sticky year headers pin to
     // the top of the list, and would otherwise hide under the status bar.
@@ -157,6 +196,7 @@ export default function EventsScreen() {
             onSearchPress={handleSearchPress}
           />
         }
+        ListEmptyComponent={emptyList}
         ListFooterComponent={footer}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}

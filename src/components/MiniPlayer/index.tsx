@@ -12,7 +12,8 @@ import { miniPlayer } from './tokens';
 
 type MiniPlayerProps = {
   title: string;
-  author: string;
+  // Hidden when the lecture has no author.
+  author?: string;
   playState: 'playing' | 'paused' | 'loading';
   // The 3px line on the bottom edge. Passed in as an element, so the line can follow the live
   // position without re-rendering the rest of the bar several times a second.
@@ -46,6 +47,11 @@ export function MiniPlayer({
   thumbnail,
   background = 'filled',
 }: MiniPlayerProps) {
+  let openPlayerLabel = `Open player: ${title}`;
+  if (author) {
+    openPlayerLabel = `Open player: ${title}, ${author}`;
+  }
+
   const { colorScheme } = useColorScheme();
   const colors = useThemeColors();
   const shadows = useThemeShadows();
@@ -96,7 +102,7 @@ export function MiniPlayer({
       {thumbnail}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Open player: ${title}, ${author}`}
+        accessibilityLabel={openPlayerLabel}
         accessibilityActions={[{ name: dismissActionName, label: 'Stop and close player' }]}
         onAccessibilityAction={handleAccessibilityAction}
         onPress={onOpenPress}
@@ -112,14 +118,16 @@ export function MiniPlayer({
         >
           {title}
         </Text>
-        <Text
-          variant="caption"
-          numberOfLines={1}
-          maxFontSizeMultiplier={1.3}
-          className={`font-manrope-semibold ${miniPlayer.fgMuted}`}
-        >
-          {author}
-        </Text>
+        {author ? (
+          <Text
+            variant="caption"
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.3}
+            className={`font-manrope-semibold ${miniPlayer.fgMuted}`}
+          >
+            {author}
+          </Text>
+        ) : null}
       </Pressable>
       {toggleControl}
       <IconButton accessibilityLabel="Skip forward 15 seconds" tone="ghost" onPress={onSkipForwardPress}>

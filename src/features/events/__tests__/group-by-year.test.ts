@@ -35,4 +35,16 @@ describe('groupEventsByYear', () => {
     const events = [eventInYear('a', '2026'), eventInYear('b', '2025'), eventInYear('c', '2026')];
     expect(summarise(groupEventsByYear(events))).toEqual(['2026: a', '2025: b', '2026: c']);
   });
+
+  it('puts events without a date in a last "Other events" section', () => {
+    const undated = { ...eventInYear('undated', '2026'), year: undefined };
+    const events = [eventInYear('a', '2026'), undated, eventInYear('b', '2025')];
+    expect(summarise(groupEventsByYear(events))).toEqual(['2026: a', '2025: b', 'Other events: undated']);
+  });
+
+  it('keeps one section for a year that runs on into the next page', () => {
+    const firstPage = [eventInYear('a', '2026'), eventInYear('b', '2025')];
+    const secondPage = [eventInYear('c', '2025'), eventInYear('d', '2024')];
+    expect(summarise(groupEventsByYear([...firstPage, ...secondPage]))).toEqual(['2026: a', '2025: b, c', '2024: d']);
+  });
 });

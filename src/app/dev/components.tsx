@@ -70,12 +70,10 @@ import {
   eventsTotal,
   latestLecturesTotal,
   lectures,
-  lectureSeries,
   seedRecentSearches,
-  topicLabels,
-  topicOrder,
-  type Lecture,
 } from '@/data/sample';
+import { lectureSeries } from '@/features/lectures/lecture-series';
+import type { Lecture } from '@/features/lectures/lecture.types';
 import { catAt, catForTopic } from '@/theme/tokens';
 import { formatVenue } from '@/utils/format-venue';
 
@@ -105,6 +103,8 @@ const sahabaEventLectures = lectures.filter((lecture) => lecture.event === sahab
 const threeLineTitleLecture = findLecture('the-treaty-of-hudaybiyyah-how-an-apparent-setback-became-a-clear-victory');
 const noDurationLecture = findLecture('a-country-on-fire-analysis-and-lessons');
 const homeMockLectures = lectures.slice(0, 6);
+// Real topics from the API, as editors typed them (case varies).
+const sampleTopics = ['sahaba r.a', 'Moon Sighting', 'Ramadan', 'Family', 'Fiqh', 'SEERAH', 'Gaza', 'spiritual'];
 
 // ---------- Gallery layout pieces ----------
 
@@ -180,16 +180,10 @@ function DataSection() {
       <Example label="formatVenue: mixed case is left unchanged">
         <Text variant="bodySm">{formatVenue('Nuʿmān Ibn Thābit, Quatre Bornes')}</Text>
       </Example>
-      <Example label="topicOrder → catForTopic (rotation, same colour on every screen)">
+      <Example label="catForTopic: the colour comes from the topic's letters (same on every screen)">
         <View className="flex-row flex-wrap gap-2">
-          {topicOrder.map((topic) => (
-            <Pill
-              key={topic}
-              label={topicLabels[topic] ?? topic}
-              variant="category"
-              size="lg"
-              category={catForTopic(topic, topicOrder)}
-            />
+          {sampleTopics.map((topic) => (
+            <Pill key={topic} label={topic} variant="category" size="lg" category={catForTopic(topic)} />
           ))}
         </View>
       </Example>
@@ -324,10 +318,10 @@ function ChipsAndPillsSection() {
       <Example label="Pill category lg (topic) + outline lg (event link, ellipsised)">
         <View className="flex-row gap-2">
           <Pill
-            label={topicLabels[playingTopic] ?? playingTopic}
+            label={playingTopic}
             variant="category"
             size="lg"
-            category={catForTopic(playingTopic, topicOrder)}
+            category={catForTopic(playingTopic)}
           />
           <Pill
             label={sahabaEvent.title}
@@ -534,7 +528,7 @@ function RowsSection() {
       <Example label="DateTile row (by position, catAt: wraps after cat-5) and result">
         <View className="flex-row flex-wrap gap-2">
           {events.slice(0, 6).map((event, index) => (
-            <DateTile key={event.slug} day={event.day} month={event.month} category={catAt(index)} size="row" />
+            <DateTile key={event.slug} day={event.day ?? ''} month={event.month ?? ''} category={catAt(index)} size="row" />
           ))}
           <DateTile day="24" month="Oct" category={1} size="result" />
         </View>
@@ -544,8 +538,8 @@ function RowsSection() {
           title={sahabaEvent.title}
           statsLabel={mockEventStats[sahabaEvent.slug]}
           venue={formatVenue(sahabaEvent.location ?? '')}
-          day={sahabaEvent.day}
-          month={sahabaEvent.month}
+          day={sahabaEvent.day ?? ''}
+          month={sahabaEvent.month ?? ''}
           category={catAt(0)}
         />
       </Example>
@@ -554,8 +548,8 @@ function RowsSection() {
           title={jummahEvent.title}
           statsLabel={mockEventStats[jummahEvent.slug]}
           dateRangeLabel={jummahEvent.dateRange}
-          day={jummahEvent.day}
-          month={jummahEvent.month}
+          day={jummahEvent.day ?? ''}
+          month={jummahEvent.month ?? ''}
           category={catAt(2)}
         />
       </Example>
@@ -640,7 +634,7 @@ function HeadersSection() {
 }
 
 function SearchSection() {
-  const sahabaTopicCategory = catForTopic('sahaba r.a', topicOrder);
+  const sahabaTopicCategory = catForTopic('sahaba r.a');
 
   return (
     <GallerySection title="Search">
@@ -683,7 +677,7 @@ function SearchSection() {
               titleParts={result.titleParts}
               author={result.author}
               metaLabel={result.metaLabel}
-              category={catForTopic(result.topic, topicOrder)}
+              category={catForTopic(result.topic)}
               accessibilityLabel={`Play ${findLecture(result.slug).title}`}
             />
           ))}
@@ -724,8 +718,8 @@ function NowPlayingSection() {
           author={playingLecture.author}
           venue={playingVenue}
           dateLabel={mockPlayback.longDate}
-          topicLabel={topicLabels[playingTopic]}
-          topicCategory={catForTopic(playingTopic, topicOrder)}
+          topicLabel={playingTopic}
+          topicCategory={catForTopic(playingTopic)}
           eventTitle={playingLecture.event}
         />
       </Example>

@@ -7,7 +7,8 @@ export type LectureRowState = 'idle' | 'active-paused' | 'active-playing';
 
 type LectureRowProps = {
   title: string;
-  author: string;
+  // Hidden when the lecture has no author.
+  author?: string;
   // Display-ready: "31 Oct · 36 min · Masjid Muswalla, Highlands".
   metaLabel: string;
   state: LectureRowState;
@@ -47,9 +48,11 @@ export function LectureRow({ title, author, metaLabel, state, onPress, onPlayPre
         <Text variant="title" numberOfLines={2}>
           {title}
         </Text>
-        <Text variant="meta" numberOfLines={1} className="text-primary">
-          {author}
-        </Text>
+        {author ? (
+          <Text variant="meta" numberOfLines={1} className="text-primary">
+            {author}
+          </Text>
+        ) : null}
         <Text variant="caption" numberOfLines={1} className="text-fg-muted">
           {metaLabel}
         </Text>

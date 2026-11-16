@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 
-import type { LectureSummary } from '@/data/sample';
+import type { Lecture } from '@/features/lectures/lecture.types';
 
 import { pause, playLecture, resume, stopAndClear } from './audio-engine';
 import { MINI_EXIT_MS } from './player-motion-config';
@@ -27,9 +27,9 @@ import {
 // This is the only file that calls setNowPlayingPresentation.
 
 export type OpenNowPlayingRequest = {
-  lecture: LectureSummary;
+  lecture: Lecture;
   // What plays after it, in data order.
-  queue: LectureSummary[];
+  queue: Lecture[];
   source: QueueSource;
   // Play buttons resume the lecture if it's the loaded one and paused. Row bodies only show it.
   resumeIfPaused: boolean;

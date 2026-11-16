@@ -19,4 +19,9 @@ describe('lectureRowMetaLabel', () => {
   it('shows only the date when both are missing', () => {
     expect(lectureRowMetaLabel(bareLecture)).toBe('2 Oct');
   });
+
+  it('leaves out the date when the lecture has none', () => {
+    const lecture = { ...fullLecture, date: undefined };
+    expect(lectureRowMetaLabel(lecture)).toBe('46 min · Masjid Muswalla, Highlands');
+  });
 });

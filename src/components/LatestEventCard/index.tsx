@@ -10,7 +10,8 @@ type LatestEventCardProps = {
   // Display-ready: "24 – 31 Oct 2026 · Masjid Muswalla, Highlands".
   metaLabel: string;
   lectureCountLabel: string;
-  durationLabel: string;
+  // Hidden when the event has no total duration.
+  durationLabel?: string;
   onPress?: () => void;
 };
 
@@ -27,7 +28,7 @@ export function LatestEventCard({ title, metaLabel, lectureCountLabel, durationL
         <View className="mt-1 flex-row items-center justify-between gap-3">
           <View className="shrink flex-row flex-wrap gap-2">
             <Pill label={lectureCountLabel} variant="onEmphasis" />
-            <Pill label={durationLabel} variant="onEmphasis" />
+            {durationLabel ? <Pill label={durationLabel} variant="onEmphasis" /> : null}
           </View>
           <View className="h-12 w-12 items-center justify-center rounded-full bg-secondary">
             <Icon icon={ArrowRight} size={20} color="secondaryFg" strokeWidth={2.4} />

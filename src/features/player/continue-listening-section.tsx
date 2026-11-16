@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 
 import { ContinueListeningCard } from '@/components/ContinueListeningCard';
-import type { LectureSummary } from '@/data/sample';
+import type { Lecture } from '@/features/lectures/lecture.types';
 import { useLectureQuery } from '@/features/lectures/lectures.queries';
 
 import { toggle } from './audio-engine';
@@ -12,7 +12,7 @@ import { selectActiveLectureSlug, usePlayerStore } from './player.store';
 
 type ContinueListeningSectionProps = {
   // What plays after the lecture when it isn't loaded yet: Home's loaded lectures.
-  queue: LectureSummary[];
+  queue: Lecture[];
 };
 
 // Home's Continue listening card: the last played lecture that isn't finished, with its progress.

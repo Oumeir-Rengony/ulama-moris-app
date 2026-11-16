@@ -119,7 +119,7 @@ Five colours named by number, from five hues: **cat-1 sage → cat-2 ochre → c
 - Use them to tell list items and topics apart: event date tiles, search result tiles, "Popular topics" chips, the Now Playing topic tag. **Never to signal state.** `cat-3` and `danger` share clay primitives but are separate tokens, so recolouring the cycle never changes error states.
 - **Which category (decided 11 Nov 2026): rotation.** Category colours carry no meaning, so they rotate cat-1 → cat-2 → … → cat-5 → cat-1. There is no fixed topic → colour map (the old `topicCategory` map and `catForItem` were removed). Not `Math.random()`: a random colour would change on every render and launch.
   - **By position:** `catAt(index)` → `cat-[(index % 5) + 1]`.
-  - **By topic:** `catForTopic(topic, topicOrder)` rotates by the topic's position in **one ordered list of known topics** (`topicOrder`: every distinct `category` string in the order it first appears in the data; later it comes from the API). So a topic keeps its colour on every screen. An unknown topic falls back to `cat-1`.
+  - **By topic:** `catForTopic(topic)` works the colour out from the topic's letters (case ignored), because topics are free text from the API with no fixed list. So a topic keeps its colour on every screen. An empty topic is `cat-1`.
   - By topic: search result tiles (lectures), the Now Playing topic tag.
   - By position: event date tiles (Events list, events-scope search results).
   - Fixed `cat-1`: the Events count chip and the Event detail number tiles.
@@ -307,7 +307,7 @@ const shadows = useThemeShadows();
 </View>
 
 // Now Playing tags: topic pill (category by topic) + outlined event link
-const topicCat = catClasses[catForTopic(lecture.category[0], topicOrder)];
+const topicCat = catClasses[catForTopic(lecture.category[0] ?? '')];
 <View className="flex-row gap-2">
   <View className={`h-[34px] px-3 rounded-full justify-center ${topicCat.bg}`}>
     <Text className={`font-manrope-bold text-meta ${topicCat.fg}`}>Ṣaḥābā r.a</Text>
@@ -403,4 +403,4 @@ Carried over from the colour-system change log (since removed). None blocks the 
 - Confirm the `ochre-600` hue (keep ≥ 4.5:1 on `surface-2`).
 - Keep a separate dark search highlight if matches look faint? (`search.highlight` dropped from `#5A4E2E` to `#4A4330` in dark.)
 - Lift `danger` for the dark mini player (2.8:1 for the error line)?
-- ~~Category by topic or by position?~~ Decided 11 Nov 2026: rotation, by topic position in `topicOrder` where an item has a topic, otherwise by list position (§5.1).
+- ~~Category by topic or by position?~~ Decided 11 Nov 2026: rotation, by topic where an item has a topic, otherwise by list position (§5.1). 16 Nov 2026: the topic colour is worked out from the topic's letters, since API topics have no fixed list.

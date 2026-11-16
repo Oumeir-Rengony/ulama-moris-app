@@ -56,12 +56,13 @@ src/
 │   └── Search/          # search UI + tokens.ts
 ├── features/            # State, data and pure logic per domain. No JSX screens
 │   ├── player/          # audio-engine.ts, player.store.ts, listening-history.store.ts, player-status-bridge.tsx
-│   ├── lectures/        # lectures.api.ts, lectures.queries.ts
-│   ├── events/          # events.api.ts, events.queries.ts, group-by-year.ts
+│   ├── api/             # api-client.ts: getJson, ApiError, the base URL from EXPO_PUBLIC_API_URL
+│   ├── lectures/        # lecture.types.ts, lecture-series.ts, lectures.api.ts, lectures.queries.ts
+│   ├── events/          # event.types.ts, events.api.ts, events.queries.ts, group-by-year.ts
 │   ├── search/          # scope.ts, match.ts, search.queries.ts, recent-searches.store.ts
 │   └── reminders/       # reminder-plan.ts (decisions), reminder-scheduler.ts (booking), reschedule-reminders.ts, reminders-bridge.tsx
 ├── providers/           # app-providers.tsx (QueryClientProvider …), rendered once by app/_layout.tsx
-├── data/                # sample.ts (API-shaped static data) + mock-ui.ts
+├── data/                # sample.ts + mock-ui.ts: mock data for /dev/components only (and the seed recent searches)
 ├── hooks/               # Cross-feature hooks only
 ├── theme/               # primitives.ts, tokens.ts, navigation-theme.ts, README.md
 ├── utils/               # format-time.ts and other pure helpers
@@ -102,7 +103,7 @@ Read [src/theme/README.md](src/theme/README.md) before adding or changing any co
 - **Components are static presentation.** They render what their props say: visual state is a prop (`state: 'idle' | 'active-paused' | 'active-playing'`, `selected`), never internal `useState`. No navigation, data fetching, stores or audio inside `src/components`.
 - Every future control is already a `Pressable` with `accessibilityRole="button"` and its final `accessibilityLabel`, and takes an optional `onPress?`. Screens wire behaviour by passing handlers; they don't change the component.
 - Props take **display-ready strings** ("35:48", "31 Oct", "2h 34m", "Masjid Muswalla, Highlands"). Formatting happens in the screen with the helpers in `src/utils/` (`formatVenue`, and the time helpers in `format-time.ts`).
-- Category colours are chosen by the caller and passed as `category: Category`: `catAt(index)` by position, `catForTopic(topic, topicOrder)` by topic.
+- Category colours are chosen by the caller and passed as `category: Category`: `catAt(index)` by position, `catForTopic(topic)` by topic (worked out from the topic's letters, so it needs no list).
 - Icons: `<Icon icon={…} color="fgMuted" />` with a semantic colour name. Import lucide icons one by one (`import Play from 'lucide-react-native/icons/play'`), never from the package root, which bundles every icon.
 - `react-native-svg` on web passes unknown props to the DOM, so don't put `accessible` / `importantForAccessibility` on `<Svg>`; the button around an icon carries the label.
 - `/dev/components` (development only) shows every component in every state with the mock data in `src/data/mock-ui.ts`, plus a Home screen mock. Add new components there.
@@ -114,7 +115,7 @@ Read [src/theme/README.md](src/theme/README.md) before adding or changing any co
 Ask these questions in order and stop at the first "yes":
 
 1. **Can it be calculated from other state, props or query data?** → Don't store it. Calculate it during render. Examples: whether the mini player is visible (`selectIsMiniPlayerVisible`), "N min left", the "81 lectures" count.
-2. **Does it come from the server, or from an API stub standing in for one?** → TanStack Query (`useQuery` / `useInfiniteQuery`). Load the `expo-data-fetching` skill.
+2. **Does it come from the server (the website API)?** → TanStack Query (`useQuery` / `useInfiniteQuery`). Load the `expo-data-fetching` skill.
 3. **Is it used by only one component (and the children it passes props to), and is it fine to lose it when the screen closes?** → `useState` in that component.
 4. **Is it read or changed on more than one screen, updated often, or must it survive an app restart?** → A Zustand store.
 5. **Is it a value that rarely changes, set once near the root, or one that needs a different value per subtree?** → React Context.
@@ -126,7 +127,7 @@ If you can't choose between `useState` and Zustand, start with `useState`. Move 
 | State | Owner | Why |
 |---|---|---|
 | Light/dark theme | NativeWind `dark:` classes + `useColorScheme()`. JS colour values come from `useThemeColors()` (`src/theme/tokens.ts`) | Set by the OS. No ThemeContext and no theme store |
-| Lecture pages, event pages, event detail, search results | TanStack Query | Server data (static stubs today, real API later) |
+| Lecture pages, event pages, event detail, search results | TanStack Query | Server data from the website API (`docs/mobile-app-api.md`) |
 | Player queue, `currentIndex`, queue `source` | Zustand `player.store.ts` (not persisted) | The mini player, Now Playing and the list rows on every screen read it. Not persisted, so a launch shows no mini player |
 | Where Now Playing is in its motion (`nowPlayingPresentation`: `closed` / `miniLeaving` / `opening` / `open` / `closing`), whether the queue has ended (`hasQueueEnded`) | Zustand `player.store.ts`. `nowPlayingPresentation` is written only by `open-now-playing.ts` | The mini player's visibility is calculated from these and the loaded lecture |
 | Player motion (`expand`, `enterY`, `miniDrop`, `surfaceOpacity`, `reducedMotion`, `surfaceGeometry`) | Reanimated shared values at module scope in `player-surface-motion.ts`. Never in Zustand, never in React state | Every frame is computed on the UI thread; React never renders per frame |
@@ -200,8 +201,12 @@ Spec: `docs/Audio Player Reminder Notifications — Logic Guide.md`. One type at
 
 - Fetchers are plain async functions in `features/<domain>/<domain>.api.ts`. Query hooks are in `<domain>.queries.ts`. Query keys are arrays that start with the domain: `['lectures', { series }]`.
 - Never copy query results into Zustand or `useState`. The one exception is the player queue. When the user presses play, copy that list of lectures into the queue, because it's a snapshot the user chose, not a cache.
-- Create one `QueryClient` at module scope in `src/providers/app-providers.tsx`. In the error-states stage, connect `onlineManager` to NetInfo and `focusManager` to `AppState`. React Native doesn't do this automatically.
-- **For now the fetchers read the static data, and nothing is cached.** Each fetcher reads `src/data/sample.ts` directly and returns the requested page. There's no network call and no artificial delay. Set `defaultOptions.queries` to `{ staleTime: 0, gcTime: 0 }` on the `QueryClient`, so query data is dropped as soon as no screen uses it and every mount reads the stub again. Don't add per-query `staleTime`/`gcTime`, `initialData`, `placeholderData` or a persisted query cache. Choose caching settings when the real API replaces the stubs.
+- Create one `QueryClient` at module scope in `src/providers/app-providers.tsx`. It connects `onlineManager` to NetInfo and `focusManager` to `AppState` (native only), because React Native doesn't do this automatically.
+- **The fetchers read the website API** (`/api/v1`, documented in `docs/mobile-app-api.md`) through `getJson` in `features/api/api-client.ts`. The base URL is `EXPO_PUBLIC_API_URL` in `.env` (the local website, `http://localhost:3000/api/v1`, until it's deployed). Restart Metro after changing it.
+- Each fetcher turns the API's JSON into the app's types (`lecture.types.ts`, `event.types.ts`): a value the API sends as `null` becomes `undefined`, so it can go straight to an optional prop. A 404 for one lecture or event returns `null`; any other failure throws, so the query reports an error.
+- Lists are paged by the API (page from 1, 10 per page). Stop on `hasMore`, never on `total` (it reads 0 past the last page). Join pages with `joinLecturePages` / `joinEventPages` / `joinSearchPages`, which drop an item a later page repeats.
+- Home always sends a series (`type`); there is no "all lectures" request. Search sends none, so it searches every series.
+- Cache settings: `staleTime` 1 minute, `gcTime` 5 minutes, `retry: 1`, on the `QueryClient` only. Don't add per-query settings, `initialData`, `placeholderData` or a persisted query cache.
 
 ### Context rules
 

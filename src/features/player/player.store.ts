@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { LectureSummary } from '@/data/sample';
+import type { Lecture } from '@/features/lectures/lecture.types';
 
 // The live playback session: what's loaded and what the audio is doing right now.
 // Not persisted, so every launch starts with nothing loaded (and no mini player).
@@ -35,7 +35,7 @@ export type MirroredStatus = {
 type PlayerData = MirroredStatus & {
   // The lectures the user chose to play, in data order. The one place where query data is
   // copied: it's a snapshot the user picked, not a cache.
-  queue: LectureSummary[];
+  queue: Lecture[];
   // null when nothing is loaded.
   currentIndex: number | null;
   source: QueueSource | null;
@@ -48,7 +48,7 @@ type PlayerData = MirroredStatus & {
 };
 
 type PlayerSetters = {
-  startQueue: (queue: LectureSummary[], startIndex: number, source: QueueSource) => void;
+  startQueue: (queue: Lecture[], startIndex: number, source: QueueSource) => void;
   setCurrentIndex: (index: number | null) => void;
   applyStatus: (status: MirroredStatus) => void;
   setHasQueueEnded: (hasQueueEnded: boolean) => void;
@@ -104,7 +104,7 @@ export const usePlayerStore = create<PlayerState>()((set) => ({
 // ---------- Selectors: values calculated from the state, never stored ----------
 
 // The loaded lecture, or null when nothing is loaded.
-export function selectCurrentLecture(state: PlayerState): LectureSummary | null {
+export function selectCurrentLecture(state: PlayerState): Lecture | null {
   if (state.currentIndex === null) {
     return null;
   }

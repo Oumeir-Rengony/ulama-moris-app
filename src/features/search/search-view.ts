@@ -29,8 +29,7 @@ export function pickSearchView({ query, debouncedQuery, results }: PickSearchVie
     return { kind: 'recent' };
   }
 
-  // A new query was sent and its results aren't back. With the static stub this lasts a single
-  // frame, so the body simply stays blank.
+  // A new query was sent and its results aren't back yet: the screen shows "Searching".
   if (results === undefined) {
     return { kind: 'waiting' };
   }

@@ -45,4 +45,9 @@ describe('lectureResultMetaLabel', () => {
   it('shows only the date when there is no venue', () => {
     expect(lectureResultMetaLabel(bareLecture)).toBe('2 Oct');
   });
+
+  it('shows only the venue when the lecture has no date', () => {
+    const lecture = { ...fullLecture, date: undefined };
+    expect(lectureResultMetaLabel(lecture)).toBe('Masjid Muswalla, Highlands');
+  });
 });

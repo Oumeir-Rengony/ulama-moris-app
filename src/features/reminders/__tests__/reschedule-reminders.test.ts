@@ -4,8 +4,14 @@ import { initialListeningHistoryState, useListeningHistoryStore } from '@/featur
 import { rescheduleRemindersOnLeave } from '@/features/reminders/reschedule-reminders';
 import * as fakeNotifications from '@/test-utils/fake-expo-notifications';
 
-// A real sample lecture (35:48 long), so the title and length come from the lectures stub.
-const SAMPLE_SLUG = 'gravity-of-talking-bad-about-the-sahaba-radiyallahu-anhum';
+// The lecture as the listening history keeps it (35:48 long). The reminders are built from the
+// history alone, with no network.
+const SAMPLE_LECTURE = {
+  slug: 'gravity-of-talking-bad-about-the-sahaba-radiyallahu-anhum',
+  title: "Gravity of Talking Bad about the Şahābā Radiyallāhu 'Anhum",
+  duration: '35:48',
+};
+const SAMPLE_SLUG = SAMPLE_LECTURE.slug;
 
 beforeEach(async () => {
   fakeNotifications.resetFakeNotifications();
@@ -15,7 +21,7 @@ beforeEach(async () => {
 
 describe('rescheduleRemindersOnLeave', () => {
   it('books the continue listening series for an unfinished lecture', async () => {
-    useListeningHistoryStore.getState().saveProgress(SAMPLE_SLUG, 600);
+    useListeningHistoryStore.getState().saveProgress(SAMPLE_LECTURE, 600);
 
     await rescheduleRemindersOnLeave();
 
@@ -25,7 +31,7 @@ describe('rescheduleRemindersOnLeave', () => {
   });
 
   it('books the inactivity reminder once that lecture is finished', async () => {
-    useListeningHistoryStore.getState().saveProgress(SAMPLE_SLUG, 600);
+    useListeningHistoryStore.getState().saveProgress(SAMPLE_LECTURE, 600);
     await rescheduleRemindersOnLeave();
 
     useListeningHistoryStore.getState().markFinished(SAMPLE_SLUG);

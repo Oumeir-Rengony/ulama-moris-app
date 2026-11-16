@@ -1,4 +1,4 @@
-import type { Lecture } from '@/data/sample';
+import type { Lecture } from '@/features/lectures/lecture.types';
 import { formatVenue } from '@/utils/format-venue';
 import { shortDateLabel } from '@/utils/format-time';
 
@@ -40,12 +40,18 @@ export function noResultsMessage(scope: SearchScope): string {
   return 'Try another lecture title.';
 }
 
-// A lecture result's meta line: "31 Oct · Masjid Muswalla, Highlands", or just the date when the
-// lecture has no venue.
+// A lecture result's meta line: "31 Oct · Masjid Muswalla, Highlands". The date or the venue is
+// left out when the lecture has none.
 export function lectureResultMetaLabel(lecture: Lecture): string {
-  const dateLabel = shortDateLabel(lecture.date);
-  if (lecture.masjid) {
-    return `${dateLabel} · ${formatVenue(lecture.masjid)}`;
+  const parts: string[] = [];
+
+  if (lecture.date !== undefined) {
+    parts.push(shortDateLabel(lecture.date));
   }
-  return dateLabel;
+
+  if (lecture.masjid) {
+    parts.push(formatVenue(lecture.masjid));
+  }
+
+  return parts.join(' · ');
 }

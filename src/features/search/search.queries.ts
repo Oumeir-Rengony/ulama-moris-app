@@ -1,14 +1,26 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 
-import { fetchSearchResults } from './search.api';
+import { fetchSearchResultsPage, type SearchResultsPage } from './search.api';
 import type { SearchScope } from './scope';
 
-// The results for one scope and one (already debounced) query. Does nothing while the query is
-// blank, so the recent searches show instead.
+// The API counts pages from 1. The next page is asked for only while the API says there is one.
+function nextPageAfter(lastPage: SearchResultsPage): number | undefined {
+  if (!lastPage.hasMore) {
+    return undefined;
+  }
+  return lastPage.page + 1;
+}
+
+// The results for one scope and one (already debounced) query, 10 at a time. Does nothing while
+// the query is blank, so the recent searches show instead.
 export function useSearchQuery(scope: SearchScope, debouncedQuery: string) {
-  return useQuery({
-    queryKey: ['search', scope, debouncedQuery],
-    queryFn: () => fetchSearchResults(scope, debouncedQuery),
-    enabled: debouncedQuery.trim().length > 0,
+  const query = debouncedQuery.trim();
+
+  return useInfiniteQuery({
+    queryKey: ['search', scope, query],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => fetchSearchResultsPage(scope, query, pageParam),
+    getNextPageParam: nextPageAfter,
+    enabled: query.length > 0,
   });
 }

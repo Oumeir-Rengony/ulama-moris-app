@@ -1,4 +1,5 @@
 import { fitArtworkSize, nowPlayingSeekBar, nowPlayingTrackInfo } from '@/features/player/now-playing-content';
+import { catForTopic } from '@/theme/tokens';
 import { bareLecture, fullLecture } from '@/test-utils/fixtures';
 
 describe('nowPlayingSeekBar', () => {
@@ -53,8 +54,8 @@ describe('nowPlayingTrackInfo', () => {
     expect(nowPlayingTrackInfo(fullLecture)).toEqual({
       venue: 'Masjid Muswalla, Highlands',
       dateLabel: 'Saturday, 31 October 2026',
-      topicLabel: 'Ṣaḥābā r.a',
-      topicCategory: 1,
+      topicLabel: 'sahaba r.a',
+      topicCategory: catForTopic('sahaba r.a'),
       eventTitle: 'The Sahaba Radiyyallahu Anhum',
     });
   });
@@ -68,10 +69,15 @@ describe('nowPlayingTrackInfo', () => {
     expect(trackInfo.dateLabel).toBe('Friday, 2 October 2026');
   });
 
-  it('shows a topic with no display label as written, in category 1', () => {
-    const lecture = { ...fullLecture, category: ['tafsir'] };
+  it('shows the topic exactly as the API sends it, in its own colour', () => {
+    const lecture = { ...fullLecture, category: ['Moon Sighting'] };
     const trackInfo = nowPlayingTrackInfo(lecture);
-    expect(trackInfo.topicLabel).toBe('tafsir');
-    expect(trackInfo.topicCategory).toBe(1);
+    expect(trackInfo.topicLabel).toBe('Moon Sighting');
+    expect(trackInfo.topicCategory).toBe(catForTopic('Moon Sighting'));
+  });
+
+  it('leaves out the date line when the lecture has no date', () => {
+    const lecture = { ...fullLecture, date: undefined };
+    expect(nowPlayingTrackInfo(lecture).dateLabel).toBeUndefined();
   });
 });

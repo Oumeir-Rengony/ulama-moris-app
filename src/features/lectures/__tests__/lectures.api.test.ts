@@ -1,92 +1,144 @@
-// These protect the contract the real API will have to meet, so swapping it in is safe.
-import { latestLecturesTotal, type LectureSummary } from '@/data/sample';
-import { fetchLectureBySlug, fetchLecturePage, LECTURE_PAGE_SIZE, type LecturePage } from '@/features/lectures/lectures.api';
-
-// Reads pages until nextPageIndex is null. Stops after 100 pages so a broken stub that never
-// ends fails the test instead of hanging it.
-async function fetchAllPages(): Promise<LecturePage[]> {
-  const pages: LecturePage[] = [];
-  let pageIndex: number | null = 0;
-
-  while (pageIndex !== null) {
-    const page = await fetchLecturePage(pageIndex);
-    pages.push(page);
-    pageIndex = page.nextPageIndex;
-
-    if (pages.length > 100) {
-      throw new Error('fetchLecturePage never returned nextPageIndex: null');
-    }
-  }
-  return pages;
-}
-
-function allItems(pages: LecturePage[]): LectureSummary[] {
-  const items: LectureSummary[] = [];
-  for (const page of pages) {
-    items.push(...page.items);
-  }
-  return items;
-}
+import { ApiError } from '@/features/api/api-client';
+import { fetchLectureBySlug, fetchLecturePage, joinLecturePages, type LecturePage } from '@/features/lectures/lectures.api';
+import type { Lecture } from '@/features/lectures/lecture.types';
+import { fullLecture } from '@/test-utils/fixtures';
+import { answerFetchWith, apiLecture, apiPage, failFetchWithNoConnection, fetchedPaths } from '@/test-utils/fake-fetch';
 
 describe('fetchLecturePage', () => {
-  it('returns a full first page', async () => {
-    const firstPage = await fetchLecturePage(0);
-    expect(firstPage.items).toHaveLength(LECTURE_PAGE_SIZE);
-    expect(firstPage.nextPageIndex).toBe(1);
+  it('asks for one page of 10 lectures of the series', async () => {
+    answerFetchWith(() => ({ status: 200, body: apiPage([], { total: 0, page: 2, hasMore: false }) }));
+
+    await fetchLecturePage({ page: 2, series: 'guest' });
+
+    expect(fetchedPaths()).toEqual(['/lectures?page=2&limit=10&type=guest']);
   });
 
-  it('reports the same library total on every page', async () => {
-    const pages = await fetchAllPages();
-    for (const page of pages) {
-      expect(page.total).toBe(latestLecturesTotal);
-    }
+  it('sends a trimmed search and leaves out the series when there is none', async () => {
+    answerFetchWith(() => ({ status: 200, body: apiPage([], { total: 0, page: 1, hasMore: false }) }));
+
+    await fetchLecturePage({ page: 1, search: '  sahaba ' });
+
+    expect(fetchedPaths()).toEqual(['/lectures?page=1&limit=10&search=sahaba']);
   });
 
-  it('counts nextPageIndex up, then ends with null on the last page', async () => {
-    const pages = await fetchAllPages();
-    const lastPageIndex = pages.length - 1;
+  it('returns the page as the API reports it', async () => {
+    answerFetchWith(() => ({ status: 200, body: apiPage([apiLecture()], { total: 81, page: 1, hasMore: true }) }));
 
-    for (let pageIndex = 0; pageIndex < lastPageIndex; pageIndex++) {
-      expect(pages[pageIndex].nextPageIndex).toBe(pageIndex + 1);
-    }
-    expect(pages[lastPageIndex].nextPageIndex).toBeNull();
+    const page = await fetchLecturePage({ page: 1, series: 'local' });
+
+    expect(page.total).toBe(81);
+    expect(page.page).toBe(1);
+    expect(page.hasMore).toBe(true);
+    expect(page.items[0]).toEqual({
+      id: 'api-lecture-1',
+      slug: 'gravity-of-talking-bad-about-the-sahaba-radiyallahu-anhum',
+      title: "Gravity of Talking Bad about the Şahābā Radiyallāhu 'Anhum",
+      author: 'Mufti Houzeifa Mamoojee',
+      date: '2026-10-31T21:15:00.000+04:00',
+      duration: '35:48',
+      masjid: 'MASJID MUSWALLA, HIGHLANDS',
+      url: 'https://example.com/gravity.m4a',
+      series: 'local',
+      event: 'The Sahaba Radiyyallahu Anhum',
+      eventSlug: 'the-sahaba-radiyyallahu-anhum',
+      category: ['sahaba r.a'],
+    });
   });
 
-  it('returns exactly the total across all pages, so the last page may be short', async () => {
-    const pages = await fetchAllPages();
-    expect(allItems(pages)).toHaveLength(latestLecturesTotal);
+  it('leaves out every value the API sends as null', async () => {
+    const bareApiLecture = apiLecture({
+      author: null,
+      date: null,
+      duration: null,
+      masjid: null,
+      series: null,
+      event: null,
+      eventSlug: null,
+      category: [],
+    });
+    answerFetchWith(() => ({ status: 200, body: apiPage([bareApiLecture], { total: 1, page: 1, hasMore: false }) }));
 
-    const lastPage = pages[pages.length - 1];
-    expect(lastPage.items.length).toBeGreaterThan(0);
-    expect(lastPage.items.length).toBeLessThanOrEqual(LECTURE_PAGE_SIZE);
+    const page = await fetchLecturePage({ page: 1, series: 'local' });
+    const lecture = page.items[0];
+
+    expect(lecture.author).toBeUndefined();
+    expect(lecture.date).toBeUndefined();
+    expect(lecture.duration).toBeUndefined();
+    expect(lecture.masjid).toBeUndefined();
+    expect(lecture.series).toBeUndefined();
+    expect(lecture.event).toBeUndefined();
+    expect(lecture.eventSlug).toBeUndefined();
+    expect(lecture.category).toEqual([]);
   });
 
-  it('never repeats a slug across pages', async () => {
-    const pages = await fetchAllPages();
-    const slugs = allItems(pages).map((lecture) => lecture.slug);
-    expect(new Set(slugs).size).toBe(slugs.length);
+  it('throws an ApiError with the status when the API fails', async () => {
+    answerFetchWith(() => ({ status: 500, body: { error: 'Failed to fetch lectures' } }));
+
+    const request = fetchLecturePage({ page: 1, series: 'local' });
+
+    await expect(request).rejects.toBeInstanceOf(ApiError);
+    await expect(request).rejects.toMatchObject({ status: 500, message: 'Failed to fetch lectures' });
+  });
+
+  it('lets a failed connection fail the request', async () => {
+    failFetchWithNoConnection();
+
+    await expect(fetchLecturePage({ page: 1, series: 'local' })).rejects.toThrow('Network request failed');
   });
 });
 
 describe('fetchLectureBySlug', () => {
-  it('finds a lecture from the first page', async () => {
-    const firstPage = await fetchLecturePage(0);
-    const firstLecture = firstPage.items[0];
-    const found = await fetchLectureBySlug(firstLecture.slug);
-    expect(found?.title).toBe(firstLecture.title);
+  it('asks for the lecture by its slug, encoded for the URL', async () => {
+    answerFetchWith(() => ({ status: 200, body: apiLecture() }));
+
+    await fetchLectureBySlug('seerah-(s.a.w)');
+
+    expect(fetchedPaths()).toEqual(['/lectures/seerah-(s.a.w)']);
   });
 
-  it('finds a generated "--N" copy from a later page', async () => {
-    const laterPage = await fetchLecturePage(2);
-    const copy = laterPage.items[0];
-    expect(copy.slug).toContain('--');
+  it('returns the lecture', async () => {
+    answerFetchWith(() => ({ status: 200, body: apiLecture() }));
 
-    const found = await fetchLectureBySlug(copy.slug);
-    expect(found?.slug).toBe(copy.slug);
-    expect(found?.title).toBe(copy.title);
+    const lecture = await fetchLectureBySlug('gravity-of-talking-bad-about-the-sahaba-radiyallahu-anhum');
+
+    expect(lecture?.title).toBe("Gravity of Talking Bad about the Şahābā Radiyallāhu 'Anhum");
   });
 
-  it('returns null for an unknown slug', async () => {
-    expect(await fetchLectureBySlug('no-such-lecture')).toBeNull();
+  it('returns null when the API has no such lecture', async () => {
+    answerFetchWith(() => ({ status: 404, body: { error: 'Lecture not found' } }));
+
+    expect(await fetchLectureBySlug('nope')).toBeNull();
+  });
+
+  it('throws for any other failure, so the screen can offer a retry', async () => {
+    answerFetchWith(() => ({ status: 500, body: { error: 'Failed to fetch lecture' } }));
+
+    await expect(fetchLectureBySlug('gravity')).rejects.toMatchObject({ status: 500 });
+  });
+});
+
+describe('joinLecturePages', () => {
+  function lectureWithId(id: string): Lecture {
+    return { ...fullLecture, id, slug: `slug-${id}` };
+  }
+
+  function page(items: Lecture[], pageNumber: number): LecturePage {
+    return { items, total: 4, page: pageNumber, hasMore: true };
+  }
+
+  it('joins the pages in order', () => {
+    const pages = [page([lectureWithId('a'), lectureWithId('b')], 1), page([lectureWithId('c')], 2)];
+
+    const ids = joinLecturePages(pages).map((lecture) => lecture.id);
+
+    expect(ids).toEqual(['a', 'b', 'c']);
+  });
+
+  it('drops a lecture that a later page repeats (a lecture was published while scrolling)', () => {
+    const pages = [page([lectureWithId('a'), lectureWithId('b')], 1), page([lectureWithId('b'), lectureWithId('c')], 2)];
+
+    const ids = joinLecturePages(pages).map((lecture) => lecture.id);
+
+    expect(ids).toEqual(['a', 'b', 'c']);
   });
 });

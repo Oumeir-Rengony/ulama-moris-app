@@ -1,5 +1,5 @@
 import { NumberedLectureRow } from '@/components/NumberedLectureRow';
-import type { LectureSummary } from '@/data/sample';
+import type { Lecture } from '@/features/lectures/lecture.types';
 import { pausedLectureMetaLabel, playingLectureMetaLabel } from '@/features/events/event-labels';
 import { clockLabel } from '@/utils/format-time';
 
@@ -8,7 +8,7 @@ import { usePlayerStore } from './player.store';
 type ActiveNumberedLectureRowProps = {
   // "01", "02" …
   number: string;
-  lecture: LectureSummary;
+  lecture: Lecture;
   onPress?: () => void;
   onPlayPress?: () => void;
 };

@@ -3,7 +3,9 @@
 // add the formatting helpers and the player, these strings are written by hand.
 // The screen stages replace each value with a computed one, then delete this file.
 
-import { lectures, type Lecture } from './sample';
+import type { Lecture } from '@/features/lectures/lecture.types';
+
+import { lectures } from './sample';
 
 export type TitlePart = {
   text: string;

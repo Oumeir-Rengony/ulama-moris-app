@@ -1,4 +1,3 @@
-import { topicOrder } from '@/data/sample';
 import { catAt, catForTopic } from '@/theme/tokens';
 
 describe('catAt', () => {
@@ -20,27 +19,24 @@ describe('catAt', () => {
 });
 
 describe('catForTopic', () => {
-  const knownTopics = ['sahaba r.a', 'islamic finance', 'current affairs', 'seerah', 'akhlaq', 'fiqh'];
-
-  it('rotates topics in their first-seen order', () => {
-    expect(catForTopic('sahaba r.a', knownTopics)).toBe(1);
-    expect(catForTopic('islamic finance', knownTopics)).toBe(2);
-    expect(catForTopic('akhlaq', knownTopics)).toBe(5);
-    expect(catForTopic('fiqh', knownTopics)).toBe(1);
-  });
-
   it('always gives the same topic the same colour', () => {
-    const first = catForTopic('seerah', knownTopics);
-    const second = catForTopic('seerah', knownTopics);
-    expect(second).toBe(first);
+    expect(catForTopic('Moon Sighting')).toBe(catForTopic('Moon Sighting'));
   });
 
-  it('gives an unknown topic category 1', () => {
-    expect(catForTopic('not a topic', knownTopics)).toBe(1);
+  it('ignores case, so topics typed differently by editors match', () => {
+    expect(catForTopic('SEERAH')).toBe(catForTopic('Seerah'));
   });
 
-  it('orders the sample topics by where they first appear in the data', () => {
-    expect(topicOrder[0]).toBe('sahaba r.a');
-    expect(catForTopic('sahaba r.a', topicOrder)).toBe(1);
+  it('gives a lecture without a topic category 1', () => {
+    expect(catForTopic('')).toBe(1);
+  });
+
+  it('spreads different topics over more than one colour', () => {
+    const topics = ['sahaba r.a', 'Moon Sighting', 'Ramadan', 'Family', 'Fiqh', 'Gaza', 'spiritual', 'Zakaat'];
+    const colours = new Set();
+    for (const topic of topics) {
+      colours.add(catForTopic(topic));
+    }
+    expect(colours.size).toBeGreaterThan(1);
   });
 });

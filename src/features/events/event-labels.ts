@@ -1,4 +1,5 @@
-import type { EventSummary, Lecture, LectureSummary } from '@/data/sample';
+import type { EventSummary } from '@/features/events/event.types';
+import type { Lecture } from '@/features/lectures/lecture.types';
 import { formatVenue } from '@/utils/format-venue';
 import { shortDateLabel } from '@/utils/format-time';
 
@@ -15,18 +16,35 @@ export function eventLectureCountLabel(event: EventSummary): string {
 }
 
 // Events row stats: "4 lectures · 2h 34m · 24 Oct – 31 Oct 2026". The date range is shown as
-// the data gives it.
+// the data gives it. The duration or the date range is left out when the event has none.
 export function eventStatsLabel(event: EventSummary): string {
-  return `${lectureCountLabel(event.total)} · ${event.duration} · ${event.dateRange}`;
+  const parts: string[] = [lectureCountLabel(event.total)];
+
+  if (event.duration) {
+    parts.push(event.duration);
+  }
+
+  if (event.dateRange) {
+    parts.push(event.dateRange);
+  }
+
+  return parts.join(' · ');
 }
 
-// Latest event card: "24 Oct – 31 Oct 2026 · Masjid Muswalla, Highlands". No venue part when the
-// event has none.
+// Latest event card: "24 Oct – 31 Oct 2026 · Masjid Muswalla, Highlands". The date range or the
+// venue is left out when the event has none.
 export function latestEventMetaLabel(event: EventSummary): string {
-  if (event.location) {
-    return `${event.dateRange} · ${formatVenue(event.location)}`;
+  const parts: string[] = [];
+
+  if (event.dateRange) {
+    parts.push(event.dateRange);
   }
-  return event.dateRange;
+
+  if (event.location) {
+    parts.push(formatVenue(event.location));
+  }
+
+  return parts.join(' · ');
 }
 
 // The venue, ready to show, or undefined when the event has none.
@@ -55,17 +73,23 @@ export function lectureNumberLabel(index: number): string {
 }
 
 // Event detail row meta when the row isn't the active lecture: "31 Oct · 35:48".
-// The duration part is left out when it's unknown.
+// The date or the duration is left out when it's unknown.
 export function eventLectureMetaLabel(lecture: Lecture): string {
-  const dateLabel = shortDateLabel(lecture.date);
-  if (lecture.duration) {
-    return `${dateLabel} · ${lecture.duration}`;
+  const parts: string[] = [];
+
+  if (lecture.date !== undefined) {
+    parts.push(shortDateLabel(lecture.date));
   }
-  return dateLabel;
+
+  if (lecture.duration) {
+    parts.push(lecture.duration);
+  }
+
+  return parts.join(' · ');
 }
 
 // Event detail row meta for the paused active lecture: "Paused · 16:05 / 46:21".
-export function pausedLectureMetaLabel(lecture: LectureSummary, elapsed: string): string {
+export function pausedLectureMetaLabel(lecture: Lecture, elapsed: string): string {
   if (lecture.duration) {
     return `Paused · ${elapsed} / ${lecture.duration}`;
   }
@@ -73,7 +97,7 @@ export function pausedLectureMetaLabel(lecture: LectureSummary, elapsed: string)
 }
 
 // Event detail row meta for the playing active lecture: "Now playing · 16:05 / 46:21".
-export function playingLectureMetaLabel(lecture: LectureSummary, elapsed: string): string {
+export function playingLectureMetaLabel(lecture: Lecture, elapsed: string): string {
   if (lecture.duration) {
     return `Now playing · ${elapsed} / ${lecture.duration}`;
   }

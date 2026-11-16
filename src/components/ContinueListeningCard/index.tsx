@@ -7,7 +7,8 @@ import { Text } from '@/components/ui/text';
 
 type ContinueListeningCardProps = {
   title: string;
-  author: string;
+  // Hidden when the lecture has no author.
+  author?: string;
   state: 'playing' | 'paused';
   // 0 to 1.
   progress: number;

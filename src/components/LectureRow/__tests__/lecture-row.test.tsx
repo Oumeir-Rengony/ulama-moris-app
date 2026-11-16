@@ -20,6 +20,13 @@ describe('LectureRow', () => {
     expect(screen.getByText('31 Oct · 36 min · Masjid Muswalla, Highlands')).toBeOnTheScreen();
   });
 
+  it('leaves out the author line when the lecture has no author', async () => {
+    await renderWithProviders(<LectureRow title={title} metaLabel="31 Oct" state="idle" />);
+    expect(screen.getByText(title)).toBeOnTheScreen();
+    expect(screen.getByText('31 Oct')).toBeOnTheScreen();
+    expect(screen.queryByText('undefined')).toBeNull();
+  });
+
   it('labels the play button "Play {title}" when idle or paused', async () => {
     await renderWithProviders(<LectureRow title={title} author="A" metaLabel="M" state="idle" />);
     expect(screen.getByRole('button', { name: `Play ${title}` })).toBeOnTheScreen();

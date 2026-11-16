@@ -1,6 +1,6 @@
 import type { AccessibilityValue } from 'react-native';
 
-import { topicLabels, topicOrder, type Lecture } from '@/data/sample';
+import type { Lecture } from '@/features/lectures/lecture.types';
 import { catForTopic, type Category } from '@/theme/tokens';
 import { formatVenue } from '@/utils/format-venue';
 import { clockLabel, clockToSeconds, longDateLabel } from '@/utils/format-time';
@@ -81,7 +81,7 @@ export function fitArtworkSize({ availableWidth, availableHeight, heightOfEveryt
 
 export type TrackInfoContent = {
   venue?: string;
-  dateLabel: string;
+  dateLabel?: string;
   topicLabel?: string;
   topicCategory?: Category;
   eventTitle?: string;
@@ -96,18 +96,23 @@ export function nowPlayingTrackInfo(lecture: Lecture): TrackInfoContent {
     venue = formatVenue(lecture.masjid);
   }
 
+  // The topic is shown exactly as the API sends it.
   let topicLabel: string | undefined = undefined;
   let topicCategory: Category | undefined = undefined;
   if (lecture.category.length > 0) {
     const topic = lecture.category[0];
-    // The display label from topicLabels ("Ṣaḥābā r.a"); the raw topic if it has none.
-    topicLabel = topicLabels[topic] ?? topic;
-    topicCategory = catForTopic(topic, topicOrder);
+    topicLabel = topic;
+    topicCategory = catForTopic(topic);
+  }
+
+  let dateLabel: string | undefined = undefined;
+  if (lecture.date !== undefined) {
+    dateLabel = longDateLabel(lecture.date);
   }
 
   return {
     venue,
-    dateLabel: longDateLabel(lecture.date),
+    dateLabel,
     topicLabel,
     topicCategory,
     eventTitle: lecture.event,

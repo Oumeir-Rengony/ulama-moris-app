@@ -1,6 +1,5 @@
 import { AppState } from 'react-native';
 
-import { fetchLectureBySlug } from '@/features/lectures/lectures.api';
 import { useListeningHistoryStore } from '@/features/player/listening-history.store';
 import { clockToSeconds } from '@/utils/format-time';
 
@@ -22,15 +21,18 @@ let lastActivityAt = Date.now();
 // a cancel with another rebuild's bookings.
 let rebuildQueue: Promise<void> = Promise.resolve();
 
-async function readLastListen(): Promise<LastListen | null> {
+// Everything comes from the saved listening history, so this works offline.
+function readLastListen(): LastListen | null {
   const history = useListeningHistoryStore.getState();
   const slug = history.lastPlayedSlug;
   if (slug === null) {
     return null;
   }
 
-  const lecture = await fetchLectureBySlug(slug);
-  if (lecture === null) {
+  // Saved before the title was kept: there's nothing to name in the reminder, so it counts as
+  // no last listen (the inactivity reminder is booked instead).
+  const title = history.lastPlayedTitle;
+  if (title === null) {
     return null;
   }
 
@@ -42,15 +44,15 @@ async function readLastListen(): Promise<LastListen | null> {
 
   return {
     slug,
-    title: lecture.title,
+    title,
     positionSec: history.progressById[slug] ?? 0,
-    durationSec: clockToSeconds(lecture.duration),
+    durationSec: clockToSeconds(history.lastPlayedDuration ?? undefined),
     listenedAt,
   };
 }
 
 async function rebuildReminders(): Promise<void> {
-  const lastListen = await readLastListen();
+  const lastListen = readLastListen();
   const reminders = planReminders({
     now: Date.now(),
     lastActivityAt,

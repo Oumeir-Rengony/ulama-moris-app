@@ -10,7 +10,8 @@ import type { Category } from '@/theme/tokens';
 
 type TrackInfoProps = {
   title: string;
-  author: string;
+  // Hidden when the lecture has no author.
+  author?: string;
   // Each optional line or pill is left out when its value is missing.
   venue?: string;
   // Display-ready, weekday included: "Saturday, 31 October 2026".
@@ -41,9 +42,11 @@ export function TrackInfo({
       <Text variant="h2" numberOfLines={2} accessibilityRole="header">
         {title}
       </Text>
-      <Text variant="body" numberOfLines={1} className="mt-1.5 font-manrope-bold text-primary">
-        {author}
-      </Text>
+      {author ? (
+        <Text variant="body" numberOfLines={1} className="mt-1.5 font-manrope-bold text-primary">
+          {author}
+        </Text>
+      ) : null}
 
       {hasInfoLines ? (
         <View className="mt-3 gap-1.5">

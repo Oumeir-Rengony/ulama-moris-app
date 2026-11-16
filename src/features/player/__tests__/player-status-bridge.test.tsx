@@ -87,7 +87,7 @@ describe('PlayerStatusBridge', () => {
 
   it('advances once when a lecture finishes, and the finished one restarts from 0 next time', async () => {
     playLecture(first, queueOfThree, latestSource);
-    useListeningHistoryStore.getState().saveProgress(first.slug, 2700);
+    useListeningHistoryStore.getState().saveProgress(first, 2700);
     await renderBridge();
     fakePlayer.replace.mockClear();
 
@@ -114,7 +114,7 @@ describe('PlayerStatusBridge', () => {
   });
 
   it('a finished lecture hides Continue listening when the queue ends', async () => {
-    useListeningHistoryStore.getState().saveProgress(second.slug, 300);
+    useListeningHistoryStore.getState().saveProgress(second, 300);
     playLecture(third, queueOfThree, latestSource);
     await renderBridge();
     await sendStatus({ ...loadedStatus, playing: true, currentTime: 0 });
@@ -216,7 +216,7 @@ describe('PlayerStatusBridge', () => {
   });
 
   it('finishes a pending resume once the new lecture has loaded', async () => {
-    useListeningHistoryStore.getState().saveProgress(second.slug, 300);
+    useListeningHistoryStore.getState().saveProgress(second, 300);
     playLecture(second, queueOfThree, latestSource);
     await renderBridge();
 

@@ -80,3 +80,21 @@ describe('playingLectureMetaLabel', () => {
     expect(playingLectureMetaLabel(bareLecture, '2:00')).toBe('Now playing · 2:00');
   });
 });
+
+describe('events with missing data', () => {
+  const undatedEvent = { slug: 'new-event', title: 'New event', total: 0, latestTime: 0 };
+
+  it('shows only the lecture count when there is no duration or date range', () => {
+    expect(eventStatsLabel(undatedEvent)).toBe('0 lectures');
+  });
+
+  it('leaves the date range out of the latest event line when there is none', () => {
+    expect(latestEventMetaLabel({ ...undatedEvent, location: 'MASJID MUSWALLA, HIGHLANDS' })).toBe(
+      'Masjid Muswalla, Highlands',
+    );
+  });
+
+  it('leaves the date out of an event lecture row when the lecture has none', () => {
+    expect(eventLectureMetaLabel({ ...fullLecture, date: undefined })).toBe('46:21');
+  });
+});

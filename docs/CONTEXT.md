@@ -10,8 +10,9 @@ An audio lecture app (Expo SDK 58, Expo Router, TypeScript, NativeWind 4). Users
 lectures (Home) and events (Events → Event detail), search by title, and listen through one
 global player: a floating **mini player** bar that morphs into a full **Now Playing** sheet.
 
-Data is static today: fetchers read `src/data/sample.ts`. There is no real API, no sign-in,
-no bookmarks and no error or offline states yet.
+Data comes from the website's API (`/api/v1`, see [mobile-app-api.md](mobile-app-api.md)), the local
+website at `localhost:3000` until it's deployed. There is no sign-in, no bookmarks, and the error
+and offline screens are being built (ERROR-STATES.md).
 
 ## Status (14 Nov 2026)
 
@@ -71,7 +72,7 @@ fail or not checked.
 
 | Route | What |
 |---|---|
-| `(tabs)/index.tsx` | Home: Continue listening, filter chips (not wired yet, `TODO(series stage)`), the latest lectures with infinite scroll |
+| `(tabs)/index.tsx` | Home: Continue listening, the series chips (Local selected at first; every request sends a series), that series' latest lectures with infinite scroll |
 | `(tabs)/events/index.tsx`, `events/[slug].tsx` | Events list (year sections, paging) and Event detail |
 | `search.tsx` | Root-stack screen over the tabs, so it covers the player too. Accent-insensitive title match |
 | `player.tsx` | **Deep links only** (`/player?slug=…`). Loads the lecture paused, shows Now Playing without an entrance, steps back. Nothing navigates here |
@@ -103,7 +104,7 @@ What was built, where it differs from the original design spec:
 - **Lectures:** the bar never introduces a lecture. Rows and search results open Now Playing.
 - **Event date tiles:** show the data's `day` / `month` as given, which is the start day ("24"), not the end day.
 - **Venues:** all-caps venue strings are title-cased for display by `formatVenue`. Mixed-case strings are kept as they are, so diacritics survive.
-- **Category colours:** rotate cat-1 → cat-5 and wrap. There is no fixed topic → colour map. By topic: `catForTopic(topic, topicOrder)`; by position: `catAt(index)`.
+- **Category colours:** rotate cat-1 → cat-5 and wrap. There is no fixed topic → colour map. By topic: `catForTopic(topic)`, worked out from the topic's letters so the same topic has the same colour everywhere; by position: `catAt(index)`. Topics show exactly as the API sends them.
 - **Search:** matches **titles only** (the lecture or event title), accent-insensitive.
   - No-results copy is "Try another lecture title." / "Try another event title.".
   - **Popular topics is removed** from both scopes.
@@ -115,12 +116,8 @@ What was built, where it differs from the original design spec:
   - Waits use the fixed `MINI_EXIT_MS`, not completion callbacks, which can hang.
   - Colours come from the theme, not the spec's hex values.
 
-**Mock-only data** (in `src/data/sample.ts` and `mock-ui.ts`). Replace each with the API field when the API exists:
-- `eventSlug` on lectures, next to `event` (the title).
-- `dateRangeLong` on events (the API will return it formatted).
-- The static totals "81 lectures" and "11 events" (the app never counts).
-- The repeated `--N` slugs that pad the lists (`src/data/mock-repeat.ts`).
-- `seedRecentSearches`.
+**Mock data** (`src/data/sample.ts`, `mock-ui.ts`) now only feeds `/dev/components`, plus
+`seedRecentSearches`, the static recent searches on the Search screen.
 
 ## Where code lives
 
@@ -132,7 +129,7 @@ What was built, where it differs from the original design spec:
 
 | State | Owner |
 |---|---|
-| Lecture/event pages, event detail, search results | TanStack Query. One `QueryClient` with `staleTime: 0, gcTime: 0` while the data is static |
+| Lecture/event pages, event detail, search results | TanStack Query, from the website API. One `QueryClient`: `staleTime` 1 min, `gcTime` 5 min |
 | Queue, `currentIndex`, `source`, `hasQueueEnded`, `nowPlayingPresentation`, the mirrored audio status | Zustand `player.store.ts`. **Not persisted**, so a launch shows no bar |
 | Resume points `progressById`, `lastPlayedSlug` | Zustand `listening-history.store.ts`, persisted to AsyncStorage |
 | Motion values | Reanimated shared values at module scope in `player-surface-motion.ts`. Never in Zustand or React state |

@@ -7,7 +7,7 @@ import {
 } from 'expo-audio';
 import { Platform } from 'react-native';
 
-import type { LectureSummary } from '@/data/sample';
+import type { Lecture } from '@/features/lectures/lecture.types';
 
 import { useListeningHistoryStore } from './listening-history.store';
 import { LOCK_SCREEN_ARTWORK_URL } from './lock-screen-artwork';
@@ -56,7 +56,7 @@ type PendingResume = {
 };
 let pendingResume: PendingResume | null = null;
 
-export function buildLockScreenMetadata(lecture: LectureSummary, sourceLabel: string): AudioMetadata {
+export function buildLockScreenMetadata(lecture: Lecture, sourceLabel: string): AudioMetadata {
   return {
     title: lecture.title,
     artist: lecture.author,
@@ -81,7 +81,7 @@ function askForNotificationPermissionOnce(): void {
   });
 }
 
-function findLectureIndex(queue: LectureSummary[], slug: string): number {
+function findLectureIndex(queue: Lecture[], slug: string): number {
   for (let index = 0; index < queue.length; index++) {
     if (queue[index].slug === slug) {
       return index;
@@ -102,7 +102,7 @@ export function saveCurrentProgress(): void {
   if (pendingResume !== null) {
     return;
   }
-  useListeningHistoryStore.getState().saveProgress(lecture.slug, player.currentTime);
+  useListeningHistoryStore.getState().saveProgress(lecture, player.currentTime);
 }
 
 // A finished lecture starts from the beginning next time, not at its last second, and leaves
@@ -169,8 +169,8 @@ type PlayLectureOptions = {
 
 // Plays `lecture`, with `queue` as what comes after it (auto-advance).
 export function playLecture(
-  lecture: LectureSummary,
-  queue: LectureSummary[],
+  lecture: Lecture,
+  queue: Lecture[],
   source: QueueSource,
   options: PlayLectureOptions = { autoplay: true },
 ): void {

@@ -8,17 +8,24 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RecentSearchList } from '@/components/Search/recent-search-list';
 import { SearchInput } from '@/components/Search/search-input';
 import { SearchResultRow } from '@/components/Search/search-result-row';
+import { LoadingFooter } from '@/components/Skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { SectionHeader, SectionHeaderAction } from '@/components/ui/section-header';
 import { Text } from '@/components/ui/text';
-import { seedRecentSearches, topicOrder } from '@/data/sample';
+import { seedRecentSearches } from '@/data/sample';
 import { latestEventMetaLabel } from '@/features/events/event-labels';
 import { openEvent } from '@/features/events/open-event';
 import { openNowPlaying } from '@/features/player/open-now-playing';
 import { parseSearchScope, type SearchScope } from '@/features/search/scope';
-import type { EventSearchResult, LectureSearchResult, SearchResult } from '@/features/search/search.api';
+import {
+  joinSearchPages,
+  type EventSearchResult,
+  type LectureSearchResult,
+  type SearchResult,
+  type SearchResults,
+} from '@/features/search/search.api';
 import { useSearchQuery } from '@/features/search/search.queries';
 import {
   lectureResultMetaLabel,
@@ -42,7 +49,7 @@ function goBack() {
 
 function resultKey(result: SearchResult) {
   if (result.kind === 'lecture') {
-    return result.lecture.slug;
+    return result.lecture.id;
   }
   return result.event.slug;
 }
@@ -105,6 +112,14 @@ function SearchListHeader({ view, scope, onRecentQueryPress }: ListHeaderProps) 
   if (view.kind === 'results') {
     return <ResultsHeading label={resultsHeadingLabel(scope, view.results.total)} />;
   }
+  if (view.kind === 'waiting') {
+    // TODO(design): the searching state isn't designed.
+    return (
+      <View className="mt-[18px]">
+        <LoadingFooter label="Searching" />
+      </View>
+    );
+  }
   return null;
 }
 
@@ -131,7 +146,7 @@ function LectureResult({ result, query }: { result: LectureSearchResult; query: 
       titleParts={result.titleParts}
       author={lecture.author}
       metaLabel={lectureResultMetaLabel(lecture)}
-      category={catForTopic(firstTopic, topicOrder)}
+      category={catForTopic(firstTopic)}
       accessibilityLabel={`Play ${lecture.title}`}
       onPress={handlePress}
     />
@@ -151,8 +166,9 @@ function EventResult({ result, position }: { result: EventSearchResult; position
       kind="event"
       titleParts={result.titleParts}
       metaLabel={latestEventMetaLabel(event)}
-      day={event.day}
-      month={event.month}
+      // An event without a dated lecture has no day or month: its tile stays blank.
+      day={event.day ?? ''}
+      month={event.month ?? ''}
       category={catAt(position)}
       accessibilityLabel={`Open ${event.title}`}
       onPress={handlePress}
@@ -160,8 +176,9 @@ function EventResult({ result, position }: { result: EventSearchResult; position
   );
 }
 
-// Search: a root-stack screen sliding in from the right. Typing filters the static lectures or
-// events by title. Recent searches are static seeds; nothing is saved yet.
+// Search: a root-stack screen sliding in from the right. Typing searches the lectures (every
+// series) or the events by title, 10 results at a time. Recent searches are static seeds;
+// nothing is saved yet.
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ scope?: string }>();
@@ -170,9 +187,14 @@ export default function SearchScreen() {
   // The input text stays local and updates on every keystroke; only the debounced value fetches.
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query, searchDebounceMs);
-  const { data } = useSearchQuery(scope, debouncedQuery);
+  const { data, hasNextPage, isFetchingNextPage, fetchNextPage } = useSearchQuery(scope, debouncedQuery);
 
-  const view = pickSearchView({ query, debouncedQuery, results: data });
+  let results: SearchResults | undefined = undefined;
+  if (data) {
+    results = joinSearchPages(data.pages);
+  }
+
+  const view = pickSearchView({ query, debouncedQuery, results });
 
   let resultItems: SearchResult[] = [];
   if (view.kind === 'results') {
@@ -184,6 +206,17 @@ export default function SearchScreen() {
 
   function clearQuery() {
     setQuery('');
+  }
+
+  function handleEndReached() {
+    if (view.kind === 'results' && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }
+
+  let footer = undefined;
+  if (isFetchingNextPage) {
+    footer = <LoadingFooter label="Loading more results" />;
   }
 
   function renderResult({ item, index }: ListRenderItemInfo<SearchResult>) {
@@ -225,6 +258,9 @@ export default function SearchScreen() {
           keyExtractor={resultKey}
           ItemSeparatorComponent={RowGap}
           ListHeaderComponent={<SearchListHeader view={view} scope={scope} onRecentQueryPress={setQuery} />}
+          ListFooterComponent={footer}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.5}
           // A tap on a result works with the keyboard open, and dragging the list closes it.
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"

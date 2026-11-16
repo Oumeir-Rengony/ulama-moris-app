@@ -12,10 +12,10 @@ import { Text } from '@/components/ui/text';
 export type EventHeroContent = {
   title: string;
   // "24 – 31 October 2026"
-  dateLabel: string;
+  dateLabel?: string;
   // "4 recorded lectures"
   lectureCountLabel: string;
-  durationLabel: string;
+  durationLabel?: string;
   venue?: string;
 };
 

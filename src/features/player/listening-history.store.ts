@@ -10,9 +10,15 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 // four times a second while audio plays, so it must not be persisted. This store changes only
 // at checkpoints (start, pause, seek, track change, every ~10 s, app background, stop, finish).
 
+// The parts of a lecture the history keeps for the last one played. A Lecture fits.
+export type PlayedLecture = {
+  slug: string;
+  title: string;
+  duration?: string;
+};
+
 type ListeningHistoryData = {
-  // Resume point in seconds, by lecture slug. Only unfinished lectures have one. The mock
-  // library's generated "--N" slugs count as separate lectures; that's fine for mock data.
+  // Resume point in seconds, by lecture slug. Only unfinished lectures have one.
   progressById: Record<string, number>;
   // The lecture whose resume point was saved most recently, while it is unfinished. Feeds
   // Continue listening: null hides the card (nothing played yet, or the last one was finished).
@@ -21,10 +27,15 @@ type ListeningHistoryData = {
   // When that lecture's resume point was saved (milliseconds since 1970), so the continue
   // listening reminder can be timed from the last listen. null whenever lastPlayedSlug is null.
   lastPlayedAt: number | null;
+  // That lecture's title and clock duration ("35:48"), kept so the reminders can be rebuilt
+  // when the app goes to the background without fetching the lecture (which fails offline).
+  // null whenever lastPlayedSlug is null; the duration is also null when it's unknown.
+  lastPlayedTitle: string | null;
+  lastPlayedDuration: string | null;
 };
 
 type ListeningHistorySetters = {
-  saveProgress: (slug: string, positionSec: number) => void;
+  saveProgress: (lecture: PlayedLecture, positionSec: number) => void;
   markFinished: (slug: string) => void;
 };
 
@@ -35,6 +46,8 @@ export const initialListeningHistoryState: ListeningHistoryData = {
   progressById: {},
   lastPlayedSlug: null,
   lastPlayedAt: null,
+  lastPlayedTitle: null,
+  lastPlayedDuration: null,
 };
 
 export const useListeningHistoryStore = create<ListeningHistoryState>()(
@@ -45,7 +58,8 @@ export const useListeningHistoryStore = create<ListeningHistoryState>()(
       // The app also saves when it goes to the background, even while paused. Only a position
       // that moved (or another lecture) counts as listening, so leaving the app doesn't move
       // lastPlayedAt.
-      saveProgress: (slug, positionSec) => {
+      saveProgress: (lecture, positionSec) => {
+        const slug = lecture.slug;
         set((state) => {
           const isSameLecture = state.lastPlayedSlug === slug;
           const hasPositionMoved = state.progressById[slug] !== positionSec;
@@ -59,6 +73,8 @@ export const useListeningHistoryStore = create<ListeningHistoryState>()(
             progressById: { ...state.progressById, [slug]: positionSec },
             lastPlayedSlug: slug,
             lastPlayedAt,
+            lastPlayedTitle: lecture.title,
+            lastPlayedDuration: lecture.duration ?? null,
           };
         });
       },
@@ -70,14 +86,17 @@ export const useListeningHistoryStore = create<ListeningHistoryState>()(
           const progressById = { ...state.progressById };
           delete progressById[slug];
 
-          let lastPlayedSlug = state.lastPlayedSlug;
-          let lastPlayedAt = state.lastPlayedAt;
-          if (lastPlayedSlug === slug) {
-            lastPlayedSlug = null;
-            lastPlayedAt = null;
+          if (state.lastPlayedSlug !== slug) {
+            return { progressById };
           }
 
-          return { progressById, lastPlayedSlug, lastPlayedAt };
+          return {
+            progressById,
+            lastPlayedSlug: null,
+            lastPlayedAt: null,
+            lastPlayedTitle: null,
+            lastPlayedDuration: null,
+          };
         });
       },
     }),

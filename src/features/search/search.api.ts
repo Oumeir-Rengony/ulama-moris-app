@@ -1,4 +1,7 @@
-import { events, lectures, type EventSummary, type Lecture } from '@/data/sample';
+import type { EventSummary } from '@/features/events/event.types';
+import { fetchEventPage } from '@/features/events/events.api';
+import type { Lecture } from '@/features/lectures/lecture.types';
+import { fetchLecturePage } from '@/features/lectures/lectures.api';
 
 import { findMatch, splitForHighlight, type TextPart } from './match';
 import type { SearchScope } from './scope';
@@ -19,52 +22,87 @@ export type EventSearchResult = {
 
 export type SearchResult = LectureSearchResult | EventSearchResult;
 
+// What the Search screen shows: the results loaded so far, and how many match in all.
 export type SearchResults = {
-  // The matches, in data order.
   items: SearchResult[];
   // The number of matches, as the API reports it. The screen only displays it.
   total: number;
 };
 
-// Lectures match on their title only: never the topic, scholar, venue or date.
-// Loops over the unique sample lectures, not the repeated Home library, which would show
-// the same lecture several times.
-function searchLectures(query: string): SearchResults {
-  const items: SearchResult[] = [];
+export type SearchResultsPage = SearchResults & {
+  page: number;
+  hasMore: boolean;
+};
 
-  for (const lecture of lectures) {
-    const match = findMatch(lecture.title, query);
-    if (match === null) {
-      continue;
-    }
-    items.push({ kind: 'lecture', lecture, titleParts: splitForHighlight(lecture.title, match) });
-  }
-
-  return { items, total: items.length };
+// The API matches the title the same way (case- and accent-insensitive), so the match is
+// usually found again here for the highlight. If it isn't, the title shows unhighlighted.
+function highlightTitle(title: string, query: string): TextPart[] {
+  return splitForHighlight(title, findMatch(title, query));
 }
 
-// Events match on their title only.
-function searchEvents(query: string): SearchResults {
-  const items: SearchResult[] = [];
+// Every series is searched: Search has no series chips.
+async function searchLectures(query: string, page: number): Promise<SearchResultsPage> {
+  const lecturePage = await fetchLecturePage({ page, search: query });
 
-  for (const event of events) {
-    const match = findMatch(event.title, query);
-    if (match === null) {
-      continue;
-    }
-    items.push({ kind: 'event', event, titleParts: splitForHighlight(event.title, match) });
+  const items: SearchResult[] = [];
+  for (const lecture of lecturePage.items) {
+    items.push({ kind: 'lecture', lecture, titleParts: highlightTitle(lecture.title, query) });
   }
 
-  return { items, total: items.length };
+  return { items, total: lecturePage.total, page: lecturePage.page, hasMore: lecturePage.hasMore };
 }
 
-// Returns the lectures or events whose title contains the query (accent-insensitive).
-// Stub: filters the static data directly, with no network and no delay. Counting here is fine
-// because this stands in for the API, which will return `total` itself. When the real API
-// arrives, only this function's body changes.
-export async function fetchSearchResults(scope: SearchScope, query: string): Promise<SearchResults> {
+async function searchEvents(query: string, page: number): Promise<SearchResultsPage> {
+  const eventPage = await fetchEventPage({ page, search: query });
+
+  const items: SearchResult[] = [];
+  for (const event of eventPage.items) {
+    items.push({ kind: 'event', event, titleParts: highlightTitle(event.title, query) });
+  }
+
+  return { items, total: eventPage.total, page: eventPage.page, hasMore: eventPage.hasMore };
+}
+
+// One page of the lectures or events whose title contains the query.
+export async function fetchSearchResultsPage(
+  scope: SearchScope,
+  query: string,
+  page: number,
+): Promise<SearchResultsPage> {
   if (scope === 'events') {
-    return searchEvents(query);
+    return searchEvents(query, page);
   }
-  return searchLectures(query);
+  return searchLectures(query, page);
+}
+
+function resultKey(result: SearchResult): string {
+  if (result.kind === 'lecture') {
+    return result.lecture.id;
+  }
+  return result.event.slug;
+}
+
+// Joins the loaded pages, dropping a result a later page repeats (see joinLecturePages). The
+// total is the first page's: past the last page the API can report 0.
+export function joinSearchPages(pages: SearchResultsPage[]): SearchResults {
+  const items: SearchResult[] = [];
+  const seenKeys = new Set<string>();
+
+  for (const page of pages) {
+    for (const result of page.items) {
+      const key = resultKey(result);
+      if (seenKeys.has(key)) {
+        continue;
+      }
+      seenKeys.add(key);
+      items.push(result);
+    }
+  }
+
+  let total = 0;
+  if (pages.length > 0) {
+    total = pages[0].total;
+  }
+
+  return { items, total };
 }

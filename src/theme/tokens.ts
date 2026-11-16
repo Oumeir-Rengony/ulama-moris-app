@@ -115,15 +115,15 @@ export function catAt(index: number): Category {
 }
 
 // Topic rule (Now Playing topic pill, lecture search tiles). A topic must keep the same colour on
-// every screen, so it rotates by its position in ONE ordered list of known topics (`topicOrder`,
-// built from the data), not by its position in whichever list is on screen.
-// An unknown topic falls back to cat-1.
-export function catForTopic(topic: string, knownTopics: readonly string[]): Category {
-  const topicPosition = knownTopics.indexOf(topic);
-  if (topicPosition === -1) {
-    return 1;
+// every screen. Topics are free text from the API with no fixed list, so the colour is worked
+// out from the topic's own letters: the same text always adds up to the same number. Case is
+// ignored, so "SEERAH" and "Seerah" match. An empty topic (a lecture without one) is cat-1.
+export function catForTopic(topic: string): Category {
+  let letterTotal = 0;
+  for (const character of topic.toLowerCase()) {
+    letterTotal += character.codePointAt(0) ?? 0;
   }
-  return catAt(topicPosition);
+  return catAt(letterTotal);
 }
 
 // Tailwind only keeps classes it can see written out, so the class names are literal here.

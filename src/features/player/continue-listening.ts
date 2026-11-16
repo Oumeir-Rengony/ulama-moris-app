@@ -1,9 +1,9 @@
-import type { LectureSummary } from '@/data/sample';
+import type { Lecture } from '@/features/lectures/lecture.types';
 import { clockLabel, clockToSeconds, minutesLeftLabel } from '@/utils/format-time';
 
 export type ContinueListeningContent = {
   title: string;
-  author: string;
+  author?: string;
   state: 'playing' | 'paused';
   progress: number;
   elapsedLabel: string;
@@ -12,7 +12,7 @@ export type ContinueListeningContent = {
 
 type ContinueListeningInput = {
   // The last played lecture (from listening history), or undefined until it has been looked up.
-  lecture: LectureSummary | null | undefined;
+  lecture: Lecture | null | undefined;
   // Where it is, in seconds: the live position while it plays, otherwise its saved resume point.
   positionSec: number;
   // Whether it's the lecture loaded in the player right now, and playing.

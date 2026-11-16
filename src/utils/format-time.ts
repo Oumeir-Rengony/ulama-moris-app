@@ -63,7 +63,9 @@ export function clockLabel(totalSeconds: number): string {
   return `${minutes}:${twoDigits(seconds)}`;
 }
 
-const shortMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+// "Sept", not "Sep": the API's event dates are written that way (en-GB), and the two sit side by
+// side on Event detail and in Search.
+const shortMonthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
 const longMonthNames = [
   'January',
   'February',

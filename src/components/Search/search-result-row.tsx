@@ -21,7 +21,8 @@ type SharedResultProps = {
 
 type LectureResultProps = SharedResultProps & {
   kind: 'lecture';
-  author: string;
+  // Hidden when the lecture has no author.
+  author?: string;
 };
 
 type EventResultProps = SharedResultProps & {
@@ -43,13 +44,14 @@ function LectureTile({ category }: { category: Category }) {
 export function SearchResultRow(props: SearchResultRowProps) {
   let tile = <LectureTile category={props.category} />;
   let authorLine = null;
-  if (props.kind === 'lecture') {
+  if (props.kind === 'lecture' && props.author) {
     authorLine = (
       <Text variant="meta" numberOfLines={1} className="text-primary">
         {props.author}
       </Text>
     );
-  } else {
+  }
+  if (props.kind === 'event') {
     tile = <DateTile day={props.day} month={props.month} category={props.category} size="result" />;
   }
 

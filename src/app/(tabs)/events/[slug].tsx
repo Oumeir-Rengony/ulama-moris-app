@@ -5,7 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EventDetailHeader, type EventHeroContent } from '@/components/EventDetailHeader';
 import { NumberedLectureRow } from '@/components/NumberedLectureRow';
-import type { EventSummary, Lecture } from '@/data/sample';
+import { LoadingFooter } from '@/components/Skeleton';
+import type { EventSummary } from '@/features/events/event.types';
+import type { Lecture } from '@/features/lectures/lecture.types';
 import {
   eventLectureMetaLabel,
   eventVenueLabel,
@@ -57,9 +59,15 @@ export default function EventDetailScreen() {
   }
 
   // Headerless screen in the Events tab stack: it owns the top inset; the tab bar owns the
-  // bottom. While the stub resolves (instantly) only the ground shows.
+  // bottom. While the event loads, a loading line shows on the ground.
+  // TODO(design): no Event detail skeleton is designed.
+  // TODO(error-states): a failed load stays on this screen; it needs its own "didn’t load" state.
   if (!data) {
-    return <View className="flex-1 bg-bg" style={{ paddingTop: insets.top }} />;
+    return (
+      <View className="flex-1 bg-bg" style={{ paddingTop: insets.top + 40 }}>
+        <LoadingFooter label="Loading event" />
+      </View>
+    );
   }
 
   const { event, lectures } = data;

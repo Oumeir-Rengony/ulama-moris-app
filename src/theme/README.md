@@ -19,7 +19,7 @@ Short and procedural. The full reference is [docs/DESIGN-SYSTEM.md](../../docs/D
 | Style a view or text | Semantic classes: `bg-surface-1`, `text-fg-muted` … (list in `tailwind.config.js`) |
 | A colour where a class can't reach (icon `color`, SVG fill, StatusBar, navigation, animation) | `useThemeColors()` in `tokens.ts` |
 | Shadows | `useThemeShadows()` in `tokens.ts` (returns `undefined` in dark) |
-| Category colours | `catAt(index)` (by position) / `catForTopic(topic, topicOrder)` (by topic) + `catClasses` in `tokens.ts` |
+| Category colours | `catAt(index)` (by position) / `catForTopic(topic)` (by topic) + `catClasses` in `tokens.ts` |
 | Artwork (rosette, logo badge) | `palette` in `tokens.ts`. Fixed, the same in both themes, never a UI colour |
 | Text | `<Text variant="…">` from `@/components/ui/text` (type scale in DESIGN-SYSTEM §10) |
 | Navigation theme | `useNavigationTheme()` in `navigation-theme.ts` (built from the semantic tokens) |
@@ -79,7 +79,7 @@ Check the current NativeWind docs for `vars()` before starting.
 Decided 11 Nov 2026 (this replaced the old `topicCategory` map and `catForItem`):
 - Colours rotate cat-1 → … → cat-5 → cat-1. Not `Math.random()`, which would flicker between renders and launches.
 - **By position** (event date tiles, search result tiles): `catAt(index)`.
-- **By topic** (Now Playing topic pill, lecture search tiles): `catForTopic(topic, topicOrder)`. `topicOrder` is one ordered list of every known topic (built once from the data), so a topic keeps its colour on every screen. Unknown topics get cat-1.
+- **By topic** (Now Playing topic pill, lecture search tiles): `catForTopic(topic)`. Topics are free text from the API, so the colour is worked out from the topic's letters (case ignored): a topic keeps its colour on every screen. An empty topic gets cat-1.
 - `catForTopic` takes the list as an argument so the theme doesn't import from `src/data/`.
 
 ## Don'ts

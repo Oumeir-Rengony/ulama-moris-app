@@ -13,7 +13,7 @@ export type LatestEventContent = {
   title: string;
   metaLabel: string;
   lectureCountLabel: string;
-  durationLabel: string;
+  durationLabel?: string;
 };
 
 type EventsListHeaderProps = {

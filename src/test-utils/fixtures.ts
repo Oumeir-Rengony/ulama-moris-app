@@ -1,6 +1,7 @@
 // TEST ONLY. Small hand-written lectures and events, shaped like src/data/sample.ts.
 // Each fixture covers one edge case, so a test can say exactly which case it is about.
-import type { EventSummary, Lecture } from '@/data/sample';
+import type { EventSummary } from '@/features/events/event.types';
+import type { Lecture } from '@/features/lectures/lecture.types';
 
 // A complete lecture: duration, venue (all caps, as the API sends it), event and topic.
 export const fullLecture: Lecture = {

@@ -16,6 +16,8 @@ type HomeListHeaderProps = {
   lectureCountLabel?: string;
   seriesLabels: string[];
   selectedSeriesLabel: string;
+  // Called with the label of the chip that was pressed.
+  onSeriesPress?: (label: string) => void;
   onSearchPress?: () => void;
 };
 
@@ -26,6 +28,7 @@ export function HomeListHeader({
   lectureCountLabel,
   seriesLabels,
   selectedSeriesLabel,
+  onSeriesPress,
   onSearchPress,
 }: HomeListHeaderProps) {
   let countTrailing = null;
@@ -57,9 +60,12 @@ export function HomeListHeader({
       </View>
 
       <View className="mt-2 flex-row flex-wrap gap-2 px-gutter">
-        {seriesLabels.map((label) => (
-          <Chip key={label} label={label} selected={label === selectedSeriesLabel} />
-        ))}
+        {seriesLabels.map((label) => {
+          function handlePress() {
+            onSeriesPress?.(label);
+          }
+          return <Chip key={label} label={label} selected={label === selectedSeriesLabel} onPress={handlePress} />;
+        })}
       </View>
     </View>
   );
