@@ -76,4 +76,25 @@ describe('OfflineGate', () => {
 
     expect(screen.queryByRole('header', { name: 'No internet connection' })).toBeNull();
   });
+
+  it('blocks the app as soon as the connection drops while it is open', async () => {
+    await renderWithProviders(<OfflineGate />);
+    expect(screen.queryByRole('header', { name: 'No internet connection' })).toBeNull();
+
+    await act(async () => {
+      sendConnection(connection(false));
+    });
+
+    expect(await screen.findByRole('header', { name: 'No internet connection' })).toBeOnTheScreen();
+  });
+
+  it('does not block the app when NetInfo stops knowing while it is open', async () => {
+    await renderWithProviders(<OfflineGate />);
+
+    await act(async () => {
+      sendConnection(connection(null));
+    });
+
+    expect(screen.queryByRole('header', { name: 'No internet connection' })).toBeNull();
+  });
 });

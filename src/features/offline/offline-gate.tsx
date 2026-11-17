@@ -22,8 +22,9 @@ function isDefinitelyOffline(isConnected: boolean | null): boolean {
 }
 
 // The blocking "No internet connection" sheet. Checked when the app opens and when it comes back
-// to the front; a connection lost while the app is open is handled by each screen's own error
-// states instead. Mounted once in the root layout, above everything.
+// to the front, and whenever the connection drops while the app is open: a lost connection always
+// shows this sheet, whatever was loading (a list, the lecture audio). Mounted once in the root
+// layout, above everything.
 //
 // Closes by itself, once, when the connection comes back (no retry loop). "Try again" checks
 // the connection now: connected closes the sheet, and Home's lectures load (TanStack Query
@@ -53,20 +54,30 @@ export function OfflineGate() {
     };
   }, []);
 
-  // While the sheet shows: close it as soon as the connection is back.
-  const isShowing = status !== 'hidden';
+  // While the app is open: show the sheet as soon as the connection drops, and close it as soon
+  // as it comes back.
   useEffect(() => {
-    if (!isShowing) {
-      return;
+    function showUnlessAlreadyShowing(current: GateStatus): GateStatus {
+      // "Try again" is checking right now: let it finish and decide.
+      if (current !== 'hidden') {
+        return current;
+      }
+      return 'offline';
     }
 
     const unsubscribe = NetInfo.addEventListener((state) => {
-      if (state.isConnected === true && !isDefinitelyOffline(state.isConnected)) {
+      if (isDefinitelyOffline(state.isConnected)) {
+        setStatus(showUnlessAlreadyShowing);
+        return;
+      }
+      if (state.isConnected === true) {
         setStatus('hidden');
       }
     });
     return unsubscribe;
-  }, [isShowing]);
+  }, []);
+
+  const isShowing = status !== 'hidden';
 
   async function handleTryAgainPress() {
     setStatus('checking');

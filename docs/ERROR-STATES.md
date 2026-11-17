@@ -27,7 +27,7 @@ Colour names follow the three-tier system in DESIGN-SYSTEM.md: screens use seman
 ## States
 
 ### offline: no internet (blocking pop-up)
-- Triggered on launch or return to foreground when NetInfo reports no connection. **Blocks the app**; it can't be dismissed, and Android back does nothing.
+- Triggered on launch, on return to foreground, and whenever NetInfo reports the connection lost while the app is open: a lost connection always shows this sheet, whatever was loading. **Blocks the app**; it can't be dismissed, and Android back does nothing.
 - Behind it: the Home skeleton (header, greeting, search bar, chips, `skeleton.bg` placeholder rows) under a fixed charcoal scrim, `scrim` from tokens.ts (charcoal-900 at 62%, applied with `style={{ backgroundColor: scrim }}`), the same in both themes. A scrim is an overlay, not a theme colour.
 - Sheet: bottom-anchored, 16px side margins, radius 32, `bg-bg`, padding 28/24/24, `offlineSheet` shadow from `useThemeShadows()` (none in dark), centred content:
   - 72px `bg-danger-subtle` circle with a wifi-off icon in `danger-subtle-fg`
@@ -56,7 +56,7 @@ Colour names follow the three-tier system in DESIGN-SYSTEM.md: screens use seman
 - On success the results appear ("3 lectures found" …). Recent searches still work offline (they're stored on the device).
 
 ### audio-didnt-load: Now Playing
-- Shown when the audio fails to load, and also when the connection drops mid-lecture and the player waits 30 s for data without moving (iOS reports no error then). A stall keeps the position it reached, so opening the lecture again resumes there. The lock-screen card is removed while the lecture is failed.
+- Shown when the audio fails to load (expo-audio reports an error). The lock-screen card is removed while the lecture is failed. A connection lost mid-lecture shows the offline sheet instead (iOS reports no player error then; decided 17 Nov 2026: no timer to detect it).
 - On web, a play the browser refuses (no tap started it) is not a failure: the lecture stays paused.
 - The top bar, artwork, title, scholar, venue/date and tags stay.
 - The progress bar is replaced by a `bg-danger-subtle` alert row (radius 18, padding 12/14): alert-circle icon, "This lecture didn’t load" (14 ExtraBold), "Check your internet connection, then open the lecture again." (13); all `text-danger-subtle-fg`, `accessibilityRole="alert"`.

@@ -34,9 +34,6 @@ export const fakePlayer = {
   isBuffering: false,
   currentTime: 0,
   duration: 0,
-  // The live status. Only timeControlStatus is read (the stall check); a test sets it to
-  // 'waitingToPlayAtSpecifiedRate' to act out a connection that dropped mid-lecture.
-  currentStatus: { timeControlStatus: 'paused' },
   replace: jest.fn(),
   play: jest.fn(() => {
     fakePlayer.playing = true;
@@ -91,7 +88,6 @@ export function resetFakeAudio(): void {
   fakePlayer.isBuffering = false;
   fakePlayer.currentTime = 0;
   fakePlayer.duration = 0;
-  fakePlayer.currentStatus = { timeControlStatus: 'paused' };
   fakePlayer.replace.mockClear();
   fakePlayer.play.mockClear();
   fakePlayer.pause.mockClear();

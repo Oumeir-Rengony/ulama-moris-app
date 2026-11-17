@@ -4,7 +4,6 @@ import { AppState, Platform, type AppStateStatus } from 'react-native';
 
 import {
   failCurrentLecture,
-  failStalledLecture,
   finishPendingResumeIfReady,
   getPlayer,
   playNext,
@@ -13,7 +12,6 @@ import {
 } from './audio-engine';
 import { rescheduleRemindersIfInBackground } from '@/features/reminders/reschedule-reminders';
 
-import { checkForStall, initialStallTracker, STALL_CHECK_INTERVAL_MS } from './playback-stall';
 import { selectHasAudioFailed, usePlayerStore } from './player.store';
 
 // While playing, the resume point is saved this often.
@@ -40,14 +38,6 @@ function isAudioFailure(status: AudioStatus): boolean {
   return true;
 }
 
-// Reads the live player: the status updates stop while iOS waits for data, so they can't be used.
-function readStallReading() {
-  const player = getPlayer();
-  return {
-    isWaitingToPlay: player.currentStatus.timeControlStatus === 'waitingToPlayAtSpecifiedRate',
-    positionSec: player.currentTime,
-  };
-}
 
 // The one place where expo-audio's status reaches the app. Mounted once in the root layout.
 // Renders nothing.
@@ -81,10 +71,9 @@ export function PlayerStatusBridge() {
       return;
     }
 
-    // Playing after all (a late error from an earlier load): back to the normal controls, so the
-    // user can never be left with audio playing and no pause button. Only when it actually plays:
-    // a lecture that stalled mid-way is still loaded, and must stay failed.
-    if (selectHasAudioFailed(playerStore) && status.playing) {
+    // Loaded after all (a late error from an earlier load): back to the normal controls, so the
+    // user can never be left with audio playing and no pause button.
+    if (selectHasAudioFailed(playerStore) && status.isLoaded) {
       playerStore.clearAudioFailure();
     }
 
@@ -159,25 +148,6 @@ export function PlayerStatusBridge() {
     const subscription = AppState.addEventListener('change', handleAppStateChange);
     return () => {
       subscription.remove();
-    };
-  }, []);
-
-  // A lecture that stopped mid-way because the connection dropped (iOS waits silently).
-  useEffect(() => {
-    let tracker = initialStallTracker;
-
-    function checkPlayback() {
-      const check = checkForStall(tracker, readStallReading(), Date.now());
-      tracker = check.tracker;
-      if (check.hasStalledTooLong) {
-        tracker = initialStallTracker;
-        failStalledLecture();
-      }
-    }
-
-    const interval = setInterval(checkPlayback, STALL_CHECK_INTERVAL_MS);
-    return () => {
-      clearInterval(interval);
     };
   }, []);
 
