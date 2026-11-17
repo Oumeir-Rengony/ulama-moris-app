@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, type AccessibilityActionEvent, type AccessibilityValue, type LayoutChangeEvent } from 'react-native';
 import { GestureDetector, useCompetingGestures, usePanGesture, useTapGesture } from 'react-native-gesture-handler';
 
@@ -19,6 +19,38 @@ type SeekBarProps = {
 };
 
 const thumbSize = 16;
+
+// After a tap or a drag, the thumb stays where the user put it until the player reports a
+// position this close to it (as a fraction of the track: 1% is about 20 s of a 35-minute lecture,
+// more than a seek ever lands off by).
+const seekArrivedTolerance = 0.01;
+
+// ...or until this long has passed, so the thumb can't stay stuck there if the seek fails.
+const pendingSeekTimeoutMs = 1500;
+
+// True once the player's reported progress has caught up with the place the user seeked to.
+export function hasSeekArrived(progress: number, pendingFraction: number): boolean {
+  const distance = Math.abs(progress - pendingFraction);
+  return distance <= seekArrivedTolerance;
+}
+
+type ShownProgressInput = {
+  progress: number;
+  dragFraction: number | null;
+  pendingFraction: number | null;
+};
+
+// Where the thumb is drawn: under the finger while dragging, then where the user seeked to until
+// the player gets there, otherwise the player's progress.
+export function pickShownProgress({ progress, dragFraction, pendingFraction }: ShownProgressInput): number {
+  if (dragFraction !== null) {
+    return dragFraction;
+  }
+  if (pendingFraction !== null) {
+    return pendingFraction;
+  }
+  return progress;
+}
 
 // Where along the track a touch is, from 0 to 1.
 export function fractionAlongTrack(x: number, trackWidth: number): number {
@@ -41,19 +73,47 @@ export function fractionAlongTrack(x: number, trackWidth: number): number {
 //
 // The drag position is kept here, in local state, on purpose: while the finger moves, the thumb
 // follows the finger, not the live position (which would make it jump back four times a second).
-// It's transient touch feedback; the real position stays in the player.
+// The same goes for the place a tap or a drag seeked to (pendingFraction): a seek takes about
+// 0.25–1 s (the player has to fetch audio at the new place), and the progress prop only changes
+// once it's done. Without it, a tap would move the thumb late, and the end of a drag would show
+// the old position for a moment before the new one. It's transient touch feedback; the real
+// position stays in the player.
 export function SeekBar({ progress, elapsed, remaining, accessibilityValue, onSeek, onAccessibilityStep }: SeekBarProps) {
   const [trackWidth, setTrackWidth] = useState(0);
   const [dragFraction, setDragFraction] = useState<number | null>(null);
+  const [pendingFraction, setPendingFraction] = useState<number | null>(null);
+
+  // The player has reached the place the user seeked to: follow its progress again. Set during
+  // render (React's pattern for state that follows a prop), not in an effect, so the thumb never
+  // draws one frame with the stale value.
+  if (pendingFraction !== null && hasSeekArrived(progress, pendingFraction)) {
+    setPendingFraction(null);
+  }
+
+  // The seek never arrived (it failed, or landed further away): give up waiting.
+  useEffect(() => {
+    if (pendingFraction === null) {
+      return;
+    }
+    const timeout = setTimeout(() => {
+      setPendingFraction(null);
+    }, pendingSeekTimeoutMs);
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [pendingFraction]);
 
   function handleTrackLayout(event: LayoutChangeEvent) {
     setTrackWidth(event.nativeEvent.layout.width);
   }
 
   function seekTo(x: number) {
-    if (onSeek) {
-      onSeek(fractionAlongTrack(x, trackWidth));
+    if (!onSeek) {
+      return;
     }
+    const fraction = fractionAlongTrack(x, trackWidth);
+    setPendingFraction(fraction);
+    onSeek(fraction);
   }
 
   const tapGesture = useTapGesture({
@@ -96,10 +156,7 @@ export function SeekBar({ progress, elapsed, remaining, accessibilityValue, onSe
     }
   }
 
-  let shownProgress = progress;
-  if (dragFraction !== null) {
-    shownProgress = dragFraction;
-  }
+  const shownProgress = pickShownProgress({ progress, dragFraction, pendingFraction });
   const clamped = Math.min(Math.max(shownProgress, 0), 1);
   const percent: `${number}%` = `${clamped * 100}%`;
 

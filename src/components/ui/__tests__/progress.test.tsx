@@ -1,7 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react-native';
 
 import { ProgressBar } from '@/components/ui/progress-bar';
-import { fractionAlongTrack, SeekBar } from '@/components/ui/seek-bar';
+import { fractionAlongTrack, hasSeekArrived, pickShownProgress, SeekBar } from '@/components/ui/seek-bar';
 import { renderWithProviders } from '@/test-utils/render-with-providers';
 
 // The filled part of the bar is the first child of the given element.
@@ -97,5 +97,25 @@ describe('SeekBar accessibility actions', () => {
 
     expect(handleStep).toHaveBeenNthCalledWith(1, 'increment');
     expect(handleStep).toHaveBeenNthCalledWith(2, 'decrement');
+  });
+});
+
+describe('where the thumb is drawn after a seek', () => {
+  it('follows the finger while dragging, even with a seek still on its way', () => {
+    expect(pickShownProgress({ progress: 0.2, dragFraction: 0.7, pendingFraction: 0.5 })).toBe(0.7);
+  });
+
+  it('stays where the user seeked to until the player gets there (no jump back to the old place)', () => {
+    expect(pickShownProgress({ progress: 0.2, dragFraction: null, pendingFraction: 0.5 })).toBe(0.5);
+  });
+
+  it('follows the player otherwise', () => {
+    expect(pickShownProgress({ progress: 0.2, dragFraction: null, pendingFraction: null })).toBe(0.2);
+  });
+
+  it('counts the seek as arrived once the player is within 1% of it', () => {
+    expect(hasSeekArrived(0.2, 0.5)).toBe(false);
+    expect(hasSeekArrived(0.495, 0.5)).toBe(true);
+    expect(hasSeekArrived(0.505, 0.5)).toBe(true);
   });
 });
