@@ -240,6 +240,27 @@ export function reloadFailedLecture(): void {
   loadCurrent(true);
 }
 
+// The loaded lecture's audio didn't load, or stopped mid-way and never came back. Stops trying,
+// marks it failed (Now Playing and the mini player say so and disable their controls), and
+// removes the lock-screen card, whose play button could only fail again. Opening the lecture
+// again loads it again and puts the card back (loadCurrent). Called by PlayerStatusBridge.
+export function failCurrentLecture(): void {
+  const player = getPlayer();
+  player.pause();
+  player.clearLockScreenControls();
+  usePlayerStore.getState().reportAudioFailure();
+}
+
+// The connection dropped while it played and the player waited too long for data. Saves where it
+// got to first (no save is allowed once it's failed), so opening it again resumes from there.
+export function failStalledLecture(): void {
+  if (selectHasAudioFailed(usePlayerStore.getState())) {
+    return;
+  }
+  saveCurrentProgress();
+  failCurrentLecture();
+}
+
 export function pause(): void {
   const player = getPlayer();
   // Still loading: just don't start once it's ready.

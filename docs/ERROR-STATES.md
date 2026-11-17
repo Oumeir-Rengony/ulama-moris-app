@@ -56,6 +56,8 @@ Colour names follow the three-tier system in DESIGN-SYSTEM.md: screens use seman
 - On success the results appear ("3 lectures found" …). Recent searches still work offline (they're stored on the device).
 
 ### audio-didnt-load: Now Playing
+- Shown when the audio fails to load, and also when the connection drops mid-lecture and the player waits 30 s for data without moving (iOS reports no error then). A stall keeps the position it reached, so opening the lecture again resumes there. The lock-screen card is removed while the lecture is failed.
+- On web, a play the browser refuses (no tap started it) is not a failure: the lecture stays paused.
 - The top bar, artwork, title, scholar, venue/date and tags stay.
 - The progress bar is replaced by a `bg-danger-subtle` alert row (radius 18, padding 12/14): alert-circle icon, "This lecture didn’t load" (14 ExtraBold), "Check your internet connection, then open the lecture again." (13); all `text-danger-subtle-fg`, `accessibilityRole="alert"`.
 - Controls: back 15, play and forward 15 all disabled at 35% opacity. **No "Try again" in the players** (decided 17 Nov 2026: one way to recover, fewer states to get wrong). Opening the lecture again loads it again: its list row, Continue listening, or the mini player (close Now Playing, tap the bar). The reload shows the normal loading look and resumes from the saved position; if it fails again, this state comes back. It never reloads by itself (not even when the connection comes back), so sound never starts without a tap.

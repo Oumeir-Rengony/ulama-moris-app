@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act } from '@testing-library/react-native';
-import { AppState, type AppStateStatus } from 'react-native';
+import { AppState, Platform, type AppStateStatus } from 'react-native';
 
 import { playLecture, reloadFailedLecture, stopAndClear } from '@/features/player/audio-engine';
 import { initialListeningHistoryState, useListeningHistoryStore } from '@/features/player/listening-history.store';
@@ -272,6 +272,102 @@ describe('PlayerStatusBridge', () => {
 
       expect(fakePlayer.replace).not.toHaveBeenCalled();
       expect(savedPositionOf(first.slug)).toBe(600);
+    });
+  });
+
+  describe('the lock screen when the audio does not load', () => {
+    it('removes the lock-screen card, and opening the lecture again puts it back', async () => {
+      await renderBridge();
+      playLecture(first, queueOfThree, latestSource);
+      fakePlayer.setActiveForLockScreen.mockClear();
+
+      await sendStatus({ error: 'offline' });
+      expect(fakePlayer.clearLockScreenControls).toHaveBeenCalledTimes(1);
+
+      reloadFailedLecture();
+      expect(fakePlayer.setActiveForLockScreen).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('on web, when the browser refuses to start playback', () => {
+    it('stays paused instead of saying the lecture did not load', async () => {
+      jest.replaceProperty(Platform, 'OS', 'web');
+      await renderBridge();
+      playLecture(first, queueOfThree, latestSource);
+
+      await sendStatus({ ...loadedStatus, playing: false, error: 'NotAllowedError: play() failed' });
+
+      expect(selectHasAudioFailed(usePlayerStore.getState())).toBe(false);
+      expect(fakePlayer.clearLockScreenControls).not.toHaveBeenCalled();
+    });
+
+    it('still says so when the audio itself did not load', async () => {
+      jest.replaceProperty(Platform, 'OS', 'web');
+      await renderBridge();
+      playLecture(first, queueOfThree, latestSource);
+
+      await sendStatus({ isLoaded: false, error: 'Playback error (code 2)' });
+
+      expect(selectHasAudioFailed(usePlayerStore.getState())).toBe(true);
+    });
+  });
+
+  describe('when the connection drops mid-lecture (iOS waits without an error)', () => {
+    async function playFirstThenStall(atSec: number) {
+      await renderBridge();
+      playLecture(first, queueOfThree, latestSource);
+      await sendStatus({ ...loadedStatus, playing: true, currentTime: atSec });
+      fakePlayer.currentTime = atSec;
+      fakePlayer.currentStatus = { timeControlStatus: 'waitingToPlayAtSpecifiedRate' };
+    }
+
+    async function waitMs(ms: number) {
+      await act(async () => {
+        jest.advanceTimersByTime(ms);
+      });
+    }
+
+    it('counts as failed after 30 s without data, and keeps where it got to', async () => {
+      await playFirstThenStall(1200);
+
+      await waitMs(25_000);
+      expect(selectHasAudioFailed(usePlayerStore.getState())).toBe(false);
+
+      await waitMs(10_000);
+      expect(selectHasAudioFailed(usePlayerStore.getState())).toBe(true);
+      expect(savedPositionOf(first.slug)).toBe(1200);
+      expect(fakePlayer.pause).toHaveBeenCalled();
+      expect(fakePlayer.clearLockScreenControls).toHaveBeenCalled();
+    });
+
+    it('stays failed when the next update says the (paused) audio is still loaded', async () => {
+      await playFirstThenStall(1200);
+      await waitMs(35_000);
+
+      await sendStatus({ ...loadedStatus, playing: false, currentTime: 1200 });
+
+      expect(selectHasAudioFailed(usePlayerStore.getState())).toBe(true);
+    });
+
+    it('does nothing while it keeps making progress, however slowly', async () => {
+      await playFirstThenStall(1200);
+
+      for (let step = 1; step <= 10; step++) {
+        fakePlayer.currentTime = 1200 + step;
+        await waitMs(5_000);
+      }
+
+      expect(selectHasAudioFailed(usePlayerStore.getState())).toBe(false);
+    });
+
+    it('does nothing while paused, however long', async () => {
+      await renderBridge();
+      playLecture(first, queueOfThree, latestSource);
+      fakePlayer.currentStatus = { timeControlStatus: 'paused' };
+
+      await waitMs(120_000);
+
+      expect(selectHasAudioFailed(usePlayerStore.getState())).toBe(false);
     });
   });
 });

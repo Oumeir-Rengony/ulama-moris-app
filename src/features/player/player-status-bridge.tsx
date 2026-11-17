@@ -1,8 +1,10 @@
-import { useAudioPlayerStatus } from 'expo-audio';
+import { useAudioPlayerStatus, type AudioStatus } from 'expo-audio';
 import { useEffect, useRef } from 'react';
-import { AppState, type AppStateStatus } from 'react-native';
+import { AppState, Platform, type AppStateStatus } from 'react-native';
 
 import {
+  failCurrentLecture,
+  failStalledLecture,
   finishPendingResumeIfReady,
   getPlayer,
   playNext,
@@ -11,6 +13,7 @@ import {
 } from './audio-engine';
 import { rescheduleRemindersIfInBackground } from '@/features/reminders/reschedule-reminders';
 
+import { checkForStall, initialStallTracker, STALL_CHECK_INTERVAL_MS } from './playback-stall';
 import { selectHasAudioFailed, usePlayerStore } from './player.store';
 
 // While playing, the resume point is saved this often.
@@ -18,6 +21,32 @@ const CHECKPOINT_INTERVAL_MS = 10_000;
 
 function logResumeError(error: unknown): void {
   console.error('Could not seek to the saved resume point.', error);
+}
+
+// True when this update says the lecture's audio didn't load (or broke off).
+// One exception, on web: the browser refuses to start playback that no tap started (an
+// auto-advance while the tab is in the background, for example). expo-audio reports that as an
+// error too, but the audio is loaded and fine: it just stays paused, and play works on the next
+// tap. A real load failure on web comes with isLoaded false.
+function isAudioFailure(status: AudioStatus): boolean {
+  const audioError = status.error ?? null;
+  if (audioError === null) {
+    return false;
+  }
+  const isPlayRefusedByBrowser = Platform.OS === 'web' && status.isLoaded;
+  if (isPlayRefusedByBrowser) {
+    return false;
+  }
+  return true;
+}
+
+// Reads the live player: the status updates stop while iOS waits for data, so they can't be used.
+function readStallReading() {
+  const player = getPlayer();
+  return {
+    isWaitingToPlay: player.currentStatus.timeControlStatus === 'waitingToPlayAtSpecifiedRate',
+    positionSec: player.currentTime,
+  };
 }
 
 // The one place where expo-audio's status reaches the app. Mounted once in the root layout.
@@ -46,16 +75,16 @@ export function PlayerStatusBridge() {
 
     // The audio didn't load. expo-audio says so in this one update only, so the store keeps it.
     // Nothing else happens on a failed update: no checkpoint, no auto-advance.
-    const audioError = status.error ?? null;
-    if (audioError !== null) {
-      playerStore.reportAudioFailure();
+    if (isAudioFailure(status)) {
+      failCurrentLecture();
       wasPlayingRef.current = false;
       return;
     }
 
-    // Loaded after all (a late error from an earlier load, or playback recovered): back to the
-    // normal controls, so the user can never be left with audio playing and no pause button.
-    if (selectHasAudioFailed(playerStore) && status.isLoaded) {
+    // Playing after all (a late error from an earlier load): back to the normal controls, so the
+    // user can never be left with audio playing and no pause button. Only when it actually plays:
+    // a lecture that stalled mid-way is still loaded, and must stay failed.
+    if (selectHasAudioFailed(playerStore) && status.playing) {
       playerStore.clearAudioFailure();
     }
 
@@ -130,6 +159,25 @@ export function PlayerStatusBridge() {
     const subscription = AppState.addEventListener('change', handleAppStateChange);
     return () => {
       subscription.remove();
+    };
+  }, []);
+
+  // A lecture that stopped mid-way because the connection dropped (iOS waits silently).
+  useEffect(() => {
+    let tracker = initialStallTracker;
+
+    function checkPlayback() {
+      const check = checkForStall(tracker, readStallReading(), Date.now());
+      tracker = check.tracker;
+      if (check.hasStalledTooLong) {
+        tracker = initialStallTracker;
+        failStalledLecture();
+      }
+    }
+
+    const interval = setInterval(checkPlayback, STALL_CHECK_INTERVAL_MS);
+    return () => {
+      clearInterval(interval);
     };
   }, []);
 
