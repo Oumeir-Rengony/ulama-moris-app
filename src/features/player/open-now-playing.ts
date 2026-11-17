@@ -7,6 +7,7 @@ import { MINI_EXIT_MS } from './player-motion-config';
 import { collapseToMini, dropMini, enterFresh, expandFromMini, showNowPlayingWithoutMotion } from './player-surface-motion';
 import {
   selectCurrentLecture,
+  selectHasAudioFailed,
   selectIsMiniPlayerVisible,
   usePlayerStore,
   type QueueSource,
@@ -72,7 +73,7 @@ function markNowPlayingClosed(finished: boolean): void {
 // The loaded lecture is opened again. If its audio didn't load, that is the way to load it
 // again (the players have no "Try again"). Otherwise resume it when asked.
 function resumeOrReloadLoadedLecture(resumeIfPaused: boolean): void {
-  if (usePlayerStore.getState().audioLoadState === 'failed') {
+  if (selectHasAudioFailed(usePlayerStore.getState())) {
     reloadFailedLecture();
     return;
   }
@@ -151,7 +152,7 @@ export function openNowPlayingForLoadedLecture(): void {
 
   state.setNowPlayingPresentation('opening');
   expandFromMini({ onFinished: markNowPlayingOpen });
-  if (state.audioLoadState === 'failed') {
+  if (selectHasAudioFailed(state)) {
     reloadFailedLecture();
   }
 }

@@ -1,12 +1,10 @@
-import type { AudioLoadState } from './player.store';
-
 export type MiniPlayerPlayState = 'playing' | 'paused' | 'loading' | 'failed';
 
 type PlaybackFlags = {
   isLoaded: boolean;
   isBuffering: boolean;
   isPlaying: boolean;
-  audioLoadState: AudioLoadState;
+  hasAudioFailed: boolean;
 };
 
 // Which control the mini player shows: a disabled play button when the audio didn't load, a
@@ -15,9 +13,9 @@ export function pickMiniPlayerPlayState({
   isLoaded,
   isBuffering,
   isPlaying,
-  audioLoadState,
+  hasAudioFailed,
 }: PlaybackFlags): MiniPlayerPlayState {
-  if (audioLoadState === 'failed') {
+  if (hasAudioFailed) {
     return 'failed';
   }
   if (!isLoaded) {

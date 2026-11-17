@@ -11,7 +11,7 @@ import { dismissMiniPlayer, openNowPlayingForLoadedLecture } from './open-now-pl
 import { MINI_DROP_DISTANCE_PX, MINI_THUMB_SIZE } from './player-motion-config';
 import { shouldDismissMini, type Rect } from './player-surface-geometry';
 import { expand, miniDrop, reducedMotion, snapMiniBack } from './player-surface-motion';
-import { selectCurrentLecture, usePlayerStore } from './player.store';
+import { selectCurrentLecture, selectHasAudioFailed, usePlayerStore } from './player.store';
 
 type MiniLayerProps = {
   // Distance from the bottom of the tabs layout: the tab bar's measured height plus the gap.
@@ -110,7 +110,7 @@ export const MiniLayer = memo(function MiniLayer({
   const isLoaded = usePlayerStore((state) => state.isLoaded);
   const isBuffering = usePlayerStore((state) => state.isBuffering);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
-  const audioLoadState = usePlayerStore((state) => state.audioLoadState);
+  const hasAudioFailed = usePlayerStore(selectHasAudioFailed);
 
   // Created once for this bar. Its handlers call module-level functions, so it never goes stale.
   const [dismissResponder] = useState(createDismissResponder);
@@ -166,7 +166,7 @@ export const MiniLayer = memo(function MiniLayer({
           <MiniPlayer
             title={lecture.title}
             author={lecture.author}
-            playState={pickMiniPlayerPlayState({ isLoaded, isBuffering, isPlaying, audioLoadState })}
+            playState={pickMiniPlayerPlayState({ isLoaded, isBuffering, isPlaying, hasAudioFailed })}
             progressLine={<MiniPlayerProgressLine />}
             onOpenPress={openNowPlayingForLoadedLecture}
             onTogglePress={toggle}

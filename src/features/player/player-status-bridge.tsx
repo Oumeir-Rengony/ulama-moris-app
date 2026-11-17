@@ -1,4 +1,3 @@
-import NetInfo from '@react-native-community/netinfo';
 import { useAudioPlayerStatus } from 'expo-audio';
 import { useEffect, useRef } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
@@ -7,13 +6,12 @@ import {
   finishPendingResumeIfReady,
   getPlayer,
   playNext,
-  reloadFailedLecture,
   saveCurrentLectureAsFinished,
   saveCurrentProgress,
 } from './audio-engine';
 import { rescheduleRemindersIfInBackground } from '@/features/reminders/reschedule-reminders';
 
-import { usePlayerStore } from './player.store';
+import { selectHasAudioFailed, usePlayerStore } from './player.store';
 
 // While playing, the resume point is saved this often.
 const CHECKPOINT_INTERVAL_MS = 10_000;
@@ -57,7 +55,7 @@ export function PlayerStatusBridge() {
 
     // Loaded after all (a late error from an earlier load, or playback recovered): back to the
     // normal controls, so the user can never be left with audio playing and no pause button.
-    if (playerStore.audioLoadState === 'failed' && status.isLoaded) {
+    if (selectHasAudioFailed(playerStore) && status.isLoaded) {
       playerStore.clearAudioFailure();
     }
 
@@ -133,24 +131,6 @@ export function PlayerStatusBridge() {
     return () => {
       subscription.remove();
     };
-  }, []);
-
-  // The audio failed to load and the connection then comes back: load it once more by itself, as
-  // if the lecture had been opened again. Only on the change from offline to online, so it can't loop.
-  useEffect(() => {
-    let wasConnected: boolean | null = null;
-
-    const unsubscribe = NetInfo.addEventListener((state) => {
-      const isConnected = state.isConnected === true;
-      const hasReconnected = wasConnected === false && isConnected;
-      wasConnected = isConnected;
-
-      if (hasReconnected && usePlayerStore.getState().audioLoadState === 'failed') {
-        reloadFailedLecture();
-      }
-    });
-
-    return unsubscribe;
   }, []);
 
   return null;

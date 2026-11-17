@@ -23,13 +23,6 @@ export type QueueSource =
   | { kind: 'event'; eventSlug: string; eventTitle: string }
   | { kind: 'search'; query: string };
 
-// Whether the loaded lecture's audio loaded. Written by PlayerStatusBridge (a failure, a success)
-// and by the engine (a reload, a new lecture).
-// - ok: loading, playing or paused normally.
-// - failed: the audio didn't load (no connection, a bad file). Now Playing and the mini player
-//   say so and their controls are disabled. Opening the lecture again loads it again.
-export type AudioLoadState = 'ok' | 'failed';
-
 // The part of expo-audio's status the UI needs. Written by PlayerStatusBridge only.
 export type MirroredStatus = {
   isPlaying: boolean;
@@ -52,9 +45,12 @@ type PlayerData = MirroredStatus & {
   // While it isn't 'closed', the mini player is hidden and most requests are ignored
   // (open-now-playing.ts says which).
   nowPlayingPresentation: NowPlayingPresentation;
-  // expo-audio reports a failure in one status update only (the next one says "no error"
-  // again), so the failure is kept here until the lecture is opened again or another one loads.
-  audioLoadState: AudioLoadState;
+  // The lecture whose audio didn't load (no connection, a bad file), or null. expo-audio reports
+  // a failure in one status update only (the next one says "no error" again), so it's kept here.
+  // It names the lecture, not just "failed", so a failure can never show on another lecture:
+  // read it through selectHasAudioFailed. Written by PlayerStatusBridge (a failure, a recovery)
+  // and cleared by the engine every time it loads a lecture.
+  failedLectureSlug: string | null;
 };
 
 type PlayerSetters = {
@@ -63,6 +59,7 @@ type PlayerSetters = {
   applyStatus: (status: MirroredStatus) => void;
   setHasQueueEnded: (hasQueueEnded: boolean) => void;
   setNowPlayingPresentation: (presentation: NowPlayingPresentation) => void;
+  // Marks the loaded lecture as failed.
   reportAudioFailure: () => void;
   clearAudioFailure: () => void;
 };
@@ -81,7 +78,7 @@ export const initialPlayerState: PlayerData = {
   durationSec: 0,
   hasQueueEnded: false,
   nowPlayingPresentation: 'closed',
-  audioLoadState: 'ok',
+  failedLectureSlug: null,
 };
 
 export const usePlayerStore = create<PlayerState>()((set) => ({
@@ -114,11 +111,17 @@ export const usePlayerStore = create<PlayerState>()((set) => ({
   },
 
   reportAudioFailure: () => {
-    set({ audioLoadState: 'failed' });
+    set((state) => {
+      const lecture = selectCurrentLecture(state);
+      if (lecture === null) {
+        return {};
+      }
+      return { failedLectureSlug: lecture.slug };
+    });
   },
 
   clearAudioFailure: () => {
-    set({ audioLoadState: 'ok' });
+    set({ failedLectureSlug: null });
   },
 }));
 
@@ -134,6 +137,16 @@ export function selectCurrentLecture(state: PlayerState): Lecture | null {
     return null;
   }
   return lecture;
+}
+
+// The loaded lecture's audio didn't load. Now Playing and the mini player say so and disable
+// their controls; opening the lecture again loads it again.
+export function selectHasAudioFailed(state: PlayerState): boolean {
+  const lecture = selectCurrentLecture(state);
+  if (lecture === null) {
+    return false;
+  }
+  return state.failedLectureSlug === lecture.slug;
 }
 
 // "Latest lectures", the event title, or the search query in curly quotes.

@@ -1,7 +1,7 @@
 import { PlayerControls, type PlayerControlsState } from '@/components/NowPlaying/player-controls';
 
 import { skipBack15, skipForward15, toggle } from './audio-engine';
-import { usePlayerStore } from './player.store';
+import { selectHasAudioFailed, usePlayerStore } from './player.store';
 
 function handleBackPress() {
   skipBack15();
@@ -17,10 +17,10 @@ function handleForwardPress() {
 // every control is disabled.
 export function NowPlayingControls() {
   const isPlaying = usePlayerStore((state) => state.isPlaying);
-  const audioLoadState = usePlayerStore((state) => state.audioLoadState);
+  const hasAudioFailed = usePlayerStore(selectHasAudioFailed);
 
   let state: PlayerControlsState = 'paused';
-  if (audioLoadState === 'failed') {
+  if (hasAudioFailed) {
     state = 'failed';
   } else if (isPlaying) {
     state = 'playing';

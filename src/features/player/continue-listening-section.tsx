@@ -8,7 +8,7 @@ import { reloadFailedLecture, toggle } from './audio-engine';
 import { buildContinueListeningContent } from './continue-listening';
 import { useListeningHistoryStore } from './listening-history.store';
 import { openNowPlaying } from './open-now-playing';
-import { selectActiveLectureSlug, usePlayerStore } from './player.store';
+import { selectActiveLectureSlug, selectHasAudioFailed, usePlayerStore } from './player.store';
 
 type ContinueListeningSectionProps = {
   // What plays after the lecture when it isn't loaded yet: Home's loaded lectures.
@@ -58,7 +58,7 @@ export function ContinueListeningSection({ queue }: ContinueListeningSectionProp
   // mini player never introduces a lecture.
   function handleTogglePress() {
     // The loaded lecture whose audio didn't load: play loads it again.
-    if (isActive && usePlayerStore.getState().audioLoadState === 'failed') {
+    if (isActive && selectHasAudioFailed(usePlayerStore.getState())) {
       reloadFailedLecture();
       return;
     }

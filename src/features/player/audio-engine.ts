@@ -12,7 +12,13 @@ import type { Lecture } from '@/features/lectures/lecture.types';
 
 import { useListeningHistoryStore } from './listening-history.store';
 import { LOCK_SCREEN_ARTWORK_URL } from './lock-screen-artwork';
-import { selectCurrentLecture, selectSourceLabel, usePlayerStore, type QueueSource } from './player.store';
+import {
+  selectCurrentLecture,
+  selectHasAudioFailed,
+  selectSourceLabel,
+  usePlayerStore,
+  type QueueSource,
+} from './player.store';
 
 // The audio engine: the only file that controls expo-audio's player.
 //
@@ -108,7 +114,7 @@ export function saveCurrentProgress(): void {
     return;
   }
   // The audio didn't load, so the player's position means nothing. Keep the saved one.
-  if (usePlayerStore.getState().audioLoadState !== 'ok') {
+  if (selectHasAudioFailed(usePlayerStore.getState())) {
     return;
   }
   useListeningHistoryStore.getState().saveProgress(lecture, player.currentTime);
@@ -134,6 +140,9 @@ function loadCurrent(shouldPlay: boolean): void {
   }
 
   state.setHasQueueEnded(false);
+  // Every load starts clean: the one place a failure is cleared before loading, so no path that
+  // loads a lecture can forget it. A new failure is reported by PlayerStatusBridge.
+  state.clearAudioFailure();
 
   let audioUrl = lecture.url;
   if (isFailureForced('audio')) {
@@ -198,7 +207,7 @@ export function playLecture(
       return;
     }
     // Its audio didn't load: playing it again loads it again.
-    if (usePlayerStore.getState().audioLoadState === 'failed') {
+    if (selectHasAudioFailed(usePlayerStore.getState())) {
       reloadFailedLecture();
       return;
     }
@@ -217,7 +226,6 @@ export function playLecture(
   }
 
   usePlayerStore.getState().startQueue(queueToPlay, startIndex, source);
-  usePlayerStore.getState().clearAudioFailure();
   loadCurrent(options.autoplay);
 }
 
@@ -226,12 +234,9 @@ export function playLecture(
 // fresh start. It shows the normal loading look; if it fails again, PlayerStatusBridge marks it
 // failed again. Does nothing when the audio hasn't failed.
 export function reloadFailedLecture(): void {
-  const state = usePlayerStore.getState();
-  if (state.audioLoadState !== 'failed') {
+  if (!selectHasAudioFailed(usePlayerStore.getState())) {
     return;
   }
-
-  state.clearAudioFailure();
   loadCurrent(true);
 }
 
@@ -321,7 +326,6 @@ export function playNext(): void {
   }
 
   state.setCurrentIndex(nextIndex);
-  state.clearAudioFailure();
   loadCurrent(true);
 }
 
@@ -335,5 +339,4 @@ export function stopAndClear(): void {
   player.pause();
   player.clearLockScreenControls();
   usePlayerStore.getState().setCurrentIndex(null);
-  usePlayerStore.getState().clearAudioFailure();
 }

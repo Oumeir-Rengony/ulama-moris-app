@@ -1,11 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
 import { act } from '@testing-library/react-native';
 import { AppState, type AppStateStatus } from 'react-native';
 
 import { playLecture, reloadFailedLecture, stopAndClear } from '@/features/player/audio-engine';
 import { initialListeningHistoryState, useListeningHistoryStore } from '@/features/player/listening-history.store';
-import { initialPlayerState, usePlayerStore } from '@/features/player/player.store';
+import { initialPlayerState, selectHasAudioFailed, usePlayerStore } from '@/features/player/player.store';
 import { PlayerStatusBridge } from '@/features/player/player-status-bridge';
 import * as fakeAudio from '@/test-utils/fake-expo-audio';
 import { latestSource, queueOfThree } from '@/test-utils/fixtures';
@@ -237,7 +236,7 @@ describe('PlayerStatusBridge', () => {
       // The next routine update says "no error" again.
       await sendStatus({ error: null });
 
-      expect(usePlayerStore.getState().audioLoadState).toBe('failed');
+      expect(selectHasAudioFailed(usePlayerStore.getState())).toBe(true);
     });
 
     it('fails again, with the same state, when the reload fails too', async () => {
@@ -249,7 +248,7 @@ describe('PlayerStatusBridge', () => {
       reloadFailedLecture();
       await sendStatus({ error: 'offline' });
 
-      expect(usePlayerStore.getState().audioLoadState).toBe('failed');
+      expect(selectHasAudioFailed(usePlayerStore.getState())).toBe(true);
     });
 
     it('goes back to normal if the audio turns out to have loaded after all', async () => {
@@ -260,7 +259,7 @@ describe('PlayerStatusBridge', () => {
       // A late error from an earlier load: this lecture loads fine.
       await sendStatus({ ...loadedStatus, playing: true, error: null });
 
-      expect(usePlayerStore.getState().audioLoadState).toBe('ok');
+      expect(selectHasAudioFailed(usePlayerStore.getState())).toBe(false);
     });
 
     it('does not advance to the next lecture or save a checkpoint on a failed update', async () => {
@@ -273,46 +272,6 @@ describe('PlayerStatusBridge', () => {
 
       expect(fakePlayer.replace).not.toHaveBeenCalled();
       expect(savedPositionOf(first.slug)).toBe(600);
-    });
-  });
-
-  describe('when the connection comes back', () => {
-    function captureConnectionListener() {
-      let listener: ((state: NetInfoState) => void) | null = null;
-      jest.mocked(NetInfo.addEventListener).mockImplementation((callback) => {
-        listener = callback;
-        return jest.fn();
-      });
-      return function sendConnection(isConnected: boolean) {
-        listener?.({ isConnected } as NetInfoState);
-      };
-    }
-
-    it('loads a failed lecture once more by itself', async () => {
-      const sendConnection = captureConnectionListener();
-      await renderBridge();
-      playLecture(first, queueOfThree, latestSource);
-      await sendStatus({ error: 'offline' });
-      await sendStatus({ error: null });
-      fakePlayer.replace.mockClear();
-
-      sendConnection(false);
-      sendConnection(true);
-
-      expect(fakePlayer.replace).toHaveBeenCalledTimes(1);
-      expect(usePlayerStore.getState().audioLoadState).toBe('ok');
-    });
-
-    it('does nothing when the audio has not failed', async () => {
-      const sendConnection = captureConnectionListener();
-      await renderBridge();
-      playLecture(first, queueOfThree, latestSource);
-      fakePlayer.replace.mockClear();
-
-      sendConnection(false);
-      sendConnection(true);
-
-      expect(fakePlayer.replace).not.toHaveBeenCalled();
     });
   });
 });

@@ -14,7 +14,12 @@ import {
 import { useForcedFailuresStore } from '@/features/dev/forced-failures.store';
 import { initialListeningHistoryState, useListeningHistoryStore } from '@/features/player/listening-history.store';
 import { LOCK_SCREEN_ARTWORK_URL } from '@/features/player/lock-screen-artwork';
-import { initialPlayerState, selectCurrentLecture, usePlayerStore } from '@/features/player/player.store';
+import {
+  initialPlayerState,
+  selectCurrentLecture,
+  selectHasAudioFailed,
+  usePlayerStore,
+} from '@/features/player/player.store';
 import { setupAudio } from '@/features/player/setup-audio';
 import * as fakeAudio from '@/test-utils/fake-expo-audio';
 import { eventSource, latestSource, queueOfThree } from '@/test-utils/fixtures';
@@ -357,7 +362,7 @@ describe('when the audio did not load', () => {
 
     reloadFailedLecture();
 
-    expect(usePlayerStore.getState().audioLoadState).toBe('ok');
+    expect(selectHasAudioFailed(usePlayerStore.getState())).toBe(false);
     expect(fakePlayer.replace).toHaveBeenCalledTimes(1);
     expect(fakePlayer.replace).toHaveBeenCalledWith({ uri: first.url, name: first.title });
     expect(fakePlayer.play).toHaveBeenCalled();
@@ -381,7 +386,7 @@ describe('when the audio did not load', () => {
     reloadFailedLecture();
 
     expect(fakePlayer.replace).not.toHaveBeenCalled();
-    expect(usePlayerStore.getState().audioLoadState).toBe('ok');
+    expect(selectHasAudioFailed(usePlayerStore.getState())).toBe(false);
   });
 
   it('never overwrites the saved point while failed', () => {
@@ -402,17 +407,45 @@ describe('when the audio did not load', () => {
     playLecture(first, queueOfThree, latestSource);
 
     expect(fakePlayer.replace).toHaveBeenCalledTimes(1);
-    expect(usePlayerStore.getState().audioLoadState).toBe('ok');
+    expect(selectHasAudioFailed(usePlayerStore.getState())).toBe(false);
   });
 
   it('starts clean when another lecture is played', () => {
     playLecture(first, queueOfThree, latestSource);
     failLoading();
-    failLoading();
 
     playLecture(second, queueOfThree, latestSource);
 
-    expect(usePlayerStore.getState().audioLoadState).toBe('ok');
+    expect(selectHasAudioFailed(usePlayerStore.getState())).toBe(false);
+  });
+
+  it('never shows the failure on another lecture, even before that lecture loads', () => {
+    playLecture(first, queueOfThree, latestSource);
+    failLoading();
+
+    // The queue moves on without going through a load (as a future command might).
+    usePlayerStore.getState().setCurrentIndex(1);
+
+    expect(selectHasAudioFailed(usePlayerStore.getState())).toBe(false);
+  });
+
+  it('starts clean when the failed lecture is played again after another one', () => {
+    playLecture(first, queueOfThree, latestSource);
+    failLoading();
+    playLecture(second, queueOfThree, latestSource);
+
+    playLecture(first, queueOfThree, latestSource);
+
+    expect(selectHasAudioFailed(usePlayerStore.getState())).toBe(false);
+  });
+
+  it('starts clean when the queue moves on to the next lecture', () => {
+    playLecture(first, queueOfThree, latestSource);
+    failLoading();
+
+    playNext();
+
+    expect(selectHasAudioFailed(usePlayerStore.getState())).toBe(false);
   });
 
   it('loads an address that can never resolve when the development switch is on', () => {

@@ -3,7 +3,7 @@ import { audioErrorMessage, errorAnnouncement } from '@/features/errors/error-co
 import { useAnnouncement } from '@/hooks/use-announcement';
 
 import { NowPlayingSeekBar } from './now-playing-seek-bar';
-import { usePlayerStore } from './player.store';
+import { selectHasAudioFailed, usePlayerStore } from './player.store';
 
 type NowPlayingProgressProps = {
   // The data's clock string ("46:21"), shown until the audio reports its own length.
@@ -14,9 +14,7 @@ type NowPlayingProgressProps = {
 // didn't load, the "This lecture didn’t load" row. The seek bar comes back when the lecture is
 // opened again and loads.
 export function NowPlayingProgress({ dataDuration }: NowPlayingProgressProps) {
-  const audioLoadState = usePlayerStore((state) => state.audioLoadState);
-
-  const hasAudioFailed = audioLoadState === 'failed';
+  const hasAudioFailed = usePlayerStore(selectHasAudioFailed);
   const message = audioErrorMessage;
 
   let announcement: string | null = null;

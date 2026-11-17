@@ -21,7 +21,7 @@ Colour names follow the three-tier system in DESIGN-SYSTEM.md: screens use seman
 - **Colour:** errors use the semantic `danger` family: `bg-danger-subtle` with `text-danger-subtle-fg` for rows, cards and icon circles (light `#EBD3C8` / `#5E4034`, dark `#4A3831` / `#E6BCA9`), and `danger` (clay-500 `#B8755C`) for lines and icons. On the mini player use `miniPlayer.errorFg` / `miniPlayer.errorLine` instead. Never a category colour (`cat-3` shares the hue but is not an error token). There is no separate red. Full rules: DESIGN-SYSTEM.md §5.3.
 - **Copy:** say what happened and what to do; never apologise. Pattern: "X didn’t load" + "Check your internet connection, then try again."
 - **Try again:** every error has one. While retrying, the retry icon becomes a spinner and the label stays "Try again" (so the button keeps its width), with `accessibilityState={{ busy: true }}`; ignore further taps. If it fails again, the error shows again with the same message: there is no second wording (decided 17 Nov 2026, to keep it simple).
-- **No retry loops.** Retry on tap, or automatically once when the connection comes back (`@react-native-community/netinfo`).
+- **No retry loops.** Retry on tap, or automatically once when the connection comes back (`@react-native-community/netinfo`). The lecture audio is the exception: it loads again only when the lecture is opened again.
 - **Accessibility:** announce errors (`accessibilityLiveRegion="polite"` on Android, `AccessibilityInfo.announceForAccessibility` on iOS). Disabled controls get `accessibilityState={{ disabled: true }}`.
 
 ## States
@@ -58,7 +58,7 @@ Colour names follow the three-tier system in DESIGN-SYSTEM.md: screens use seman
 ### audio-didnt-load: Now Playing
 - The top bar, artwork, title, scholar, venue/date and tags stay.
 - The progress bar is replaced by a `bg-danger-subtle` alert row (radius 18, padding 12/14): alert-circle icon, "This lecture didn’t load" (14 ExtraBold), "Check your internet connection, then open the lecture again." (13); all `text-danger-subtle-fg`, `accessibilityRole="alert"`.
-- Controls: back 15, play and forward 15 all disabled at 35% opacity. **No "Try again" in the players** (decided 17 Nov 2026: one way to recover, fewer states to get wrong). Opening the lecture again loads it again: its list row, Continue listening, or the mini player (close Now Playing, tap the bar). The reload shows the normal loading look and resumes from the saved position; if it fails again, this state comes back. The connection coming back (NetInfo offline → online) also reloads it once by itself.
+- Controls: back 15, play and forward 15 all disabled at 35% opacity. **No "Try again" in the players** (decided 17 Nov 2026: one way to recover, fewer states to get wrong). Opening the lecture again loads it again: its list row, Continue listening, or the mini player (close Now Playing, tap the bar). The reload shows the normal loading look and resumes from the saved position; if it fails again, this state comes back. It never reloads by itself (not even when the connection comes back), so sound never starts without a tap.
 
 ### mini-player-lecture-didnt-load
 - Scholar line becomes "Didn’t load. Tap to open again." in the component token `miniPlayer.errorFg` (primitive clay-200 `#E6BCA9`, light clay in both themes; `danger-subtle-fg` would be unreadable on the dark bar; no semantic role fits yet).
