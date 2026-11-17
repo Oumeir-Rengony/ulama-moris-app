@@ -32,7 +32,8 @@ Start with [docs/CONTEXT.md](docs/CONTEXT.md): how the app works, what was decid
 |---|---|
 | Colours, tokens, type, spacing, shadows, any visual style | [src/theme/README.md](src/theme/README.md) (recipes), then [docs/DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md) (full reference) |
 | Changing a screen's layout | Its design screenshot (the table in CONTEXT.md "Design screenshots") and the existing code |
-| Error and offline states | [docs/ERROR-STATES.md](docs/ERROR-STATES.md), `docs/artboards/error-states/*.png`, and the switches at `/dev/failures` |
+| Error and offline states | CONTEXT.md "Error and offline states", `docs/artboards/error-states/*.png`, and the switches at `/dev/failures` |
+| Website API, reminder notifications | CONTEXT.md "The website API" and "Reminder notifications", then the code in `src/features/` |
 | Audio playback, lock screen, background | AGENTS.md "Audio: expo-audio plays, Zustand remembers", the comments in `src/features/player/audio-engine.ts` and `setup-audio.ts`, then the Expo docs: https://docs.expo.dev/versions/latest/sdk/audio.md |
 | Player motion | CONTEXT.md "Motion", then [docs/Audio-Player-Animations.md](docs/Audio-Player-Animations.md) |
 
@@ -129,7 +130,7 @@ If you can't choose between `useState` and Zustand, start with `useState`. Move 
 | State | Owner | Why |
 |---|---|---|
 | Light/dark theme | NativeWind `dark:` classes + `useColorScheme()`. JS colour values come from `useThemeColors()` (`src/theme/tokens.ts`) | Set by the OS. No ThemeContext and no theme store |
-| Lecture pages, event pages, event detail, search results | TanStack Query | Server data from the website API (`docs/mobile-app-api.md`) |
+| Lecture pages, event pages, event detail, search results | TanStack Query | Server data from the website API (`/api/v1`) |
 | Player queue, `currentIndex`, queue `source` | Zustand `player.store.ts` (not persisted) | The mini player, Now Playing and the list rows on every screen read it. Not persisted, so a launch shows no mini player |
 | Where Now Playing is in its motion (`nowPlayingPresentation`: `closed` / `miniLeaving` / `opening` / `open` / `closing`), whether the queue has ended (`hasQueueEnded`), the lecture whose audio didn't load (`failedLectureSlug`, read through `selectHasAudioFailed`, cleared by every load) | Zustand `player.store.ts`. `nowPlayingPresentation` is written only by `open-now-playing.ts` | The mini player's visibility is calculated from these and the loaded lecture |
 | Player motion (`expand`, `enterY`, `miniDrop`, `surfaceOpacity`, `reducedMotion`, `surfaceGeometry`) | Reanimated shared values at module scope in `player-surface-motion.ts`. Never in Zustand, never in React state | Every frame is computed on the UI thread; React never renders per frame |
@@ -182,7 +183,7 @@ Not in the spec yet: signed-in user, bookmarks, language. Don't add stores or co
 
 ### Reminder notifications
 
-Spec: `docs/Audio Player Reminder Notifications — Logic Guide.md`. One type at a time: a continue listening series (10 booked ahead) for the last unfinished lecture, otherwise one inactivity reminder.
+The rules are in CONTEXT.md "Reminder notifications". One type at a time: a continue listening series (10 booked ahead) for the last unfinished lecture, otherwise one inactivity reminder.
 
 - **Decisions and scheduling are separate.** `reminder-plan.ts` is pure: a snapshot goes in, a list of `PlannedReminder` (id, time, text, `openPath`) comes out. `reminder-scheduler.ts` cancels every `reminder-*` notification and books exactly that list; it has no rules. Change the rules in the plan only.
 - Timings live in `reminder-timings.ts`. Development builds (`__DEV__`) use the quick set in minutes (first continue reminder 1 min after the last listen, then every 2 min; inactivity after 3 min); release builds use 24 h / 3 days.
@@ -205,7 +206,7 @@ Spec: `docs/Audio Player Reminder Notifications — Logic Guide.md`. One type at
 - Fetchers are plain async functions in `features/<domain>/<domain>.api.ts`. Query hooks are in `<domain>.queries.ts`. Query keys are arrays that start with the domain: `['lectures', { series }]`.
 - Never copy query results into Zustand or `useState`. The one exception is the player queue. When the user presses play, copy that list of lectures into the queue, because it's a snapshot the user chose, not a cache.
 - Create one `QueryClient` at module scope in `src/providers/app-providers.tsx`. It connects `onlineManager` to NetInfo and `focusManager` to `AppState` (native only), because React Native doesn't do this automatically.
-- **The fetchers read the website API** (`/api/v1`, documented in `docs/mobile-app-api.md`) through `getJson` in `features/api/api-client.ts`. The base URL is `EXPO_PUBLIC_API_URL` in `.env` (the local website, `http://localhost:3000/api/v1`, until it's deployed). Restart Metro after changing it.
+- **The fetchers read the website API** (`/api/v1`, summarised in CONTEXT.md "The website API") through `getJson` in `features/api/api-client.ts`. The base URL is `EXPO_PUBLIC_API_URL` in `.env` (the local website, `http://localhost:3000/api/v1`, until it's deployed). Restart Metro after changing it.
 - Each fetcher turns the API's JSON into the app's types (`lecture.types.ts`, `event.types.ts`): a value the API sends as `null` becomes `undefined`, so it can go straight to an optional prop. A 404 for one lecture or event returns `null`; any other failure throws, so the query reports an error.
 - Lists are paged by the API (page from 1, 10 per page). Stop on `hasMore`, never on `total` (it reads 0 past the last page). Join pages with `joinLecturePages` / `joinEventPages` / `joinSearchPages`, which drop an item a later page repeats.
 - Home always sends a series (`type`); there is no "all lectures" request. Search sends none, so it searches every series.

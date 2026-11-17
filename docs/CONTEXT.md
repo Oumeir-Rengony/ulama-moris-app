@@ -10,9 +10,8 @@ An audio lecture app (Expo SDK 58, Expo Router, TypeScript, NativeWind 4). Users
 lectures (Home) and events (Events → Event detail), search by title, and listen through one
 global player: a floating **mini player** bar that morphs into a full **Now Playing** sheet.
 
-Data comes from the website's API (`/api/v1`, see [mobile-app-api.md](mobile-app-api.md)), the local
-website at `localhost:3000` until it's deployed. There is no sign-in, no bookmarks, and the error
-and offline screens are being built (ERROR-STATES.md).
+Data comes from the website's API (`/api/v1`, see "The website API" below), the local
+website at `localhost:3000` until it's deployed. There is no sign-in and no bookmarks.
 
 ## Status (14 Nov 2026)
 
@@ -20,7 +19,7 @@ Build stages 1–12 are done and merged. Their plan files were deleted once this
 they decided; they are in git history before the commit that removed `plan/`. Lint, typecheck,
 `check:theme` and `npm test` (43 suites, 449 tests) pass.
 
-The **error and offline states** ([ERROR-STATES.md](ERROR-STATES.md)) are built: the list
+The **error and offline states** (see "Error and offline states" below) are built: the list
 cards and next-page footers (Home, Events, Search, and Event detail, which has no design and
 reuses the card), the Now Playing and mini player audio states, and the blocking offline sheet.
 Force any of them in development at `/dev/failures`.
@@ -99,7 +98,7 @@ file, the built screen and this file win (the decisions below list the deliberat
 | `artboards/screens/search.png` | Search (`search.tsx`) | Lectures scope, empty query, recent searches |
 | `artboards/screens/search-results.png` | Search (`search.tsx`) | "Ṣaḥābā" typed, results |
 | `artboards/design-system.png` | — | The colour board (see DESIGN-SYSTEM.md) |
-| `artboards/error-states/*.png` | The next stage | See ERROR-STATES.md |
+| `artboards/error-states/*.png` | Lists, Search, Now Playing, mini player, offline sheet | Each error and offline state (see "Error and offline states") |
 | `videos/mini-player.mov` | Mini player ↔ Now Playing | The reference motion |
 
 ## Decisions
@@ -251,6 +250,57 @@ There are three driving shared values, all in `player-surface-motion.ts`:
 
 Deliberately not built: the big play button morph, the progress sweep on entrance, the moonlight
 reveal, and haptics.
+
+## The website API
+
+The website's read-only JSON API (`GET` only, no auth). Production base URL
+`https://www.ulama-moris.org/api/v1`; the app reads `EXPO_PUBLIC_API_URL` from `.env`.
+
+| Endpoint | Used for |
+|---|---|
+| `GET /lectures?page&limit&type&search` | Home list (`type` is `local`, `guest` or `islahi-majlis`; anything else is a 400), lecture search |
+| `GET /lectures/{slug}` | Now Playing deep links, reminder taps. 404 when unknown |
+| `GET /events?page&limit&search` | Events tab, event search |
+| `GET /events/{slug}` | Event detail: `{ event, lectures }`, every lecture, not paged (at most 10). 404 when unknown |
+
+What the app relies on:
+- **Paging:** lists return `{ items, total, page, hasMore }`, page from 1. Stop on `hasMore`: past the last page `/lectures` reports `total: 0`. Pages are offset based, so a newly published item can make the next page repeat one; the join helpers drop repeats (by `id` for lectures, `slug` for events). Keep the same `limit` for every page of a list.
+- **Search** matches titles only, ignoring case and accents.
+- **Missing values are `null`** (the fetchers turn them into `undefined`), except `category`, always an array.
+- **Dates** are recorded in Mauritius time (`+04:00`) and shown in Mauritius time, not the device's. Event date fields (`dateRange`, `day`, `month`, `year` …) arrive ready to display. Events are grouped by `year`, with `year: null` under a final "Other events".
+- A lecture's `duration` is editor text for display; the real length comes from the player. A `null` `url` means there is nothing to play.
+- **Errors** have the body `{ "error": "…" }`; read the status, the text is for logs only.
+- Responses are `no-store`: no extra HTTP caching, the query cache is enough.
+
+## Error and offline states
+
+Each has a screenshot in `artboards/error-states/`; the built screens are the reference now.
+Force any of them at `/dev/failures`.
+
+- **Colour:** the semantic `danger` family (`bg-danger-subtle`, `text-danger-subtle-fg`, `danger` for lines and icons), `miniPlayer.errorFg` / `errorLine` on the mini player, `scrim` for the offline pop-up. Never a category colour, no separate red.
+- **Copy** (`features/errors/error-copy.ts`): say what happened and what to do, never apologise ("Lectures didn’t load" + "Check your internet connection, then try again.").
+- **Try again:** every list error has one. While retrying, the icon becomes a spinner, the label stays (the button keeps its width), it's `busy` and ignores taps. A second failure shows the same message: no second wording.
+- **No retry loops:** retry on a tap, or once automatically when NetInfo reports the connection back.
+- **Lists:** a failed first page replaces the rows with an error card (header, search and chips stay usable). A failed next page keeps the loaded rows and swaps the "Loading more" footer for one shared retry footer (Home and Events). Search results use the same card, "Results didn’t load".
+- **Audio:** a failed lecture keeps Now Playing's artwork and text, replaces the progress bar with an alert row and disables play and both skips. The mini player says "Didn’t load. Tap to open again." with a `danger` progress line. **No "Try again" in the players**, on purpose: opening the lecture again (its row, Continue listening, or the bar) reloads it from the saved position. It never reloads by itself, so sound never starts without a tap.
+- **Offline sheet:** on launch and on return to the app, when NetInfo reports no connection. It blocks the app (no dismiss, Android back does nothing), is modal for screen readers, and closes once a check finds the connection.
+- **Accessibility:** errors are announced (Android live region, iOS `announceForAccessibility`); disabled controls expose `disabled`.
+- Known gap: `danger` on the dark-mode mini player bar is about 2.8:1, below the 3:1 floor for lines.
+
+## Reminder notifications
+
+Local notifications (expo-notifications) to bring the user back. **One type at a time**, and
+continue listening wins:
+
+| Reminder | When | Repeats | Tap |
+|---|---|---|---|
+| Continue listening | The last listened lecture is unfinished (past 5 s and under 95 %) | First 24 h after the last listen (or within a minute if that's past), then every 3 days, until it's finished. 10 booked ahead (about a month; iOS allows 64 pending) | Opens Now Playing on it, at the saved position |
+| Inactivity | Nothing unfinished | Once, 3 days after the last use of the app; rebooked each visit | Opens the app |
+
+- A notification can't run code when it fires, so the decision is made when booking: every rebuild cancels all `reminder-*` notifications and books the plan again. Fixed IDs (`reminder-continue-0…9`, `reminder-inactive`) mean no duplicates.
+- **When it's rebuilt:** when the user leaves the app, and on a pause or finish while in the background (the lock screen may be the user's last action). Not on pauses while the app is open: one rebuild per visit, and no overlapping rebuilds from fast taps.
+- Starting another lecture moves the continue reminders to it. Finishing it hands over to the inactivity reminder.
+- Development builds use minutes instead of hours and days (`reminder-timings.ts`). Web has no reminders. Android needs a development build to check them.
 
 ## Design system in one breath
 

@@ -1,4 +1,4 @@
-// The words of the error states (docs/ERROR-STATES.md). Say what happened and what to do; never
+// The words of the error states. Say what happened and what to do; never
 // apologise. The message stays the same after a failed "Try again": no second wording.
 
 // Under an error card's title ("Lectures didn’t load", "Results didn’t load").

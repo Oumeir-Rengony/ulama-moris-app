@@ -1,5 +1,5 @@
 // Development-only switches that make requests fail on purpose, to check every error state
-// (docs/ERROR-STATES.md) without turning the network off. Open by URL: /dev/failures.
+// without turning the network off. Open by URL: /dev/failures.
 // The switches reset on reload. A switch takes effect on the next request: pull to refresh,
 // switch tabs, or press "Try again".
 import { Redirect, router } from 'expo-router';

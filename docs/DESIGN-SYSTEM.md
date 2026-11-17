@@ -35,7 +35,7 @@ Added during design: olive-deep `#56613F` (olive darkened so small text passes 4
 - Never reuse an artwork green as a UI colour. In the UI, olive is `primary` (`olive-600`).
 - `palette` is for `react-native-svg` fills only; it is not a Tailwind class.
 
-The offline pop-up's scrim is the one non-artwork fixed colour: `scrim` in tokens.ts (charcoal-900 at 62%, both themes; ERROR-STATES.md).
+The offline pop-up's scrim is the one non-artwork fixed colour: `scrim` in tokens.ts (charcoal-900 at 62%, both themes).
 
 ## 3. How the dark theme was derived
 
@@ -250,7 +250,7 @@ Three shadows, all from the design files, applied with React Native's `boxShadow
 |---|---|---|
 | `artwork` | `0px 28px 48px -26px rgba(41, 45, 37, 0.55)` | Now Playing artwork |
 | `playButton` | `0px 14px 28px -16px rgba(41, 45, 37, 0.6)` | Now Playing play/pause button |
-| `offlineSheet` | `0px 30px 60px -30px rgba(0, 0, 0, 0.6)` | Offline pop-up sheet (ERROR-STATES.md) |
+| `offlineSheet` | `0px 30px 60px -30px rgba(0, 0, 0, 0.6)` | Offline pop-up sheet |
 
 **Dark mode has no shadows**: a dark shadow on the charcoal ground can't be seen. `useThemeShadows()` returns `undefined` in dark, so the same code works in both themes:
 
