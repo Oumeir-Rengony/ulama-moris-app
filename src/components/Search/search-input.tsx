@@ -2,7 +2,7 @@ import Mic from 'lucide-react-native/icons/mic';
 import Search from 'lucide-react-native/icons/search';
 import X from 'lucide-react-native/icons/x';
 import { useColorScheme } from 'nativewind';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View, type TextInputSubmitEditingEvent } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
 import { useThemeColors } from '@/theme/tokens';
@@ -14,6 +14,9 @@ type SearchInputProps = {
   // The Search screen focuses the input as it opens, so the keyboard is already up.
   autoFocus?: boolean;
   onChangeText?: (text: string) => void;
+  // The keyboard's Search key, with the text the field holds at that moment. That text can be
+  // newer than `value`: a fast Search press can arrive before the last letter has re-rendered.
+  onSubmit?: (text: string) => void;
   onClearPress?: () => void;
   onMicPress?: () => void;
 };
@@ -24,12 +27,17 @@ export function SearchInput({
   placeholder,
   autoFocus = false,
   onChangeText,
+  onSubmit,
   onClearPress,
   onMicPress,
 }: SearchInputProps) {
   const colors = useThemeColors();
   const { colorScheme } = useColorScheme();
   const hasText = value.length > 0;
+
+  function handleSubmitEditing(event: TextInputSubmitEditingEvent) {
+    onSubmit?.(event.nativeEvent.text);
+  }
 
   let keyboardAppearance: 'light' | 'dark' = 'light';
   if (colorScheme === 'dark') {
@@ -44,6 +52,7 @@ export function SearchInput({
         placeholder={placeholder}
         placeholderTextColor={colors.fgMuted}
         onChangeText={onChangeText}
+        onSubmitEditing={handleSubmitEditing}
         autoFocus={autoFocus}
         accessibilityLabel="Search"
         returnKeyType="search"

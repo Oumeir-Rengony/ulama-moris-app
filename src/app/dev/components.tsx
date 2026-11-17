@@ -66,6 +66,7 @@ import {
   mockHomeRowMeta,
   mockLatestEventMeta,
   mockPlayback,
+  mockRecentSearches,
   mockSearchResults,
 } from '@/data/mock-ui';
 import {
@@ -73,7 +74,6 @@ import {
   eventsTotal,
   latestLecturesTotal,
   lectures,
-  seedRecentSearches,
 } from '@/data/sample';
 import { lectureSeries } from '@/features/lectures/lecture-series';
 import type { Lecture } from '@/features/lectures/lecture.types';
@@ -688,7 +688,7 @@ function SearchSection() {
       <Example label="RecentSearchList: 5 rows">
         <View className="gap-1">
           <SectionHeader title="Recent searches" size="small" trailing={<SectionHeaderAction label="Clear all" />} />
-          <RecentSearchList queries={seedRecentSearches.lectures} />
+          <RecentSearchList queries={mockRecentSearches} />
         </View>
       </Example>
       <Example label="RecentSearchList: empty">

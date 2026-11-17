@@ -59,8 +59,11 @@ describe('player rules', () => {
     }
   });
 
-  it('only the listening history is persisted, never the live player store', () => {
-    expect(filesContaining('persist(')).toEqual(['features/player/listening-history.store.ts']);
+  it('only the listening history and recent searches are persisted, never the live player store', () => {
+    expect(filesContaining('persist(')).toEqual([
+      'features/player/listening-history.store.ts',
+      'features/search/recent-searches.store.ts',
+    ]);
   });
 
   it('there is one player, created in the engine', () => {

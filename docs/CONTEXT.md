@@ -67,7 +67,6 @@ fail or not checked.
 
 **Open questions and gaps** (decide before release; don't build without asking):
 - **Data to confirm:** "Who were the ṣaḥābā…" is assumed to be the Sahaba event's 4th lecture, with 2377 s derived from the event total. "A Country on Fire" has no duration.
-- **Recent searches:** the 5 seeds are invented. Ship an empty list, or keep them as hints that real searches replace?
 - **Share and mic:** the Event detail share button and the Search mic are visual only. Their behaviour (and the share payload) is undecided.
 - **App icons:** `app.json` still has Expo's default icons and Android adaptive background `#E6F4FE`. Derive them from the logo, on the ivory background.
 - **Spelling:** titles are kept exactly as on the website ("Sahaba Radiyyallahu Anhum" vs "Ṣaḥābā Radiyallāhu ’Anhum"; "Islahi" vs "Islāhi"). Don't "fix" one side; accent-insensitive search covers both.
@@ -114,7 +113,7 @@ What was built, where it differs from the original design spec:
 - **Search:** matches **titles only** (the lecture or event title), accent-insensitive.
   - No-results copy is "Try another lecture title." / "Try another event title.".
   - **Popular topics is removed** from both scopes.
-  - Recent searches are **static seeds**: nothing is saved, and ✕ / "Clear all" do nothing. Create `recent-searches.store.ts` (persisted, max 5, de-duped, newest first) when recents become real.
+  - Recent searches are real: `recent-searches.store.ts`, persisted, the last 5 per scope, newest first, a repeat (any capitalisation) moved to the top. A query is saved only when the user commits to it: the keyboard's Search key, or opening one of its results. Search starts empty ("Your searches will appear here."). ✕ removes one; "Clear all" (shown only when there is something to clear) empties the scope.
 - **Motion:** where the build departs from [Audio-Player-Animations.md](Audio-Player-Animations.md):
   - The surface is rendered in `(tabs)/_layout.tsx`, not at the root, so Search still covers it.
   - The spec's seven UI states map onto the five `nowPlayingPresentation` values. There is no second state machine.
@@ -122,8 +121,7 @@ What was built, where it differs from the original design spec:
   - Waits use the fixed `MINI_EXIT_MS`, not completion callbacks, which can hang.
   - Colours come from the theme, not the spec's hex values.
 
-**Mock data** (`src/data/sample.ts`, `mock-ui.ts`) now only feeds `/dev/components`, plus
-`seedRecentSearches`, the static recent searches on the Search screen.
+**Mock data** (`src/data/sample.ts`, `mock-ui.ts`) now only feeds `/dev/components` (and a few tests).
 
 ## Where code lives
 

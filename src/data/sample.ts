@@ -330,12 +330,3 @@ export const events: EventSummary[] = [
 
 export const latestLecturesTotal = 81;
 export const eventsTotal = 11;
-
-// ---------- Search ----------
-
-// Placeholder recent searches per scope. The lectures list is the design's; the events list has
-// no design and is made up from event titles. They are not real searches.
-export const seedRecentSearches: { lectures: string[]; events: string[] } = {
-  lectures: ['Ṣaḥābā', 'Islamic finance', 'Fire', 'Sacrifices', 'Ummah'],
-  events: ['Jummah', 'Sahaba', 'Islahi'],
-};

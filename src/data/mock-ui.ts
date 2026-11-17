@@ -130,3 +130,6 @@ export const mockSearchResults: {
     },
   ],
 };
+
+// The recent searches the Search design shows. Real ones come from recent-searches.store.ts.
+export const mockRecentSearches = ['Ṣaḥābā', 'Islamic finance', 'Fire', 'Sacrifices', 'Ummah'];

@@ -16,11 +16,11 @@ import { IconButton } from '@/components/ui/icon-button';
 import { LoadMoreError } from '@/components/ui/load-more-error';
 import { SectionHeader, SectionHeaderAction } from '@/components/ui/section-header';
 import { Text } from '@/components/ui/text';
-import { seedRecentSearches } from '@/data/sample';
 import { errorAnnouncement, errorCardMessage, loadMoreErrorMessage } from '@/features/errors/error-copy';
 import { latestEventMetaLabel } from '@/features/events/event-labels';
 import { openEvent } from '@/features/events/open-event';
 import { openNowPlaying } from '@/features/player/open-now-playing';
+import { useRecentSearchesStore } from '@/features/search/recent-searches.store';
 import { parseSearchScope, type SearchScope } from '@/features/search/scope';
 import {
   joinSearchPages,
@@ -43,8 +43,9 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useRetry } from '@/hooks/use-retry';
 import { catAt, catForTopic } from '@/theme/tokens';
 
-// A live filter that waits for a short pause in typing.
-const searchDebounceMs = 150;
+// A live filter that waits for a pause in typing, so a fast typist doesn't send a request for
+// every letter.
+const searchDebounceMs = 300;
 const bottomSpacing = 24;
 const contentMaxWidth = 600;
 
@@ -66,16 +67,23 @@ function RowGap() {
 type RecentSearchesProps = {
   queries: string[];
   onQueryPress: (query: string) => void;
+  onRemovePress: (query: string) => void;
+  onClearAllPress: () => void;
 };
 
-// Recent searches are static for now: the seeds for the scope, never saved or reordered. They
-// become dynamic (saved, max 5, newest first) when the API is connected.
-function RecentSearches({ queries, onQueryPress }: RecentSearchesProps) {
+// The last searches the user committed to in this scope (see recent-searches.store.ts).
+function RecentSearches({ queries, onQueryPress, onRemovePress, onClearAllPress }: RecentSearchesProps) {
+  // Nothing to clear while the list is empty.
+  let clearAllAction = null;
+  if (queries.length > 0) {
+    clearAllAction = <SectionHeaderAction label="Clear all" onPress={onClearAllPress} />;
+  }
+
   return (
     <View className="mt-[22px] px-gutter">
-      <SectionHeader title="Recent searches" size="small" trailing={<SectionHeaderAction label="Clear all" />} />
+      <SectionHeader title="Recent searches" size="small" trailing={clearAllAction} />
       <View className="mt-1">
-        <RecentSearchList queries={queries} onQueryPress={onQueryPress} />
+        <RecentSearchList queries={queries} onQueryPress={onQueryPress} onRemovePress={onRemovePress} />
       </View>
     </View>
   );
@@ -103,15 +111,33 @@ function NoResults({ title, message }: { title: string; message: string }) {
 type ListHeaderProps = {
   view: SearchView;
   scope: SearchScope;
+  recentQueries: string[];
   onRecentQueryPress: (query: string) => void;
+  onRecentRemovePress: (query: string) => void;
+  onRecentClearAllPress: () => void;
   // The "Results didn’t load" card, shown in the failed view.
   errorCard: ReactNode;
 };
 
 // Everything above the result rows. In the recent and no-results views it is the whole body.
-function SearchListHeader({ view, scope, onRecentQueryPress, errorCard }: ListHeaderProps) {
+function SearchListHeader({
+  view,
+  scope,
+  recentQueries,
+  onRecentQueryPress,
+  onRecentRemovePress,
+  onRecentClearAllPress,
+  errorCard,
+}: ListHeaderProps) {
   if (view.kind === 'recent') {
-    return <RecentSearches queries={seedRecentSearches[scope]} onQueryPress={onRecentQueryPress} />;
+    return (
+      <RecentSearches
+        queries={recentQueries}
+        onQueryPress={onRecentQueryPress}
+        onRemovePress={onRecentRemovePress}
+        onClearAllPress={onRecentClearAllPress}
+      />
+    );
   }
   if (view.kind === 'no-results') {
     return <NoResults title={noResultsTitle(view.query)} message={noResultsMessage(scope)} />;
@@ -133,12 +159,20 @@ function SearchListHeader({ view, scope, onRecentQueryPress, errorCard }: ListHe
   return null;
 }
 
-function LectureResult({ result, query }: { result: LectureSearchResult; query: string }) {
+type LectureResultProps = {
+  result: LectureSearchResult;
+  query: string;
+  // Called just before the lecture opens, so the screen can save the search.
+  onOpen: () => void;
+};
+
+function LectureResult({ result, query, onOpen }: LectureResultProps) {
   const { lecture } = result;
   // A lecture without a topic falls back to cat-1.
   const firstTopic = lecture.category[0] ?? '';
 
   function handlePress() {
+    onOpen();
     // Just this lecture, with the query as its "Playing from" source. Now Playing replaces
     // Search, so minimising it returns to the tab Search was opened from.
     openNowPlaying({
@@ -164,10 +198,18 @@ function LectureResult({ result, query }: { result: LectureSearchResult; query: 
 }
 
 // TODO(design): the event result row isn't designed.
-function EventResult({ result, position }: { result: EventSearchResult; position: number }) {
+type EventResultProps = {
+  result: EventSearchResult;
+  position: number;
+  // Called just before the event opens, so the screen can save the search.
+  onOpen: () => void;
+};
+
+function EventResult({ result, position, onOpen }: EventResultProps) {
   const { event } = result;
 
   function handlePress() {
+    onOpen();
     openEvent(event.slug, { replaceSearch: true });
   }
 
@@ -187,8 +229,8 @@ function EventResult({ result, position }: { result: EventSearchResult; position
 }
 
 // Search: a root-stack screen sliding in from the right. Typing searches the lectures (every
-// series) or the events by title, 10 results at a time. Recent searches are static seeds;
-// nothing is saved yet.
+// series) or the events by title, 10 results at a time. A search is saved to the recent searches
+// when the user presses the keyboard's Search key or opens one of its results.
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ scope?: string }>();
@@ -198,6 +240,10 @@ export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query, searchDebounceMs);
   const searchQuery = useSearchQuery(scope, debouncedQuery);
+  const recentQueries = useRecentSearchesStore((state) => state.queriesByScope[scope]);
+  const addRecentSearch = useRecentSearchesStore((state) => state.addRecentSearch);
+  const removeRecentSearch = useRecentSearchesStore((state) => state.removeRecentSearch);
+  const clearRecentSearches = useRecentSearchesStore((state) => state.clearRecentSearches);
   const { data, isError, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage, refetch } = searchQuery;
   // One "Try again" for the results, one for a later page of them.
   const resultsRetry = useRetry(searchQuery, refetch);
@@ -233,6 +279,24 @@ export default function SearchScreen() {
 
   function clearQuery() {
     setQuery('');
+  }
+
+  // The keyboard's Search key saves what is typed, even before its results arrive.
+  function saveTypedSearch(typedText: string) {
+    addRecentSearch(scope, typedText);
+  }
+
+  // Opening a result saves the query those results belong to.
+  function saveResultsSearch() {
+    addRecentSearch(scope, resultsQuery);
+  }
+
+  function removeRecentQuery(recentQuery: string) {
+    removeRecentSearch(scope, recentQuery);
+  }
+
+  function clearRecentQueries() {
+    clearRecentSearches(scope);
   }
 
   // After a failed page, scrolling doesn't ask again (no retry loops): only "Try again" does.
@@ -275,9 +339,9 @@ export default function SearchScreen() {
   function renderResult({ item, index }: ListRenderItemInfo<SearchResult>) {
     let row = null;
     if (item.kind === 'lecture') {
-      row = <LectureResult result={item} query={resultsQuery} />;
+      row = <LectureResult result={item} query={resultsQuery} onOpen={saveResultsSearch} />;
     } else {
-      row = <EventResult result={item} position={index} />;
+      row = <EventResult result={item} position={index} onOpen={saveResultsSearch} />;
     }
     return <View className="px-gutter">{row}</View>;
   }
@@ -297,6 +361,7 @@ export default function SearchScreen() {
             placeholder={searchPlaceholder(scope)}
             autoFocus
             onChangeText={setQuery}
+            onSubmit={saveTypedSearch}
             onClearPress={clearQuery}
           />
         </View>
@@ -311,7 +376,15 @@ export default function SearchScreen() {
           keyExtractor={resultKey}
           ItemSeparatorComponent={RowGap}
           ListHeaderComponent={
-            <SearchListHeader view={view} scope={scope} onRecentQueryPress={setQuery} errorCard={errorCard} />
+            <SearchListHeader
+              view={view}
+              scope={scope}
+              recentQueries={recentQueries}
+              onRecentQueryPress={setQuery}
+              onRecentRemovePress={removeRecentQuery}
+              onRecentClearAllPress={clearRecentQueries}
+              errorCard={errorCard}
+            />
           }
           ListFooterComponent={footer}
           onEndReached={handleEndReached}

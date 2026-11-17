@@ -62,7 +62,7 @@ src/
 │   ├── search/          # scope.ts, match.ts, search.queries.ts, recent-searches.store.ts
 │   └── reminders/       # reminder-plan.ts (decisions), reminder-scheduler.ts (booking), reschedule-reminders.ts, reminders-bridge.tsx
 ├── providers/           # app-providers.tsx (QueryClientProvider …), rendered once by app/_layout.tsx
-├── data/                # sample.ts + mock-ui.ts: mock data for /dev/components only (and the seed recent searches)
+├── data/                # sample.ts + mock-ui.ts: mock data for /dev/components only
 ├── hooks/               # Cross-feature hooks only
 ├── theme/               # primitives.ts, tokens.ts, navigation-theme.ts, README.md
 ├── utils/               # format-time.ts and other pure helpers
