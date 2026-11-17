@@ -15,7 +15,7 @@ Colours live in **three tiers**, and each tier may only point at the one below i
 | `tailwind.config.js` (project root) | Maps the semantic tokens to classes (`bg-surface-1`, `text-fg-muted`, `bg-cat-4-bg`, `border-border-strong` …), plus fonts, type scale, radii, spacing |
 | `src/theme/tokens.ts` | The same semantic colours in JS (`useThemeColors()`) for places classes can't reach (SVG fills, icon colours, StatusBar, navigation theme, animations), the category helpers (`catAt`, `catForTopic`, `catClasses`), the offline `scrim`, the artwork `palette`, shadows (`useThemeShadows()`), type, spacing, radii, sizes |
 | `src/components/<Name>/tokens.ts` | Tier 3: component tokens for MiniPlayer, TabBar, Skeleton and Search |
-| `artboards/design-system.png` | The colour board: light and dark semantic tokens, categories, sample components, primitives and component tokens. In the app, `/dev/tokens` shows the live tokens |
+| `artboards/design-system.png` | The colour board: light and dark semantic tokens, categories, sample components, primitives and component tokens. |
 
 ## 1. Naming rules
 
@@ -188,7 +188,7 @@ Everything else uses semantic tokens directly (the emphasis card is just `bg-emp
 1. **Add a primitive first**, in its ramp with a step number.
 2. **One component needs it?** Use it through that component's tokens, with a comment that it points at a primitive.
 3. **Second use? Promote it** to a semantic token named by role, with light and dark values and a contrast check (4.5:1 text, 3:1 icons/lines).
-4. **Update** `primitives.ts`, `global.css`, `tailwind.config.js`, `tokens.ts` and the swatches in `src/app/dev/tokens.tsx`.
+4. **Update** `primitives.ts`, `global.css`, `tailwind.config.js` and `tokens.ts`.
 
 ## 8. Contrast (WCAG)
 

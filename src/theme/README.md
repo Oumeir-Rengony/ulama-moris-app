@@ -23,7 +23,6 @@ Short and procedural. The full reference is [docs/DESIGN-SYSTEM.md](../../docs/D
 | Artwork (rosette, logo badge) | `palette` in `tokens.ts`. Fixed, the same in both themes, never a UI colour |
 | Text | `<Text variant="…">` from `@/components/ui/text` (type scale in DESIGN-SYSTEM §10) |
 | Navigation theme | `useNavigationTheme()` in `navigation-theme.ts` (built from the semantic tokens) |
-| See every token in light and dark | `/dev/tokens` route (development builds only) |
 
 Run `npm run check:theme` after any change here. It checks that `global.css`, `tailwind.config.js` and `tokens.ts` agree, and that no raw colour leaked into `src/app` or `src/components`.
 
@@ -54,8 +53,7 @@ Nothing else changes. A primitive does nothing until a semantic or component tok
 3. `tailwind.config.js`: add `'name': c('name')` to `colors`.
 4. `src/theme/tokens.ts`: add the camelCase key to `lightColors` **and** `darkColors`, pointing at the same primitives.
 5. Check contrast against DESIGN-SYSTEM §8 floors (4.5:1 text, 3:1 icons and lines) and add the pair to the §8 table.
-6. Add a swatch to `src/app/dev/tokens.tsx`.
-7. Run `npm run check:theme`.
+6. Run `npm run check:theme`.
 
 ### 5. Promote a component token
 When a second component needs a component-only colour: do recipe 4 for a new role, then point both components' `tokens.ts` at it.
@@ -80,7 +78,6 @@ Decided 11 Nov 2026 (this replaced the old `topicCategory` map and `catForItem`)
 - Colours rotate cat-1 → … → cat-5 → cat-1. Not `Math.random()`, which would flicker between renders and launches.
 - **By position** (event date tiles, search result tiles): `catAt(index)`.
 - **By topic** (Now Playing topic pill, lecture search tiles): `catForTopic(topic)`. Topics are free text from the API, so the colour is worked out from the topic's letters (case ignored): a topic keeps its colour on every screen. An empty topic gets cat-1.
-- `catForTopic` takes the list as an argument so the theme doesn't import from `src/data/`.
 
 ## Don'ts
 

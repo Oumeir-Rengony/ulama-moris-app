@@ -3,8 +3,7 @@
    Light = :root, dark = prefers-color-scheme: dark.
    Each value comes from a primitive (src/theme/primitives.ts), named in the comment.
    border / border-strong are fg at 10% / 20% and live in tailwind.config.js.
-   Component tokens (tier 3) live with their components in src/components/<Name>/tokens.ts.
-   /dev/tokens shows every token in the current theme. */
+   Component tokens (tier 3) live with their components in src/components/<Name>/tokens.ts. */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

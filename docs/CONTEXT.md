@@ -24,9 +24,8 @@ cards and next-page footers (Home, Events, Search, and Event detail, which has n
 reuses the card), the Now Playing and mini player audio states, and the blocking offline sheet.
 Force any of them in development at `/dev/failures`.
 
-**Before the first release:** the `/dev` pages (`/dev/tokens`, `/dev/components`,
-`/dev/failures`) and the mock data they use still ship in the release bundle; they only
-redirect to Home there. Remove them from production builds for bundle size and tidiness.
+**Before the first release:** `/dev/failures` still ships in the release bundle; it only
+redirects to Home there. Remove it from production builds.
 
 Built but not yet checked. Everything was verified in Expo Go on the iOS simulator and on web;
 no development build exists yet. The checks below need one (`npx expo run:ios --device`,
@@ -81,7 +80,7 @@ fail or not checked.
 | `search.tsx` | Root-stack screen over the tabs, so it covers the player too. Accent-insensitive title match |
 | `player.tsx` | **Deep links only** (`/player?slug=…`). Loads the lecture paused, shows Now Playing without an entrance, steps back. Nothing navigates here |
 | `(tabs)/_layout.tsx` | JS tabs (`expo-router/js-tabs`) wrapped in `TuckedContent`, with `PlayerSurface` drawn over them |
-| `dev/components`, `dev/tokens`, `dev/failures` | Development-only galleries and the forced-failure switches, opened by URL. In the release bundle too (redirect to Home): remove before release |
+| `dev/failures` | Development-only forced-failure switches, opened by URL. In the release bundle too (redirect to Home): remove before release |
 
 ## Design screenshots
 
@@ -119,8 +118,6 @@ What was built, where it differs from the original design spec:
   - The tuck is derived from `expand` and `enterY`. There is no separate `tuck` value.
   - Waits use the fixed `MINI_EXIT_MS`, not completion callbacks, which can hang.
   - Colours come from the theme, not the spec's hex values.
-
-**Mock data** (`src/data/sample.ts`, `mock-ui.ts`) now only feeds `/dev/components` (and a few tests).
 
 ## Where code lives
 

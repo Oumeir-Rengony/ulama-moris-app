@@ -21,7 +21,6 @@ import { EventsTabIcon, HomeTabIcon } from '@/components/icons/tab-icons';
 import { LatestEventCard } from '@/components/LatestEventCard';
 import { LectureRow } from '@/components/LectureRow';
 import { MiniPlayer } from '@/components/MiniPlayer';
-import { Artwork } from '@/components/NowPlaying/artwork';
 import { AudioErrorRow } from '@/components/NowPlaying/audio-error-row';
 import { PlayerControls } from '@/components/NowPlaying/player-controls';
 import { TrackInfo } from '@/components/NowPlaying/track-info';
@@ -166,7 +165,6 @@ const everyComponent: { name: string; element: ReactElement }[] = [
   { name: 'TabBarItem', element: <TabBarItem tab="events" label="Events" isSelected /> },
   { name: 'SkeletonRow', element: <SkeletonRow variant="lecture" /> },
   { name: 'LoadingFooter', element: <LoadingFooter label="Loading more lectures" /> },
-  { name: 'Artwork', element: <Artwork size={342} /> },
   { name: 'TrackInfo', element: <TrackInfo title="Title" author="Author" topicLabel="Topic" eventTitle="Event" /> },
   { name: 'PlayerControls', element: <PlayerControls state="playing" /> },
   { name: 'ScreenTitle', element: <ScreenTitle title="Events" subtitle="11 events" /> },

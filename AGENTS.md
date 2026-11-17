@@ -63,7 +63,6 @@ src/
 │   ├── search/          # scope.ts, match.ts, search.queries.ts, recent-searches.store.ts
 │   └── reminders/       # reminder-plan.ts (decisions), reminder-scheduler.ts (booking), reschedule-reminders.ts, reminders-bridge.tsx
 ├── providers/           # app-providers.tsx (QueryClientProvider …), rendered once by app/_layout.tsx
-├── data/                # sample.ts + mock-ui.ts: mock data for /dev/components only
 ├── hooks/               # Cross-feature hooks only
 ├── theme/               # primitives.ts, tokens.ts, navigation-theme.ts, README.md
 ├── utils/               # format-time.ts and other pure helpers
@@ -94,7 +93,6 @@ Read [src/theme/README.md](src/theme/README.md) before adding or changing any co
 - Colours a class can't reach (icon `color`, SVG fills, navigation) come from `useThemeColors()`; shadows from `useThemeShadows()`. Both read NativeWind's `useColorScheme`, never React Native's, so classes and JS always agree.
 - Text: `<Text variant="h1">` from `@/components/ui/text`. Variants: `display`, `h1`, `h2`, `section`, `headingSm`, `title`, `body`, `bodySm`, `meta`, `caption`, `label`, `overline`. Default colour `text-fg`; pass `className` to change colour or weight (the component drops its own default so yours wins, because NativeWind resolves conflicts by stylesheet order, not className order). Use `tabular` for every time value.
 - Manrope is loaded in the root layout before the splash hides. Use `font-manrope-*` classes, never `font-bold`.
-- `/dev/tokens` (development only) shows every token in the current theme. It and `/dev/components` have no in-app link: open them by URL (web: `localhost:8081/dev/components`; iOS in Expo Go: `xcrun simctl openurl booted "exp://127.0.0.1:8081/--/dev/components"`).
 - `metro.config.js` sets NativeWind's `inlineRem: 16`. Tailwind's spacing scale is in rem, and NativeWind's native default is 14, which made every spacing class 12% smaller on iOS/Android than on web and in the designs (`min-h-10` came out 35, not 40). Don't remove it.
 - Text scaling: the `Text` component caps `display`, `h1` and `h2` at 1.6× (they broke words mid-word at the largest accessibility sizes). Body text scales without limit. The mini player and the tab bar labels cap at 1.3×.
 
@@ -107,9 +105,8 @@ Read [src/theme/README.md](src/theme/README.md) before adding or changing any co
 - Category colours are chosen by the caller and passed as `category: Category`: `catAt(index)` by position, `catForTopic(topic)` by topic (worked out from the topic's letters, so it needs no list).
 - Icons: `<Icon icon={…} color="fgMuted" />` with a semantic colour name. Import lucide icons one by one (`import Play from 'lucide-react-native/icons/play'`), never from the package root, which bundles every icon.
 - `react-native-svg` on web passes unknown props to the DOM, so don't put `accessible` / `importantForAccessibility` on `<Svg>`; the button around an icon carries the label.
-- `/dev/components` (development only) shows every component in every state with the mock data in `src/data/mock-ui.ts`, plus a Home screen mock. Add new components there.
-- `/dev/failures` (development only) has switches that make one kind of request fail on purpose (first pages, next pages, search, event detail, lecture audio, no connection), so every error state can be seen in the real screens. A forced request fails like a lost connection. The switches reset on reload.
-- **The `/dev` pages are still in the release build.** Expo Router makes every file in `src/app/` a route, so `/dev/tokens`, `/dev/components` and `/dev/failures` ship in the release bundle, together with the mock data they use (`src/data/sample.ts`, `mock-ui.ts`). Each one only redirects to Home when `__DEV__` is false. Before the first release, remove them from production builds, for bundle size and tidiness (for example by keeping them out of `src/app/` in release builds, or guarding them all in one `src/app/dev/_layout.tsx`).
+- `/dev/failures` (development only) has switches that make one kind of request fail on purpose (first pages, next pages, search, event detail, lecture audio, no connection), so every error state can be seen in the real screens. A forced request fails like a lost connection. The switches reset on reload. It has no in-app link: open it by URL (web: `localhost:8081/dev/failures`; iOS in Expo Go: `xcrun simctl openurl booted "exp://127.0.0.1:8081/--/dev/failures"`).
+- **`/dev/failures` is still in the release build.** Expo Router makes every file in `src/app/` a route, so it ships in the release bundle and only redirects to Home when `__DEV__` is false. Before the first release, remove it from production builds (for example by keeping it out of `src/app/` in release builds, or guarding it in a `src/app/dev/_layout.tsx`).
 
 ## State management
 
