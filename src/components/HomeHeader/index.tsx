@@ -7,7 +7,7 @@ import { Text } from '@/components/ui/text';
 export function HomeHeader() {
   return (
     <View className="flex-row items-center gap-2.5 pl-5 pr-bar">
-      <LogoBadge size={40} />
+      <LogoBadge size={52} />
       <View className="shrink gap-px">
         <Text variant="headingSm" accessibilityRole="header">
           Ulama Moris
