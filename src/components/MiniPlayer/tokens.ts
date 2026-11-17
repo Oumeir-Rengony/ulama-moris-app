@@ -12,7 +12,6 @@ export const miniPlayer = {
   fgMuted: 'text-emphasis-fg-muted',           // scholar name
   progress: 'bg-secondary',                    // 3px line on the bottom edge
   errorLine: 'bg-danger',                      // progress line when the lecture fails to load
-  retryBg: 'bg-emphasis-fg/[0.12]',            // translucent circle behind the retry icon
   // No semantic role fits light clay text on a dark bar yet → primitive (clay-200). Promote to a
   // semantic token (e.g. emphasis-danger-fg) when a second component needs it.
   errorFg: 'text-[#E6BCA9]',

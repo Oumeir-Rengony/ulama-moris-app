@@ -1,7 +1,7 @@
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, View, type ListRenderItemInfo } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,11 +10,14 @@ import { SearchInput } from '@/components/Search/search-input';
 import { SearchResultRow } from '@/components/Search/search-result-row';
 import { LoadingFooter } from '@/components/Skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorCard } from '@/components/ui/error-card';
 import { Icon } from '@/components/ui/icon';
 import { IconButton } from '@/components/ui/icon-button';
+import { LoadMoreError } from '@/components/ui/load-more-error';
 import { SectionHeader, SectionHeaderAction } from '@/components/ui/section-header';
 import { Text } from '@/components/ui/text';
 import { seedRecentSearches } from '@/data/sample';
+import { errorAnnouncement, errorCardMessage, loadMoreErrorMessage } from '@/features/errors/error-copy';
 import { latestEventMetaLabel } from '@/features/events/event-labels';
 import { openEvent } from '@/features/events/open-event';
 import { openNowPlaying } from '@/features/player/open-now-playing';
@@ -35,7 +38,9 @@ import {
   searchPlaceholder,
 } from '@/features/search/search-labels';
 import { pickSearchView, type SearchView } from '@/features/search/search-view';
+import { useAnnouncement } from '@/hooks/use-announcement';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { useRetry } from '@/hooks/use-retry';
 import { catAt, catForTopic } from '@/theme/tokens';
 
 // A live filter that waits for a short pause in typing.
@@ -99,10 +104,12 @@ type ListHeaderProps = {
   view: SearchView;
   scope: SearchScope;
   onRecentQueryPress: (query: string) => void;
+  // The "Results didn’t load" card, shown in the failed view.
+  errorCard: ReactNode;
 };
 
 // Everything above the result rows. In the recent and no-results views it is the whole body.
-function SearchListHeader({ view, scope, onRecentQueryPress }: ListHeaderProps) {
+function SearchListHeader({ view, scope, onRecentQueryPress, errorCard }: ListHeaderProps) {
   if (view.kind === 'recent') {
     return <RecentSearches queries={seedRecentSearches[scope]} onQueryPress={onRecentQueryPress} />;
   }
@@ -111,6 +118,9 @@ function SearchListHeader({ view, scope, onRecentQueryPress }: ListHeaderProps) 
   }
   if (view.kind === 'results') {
     return <ResultsHeading label={resultsHeadingLabel(scope, view.results.total)} />;
+  }
+  if (view.kind === 'failed') {
+    return <View className="mt-[18px] px-gutter">{errorCard}</View>;
   }
   if (view.kind === 'waiting') {
     // TODO(design): the searching state isn't designed.
@@ -187,14 +197,31 @@ export default function SearchScreen() {
   // The input text stays local and updates on every keystroke; only the debounced value fetches.
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query, searchDebounceMs);
-  const { data, hasNextPage, isFetchingNextPage, fetchNextPage } = useSearchQuery(scope, debouncedQuery);
+  const searchQuery = useSearchQuery(scope, debouncedQuery);
+  const { data, isError, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage, refetch } = searchQuery;
+  // One "Try again" for the results, one for a later page of them.
+  const resultsRetry = useRetry(searchQuery, refetch);
+  const nextPageRetry = useRetry(searchQuery, fetchNextPage);
 
   let results: SearchResults | undefined = undefined;
   if (data) {
     results = joinSearchPages(data.pages);
   }
 
-  const view = pickSearchView({ query, debouncedQuery, results });
+  const hasFailed = isError || resultsRetry.isRetrying;
+  const view = pickSearchView({ query, debouncedQuery, results, hasFailed });
+
+  // Recent searches still work offline: they are stored on the device.
+  const resultsErrorTitle = 'Results didn’t load';
+  const resultsErrorMessage = errorCardMessage;
+  const errorCard = (
+    <ErrorCard
+      title={resultsErrorTitle}
+      message={resultsErrorMessage}
+      isRetrying={resultsRetry.isRetrying}
+      onRetryPress={resultsRetry.retry}
+    />
+  );
 
   let resultItems: SearchResult[] = [];
   if (view.kind === 'results') {
@@ -208,16 +235,42 @@ export default function SearchScreen() {
     setQuery('');
   }
 
+  // After a failed page, scrolling doesn't ask again (no retry loops): only "Try again" does.
   function handleEndReached() {
-    if (view.kind === 'results' && hasNextPage && !isFetchingNextPage) {
+    if (view.kind === 'results' && hasNextPage && !isFetchingNextPage && !isFetchNextPageError) {
       fetchNextPage();
     }
   }
 
+  let announcement: string | null = null;
+  if (view.kind === 'failed' && !resultsRetry.isRetrying) {
+    announcement = errorAnnouncement(resultsErrorTitle, resultsErrorMessage);
+  }
+
+  // Under the results: the next page loading, or the next page failed (the results stay).
+  // TODO(design): the search footers aren't designed; they reuse the lists' footers.
   let footer = undefined;
-  if (isFetchingNextPage) {
+  const nextPageFailed = view.kind === 'results' && isFetchNextPageError && !isFetchingNextPage;
+  if (nextPageRetry.isRetrying || nextPageFailed) {
+    const title = 'More results didn’t load';
+    const message = loadMoreErrorMessage;
+    footer = (
+      <View className="px-gutter pt-2">
+        <LoadMoreError
+          title={title}
+          message={message}
+          isRetrying={nextPageRetry.isRetrying}
+          onRetryPress={nextPageRetry.retry}
+        />
+      </View>
+    );
+    if (!nextPageRetry.isRetrying) {
+      announcement = errorAnnouncement(title, message);
+    }
+  } else if (isFetchingNextPage) {
     footer = <LoadingFooter label="Loading more results" />;
   }
+  useAnnouncement(announcement);
 
   function renderResult({ item, index }: ListRenderItemInfo<SearchResult>) {
     let row = null;
@@ -257,7 +310,9 @@ export default function SearchScreen() {
           renderItem={renderResult}
           keyExtractor={resultKey}
           ItemSeparatorComponent={RowGap}
-          ListHeaderComponent={<SearchListHeader view={view} scope={scope} onRecentQueryPress={setQuery} />}
+          ListHeaderComponent={
+            <SearchListHeader view={view} scope={scope} onRecentQueryPress={setQuery} errorCard={errorCard} />
+          }
           ListFooterComponent={footer}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.5}

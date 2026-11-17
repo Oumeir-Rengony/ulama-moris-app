@@ -5,11 +5,13 @@ import {
   finishPendingResumeIfReady,
   playLecture,
   playNext,
+  reloadFailedLecture,
   seek,
   skip,
   stopAndClear,
   toggle,
 } from '@/features/player/audio-engine';
+import { useForcedFailuresStore } from '@/features/dev/forced-failures.store';
 import { initialListeningHistoryState, useListeningHistoryStore } from '@/features/player/listening-history.store';
 import { LOCK_SCREEN_ARTWORK_URL } from '@/features/player/lock-screen-artwork';
 import { initialPlayerState, selectCurrentLecture, usePlayerStore } from '@/features/player/player.store';
@@ -39,6 +41,7 @@ beforeEach(async () => {
   usePlayerStore.setState(initialPlayerState);
   useListeningHistoryStore.setState(initialListeningHistoryState);
   fakeAudio.resetFakeAudio();
+  useForcedFailuresStore.setState({ active: [] });
   await AsyncStorage.clear();
 });
 
@@ -339,5 +342,87 @@ describe('setupAudio', () => {
     expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Could not set the audio mode'), failure);
     // This test expects the console.error; the shared check in jest.setup.ts would fail it otherwise.
     consoleErrorSpy.mockReset();
+  });
+});
+
+describe('when the audio did not load', () => {
+  function failLoading() {
+    usePlayerStore.getState().reportAudioFailure();
+  }
+
+  it('reloading loads the same lecture again, in the normal loading state, and plays it', () => {
+    playLecture(first, queueOfThree, latestSource);
+    failLoading();
+    fakePlayer.replace.mockClear();
+
+    reloadFailedLecture();
+
+    expect(usePlayerStore.getState().audioLoadState).toBe('ok');
+    expect(fakePlayer.replace).toHaveBeenCalledTimes(1);
+    expect(fakePlayer.replace).toHaveBeenCalledWith({ uri: first.url, name: first.title });
+    expect(fakePlayer.play).toHaveBeenCalled();
+  });
+
+  it('does not load it a second time while the reload is still loading', () => {
+    playLecture(first, queueOfThree, latestSource);
+    failLoading();
+    reloadFailedLecture();
+    fakePlayer.replace.mockClear();
+
+    reloadFailedLecture();
+
+    expect(fakePlayer.replace).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when the audio has not failed', () => {
+    playLecture(first, queueOfThree, latestSource);
+    fakePlayer.replace.mockClear();
+
+    reloadFailedLecture();
+
+    expect(fakePlayer.replace).not.toHaveBeenCalled();
+    expect(usePlayerStore.getState().audioLoadState).toBe('ok');
+  });
+
+  it('never overwrites the saved point while failed', () => {
+    useListeningHistoryStore.getState().saveProgress(first, 965);
+    playLecture(first, queueOfThree, latestSource);
+    failLoading();
+
+    // A checkpoint while failed: the player's position (0) means nothing and isn't saved.
+    stopAndClear();
+    expect(useListeningHistoryStore.getState().progressById[first.slug]).toBe(965);
+  });
+
+  it('playing the failed lecture again loads it again', () => {
+    playLecture(first, queueOfThree, latestSource);
+    failLoading();
+    fakePlayer.replace.mockClear();
+
+    playLecture(first, queueOfThree, latestSource);
+
+    expect(fakePlayer.replace).toHaveBeenCalledTimes(1);
+    expect(usePlayerStore.getState().audioLoadState).toBe('ok');
+  });
+
+  it('starts clean when another lecture is played', () => {
+    playLecture(first, queueOfThree, latestSource);
+    failLoading();
+    failLoading();
+
+    playLecture(second, queueOfThree, latestSource);
+
+    expect(usePlayerStore.getState().audioLoadState).toBe('ok');
+  });
+
+  it('loads an address that can never resolve when the development switch is on', () => {
+    useForcedFailuresStore.setState({ active: ['audio'] });
+
+    playLecture(first, queueOfThree, latestSource);
+
+    expect(fakePlayer.replace).toHaveBeenCalledWith({
+      uri: 'https://forced-failure.invalid/lecture.m4a',
+      name: first.title,
+    });
   });
 });

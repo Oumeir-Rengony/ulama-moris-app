@@ -1,3 +1,5 @@
+import { isApiFailureForced } from '@/features/dev/forced-failures.store';
+
 // The one place the app talks to the website's API (/api/v1). The fetchers in
 // features/<domain>/<domain>.api.ts call getJson and turn its result into the app's types.
 
@@ -37,6 +39,11 @@ async function readErrorMessage(response: Response): Promise<string> {
 
 // GET a path such as "/lectures?page=1" and return the parsed JSON body.
 export async function getJson(path: string): Promise<unknown> {
+  // Development only: fail the way a lost connection does, to show the error states.
+  if (isApiFailureForced(path)) {
+    throw new TypeError('Network request failed (forced at /dev/failures)');
+  }
+
   const response = await fetch(`${readBaseUrl()}${path}`);
 
   if (!response.ok) {

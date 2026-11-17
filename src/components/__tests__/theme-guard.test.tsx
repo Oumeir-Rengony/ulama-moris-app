@@ -22,9 +22,11 @@ import { LatestEventCard } from '@/components/LatestEventCard';
 import { LectureRow } from '@/components/LectureRow';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { Artwork } from '@/components/NowPlaying/artwork';
+import { AudioErrorRow } from '@/components/NowPlaying/audio-error-row';
 import { PlayerControls } from '@/components/NowPlaying/player-controls';
 import { TrackInfo } from '@/components/NowPlaying/track-info';
 import { NumberedLectureRow } from '@/components/NumberedLectureRow';
+import { OfflineSheet } from '@/components/OfflineSheet';
 import { ScreenTitle } from '@/components/ScreenTitle';
 import { ScreenTopBar } from '@/components/ScreenTopBar';
 import { HighlightedText } from '@/components/Search/highlighted-text';
@@ -37,8 +39,10 @@ import { TabBarItem } from '@/components/TabBar';
 import { Chip } from '@/components/ui/chip';
 import { Divider } from '@/components/ui/divider';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorCard } from '@/components/ui/error-card';
 import { IconButton } from '@/components/ui/icon-button';
 import { IconLabel } from '@/components/ui/icon-label';
+import { LoadMoreError } from '@/components/ui/load-more-error';
 import { Pill } from '@/components/ui/pill';
 import { PlayPauseButton } from '@/components/ui/play-pause-button';
 import { ProgressBar } from '@/components/ui/progress-bar';
@@ -47,6 +51,7 @@ import { SeekBar } from '@/components/ui/seek-bar';
 import { Spinner } from '@/components/ui/spinner';
 import { SurfaceCard } from '@/components/ui/surface-card';
 import { Text } from '@/components/ui/text';
+import { TryAgainButton } from '@/components/ui/try-again-button';
 import { renderWithProviders } from '@/test-utils/render-with-providers';
 
 const titleParts = [
@@ -94,6 +99,19 @@ const everyComponent: { name: string; element: ReactElement }[] = [
     element: <SeekBar progress={0.5} elapsed="1:00" remaining="-1:00" accessibilityValue={{ min: 0, max: 120, now: 60 }} />,
   },
   { name: 'Spinner', element: <Spinner /> },
+  { name: 'Spinner on primary', element: <Spinner color="primaryFg" /> },
+  { name: 'TryAgainButton primary', element: <TryAgainButton variant="primary" isRetrying={false} /> },
+  { name: 'AudioErrorRow', element: <AudioErrorRow message="Check your connection." /> },
+  { name: 'OfflineSheet', element: <OfflineSheet status="checking" seriesLabels={['Local', 'Guest']} /> },
+  { name: 'TryAgainButton onDanger retrying', element: <TryAgainButton variant="onDanger" isRetrying /> },
+  {
+    name: 'ErrorCard',
+    element: <ErrorCard title="Lectures didn’t load" message="Check your connection." isRetrying={false} />,
+  },
+  {
+    name: 'LoadMoreError',
+    element: <LoadMoreError title="More lectures didn’t load" message="Check your connection." isRetrying />,
+  },
   {
     name: 'SurfaceCard',
     element: (

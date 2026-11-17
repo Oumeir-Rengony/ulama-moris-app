@@ -25,18 +25,35 @@ type IconButtonProps = {
   size?: IconButtonSize;
   tone?: IconButtonTone;
   onPress?: () => void;
+  // Shown at 35% and not pressable: the skip buttons while a lecture's audio didn't load.
+  disabled?: boolean;
   // Lets a screen move screen-reader focus to this button (Now Playing's chevron on open).
   ref?: ComponentProps<typeof Pressable>['ref'];
 };
 
-export function IconButton({ children, accessibilityLabel, size = 'md', tone = 'surface', onPress, ref }: IconButtonProps) {
+export function IconButton({
+  children,
+  accessibilityLabel,
+  size = 'md',
+  tone = 'surface',
+  onPress,
+  disabled = false,
+  ref,
+}: IconButtonProps) {
+  let opacityClass = 'active:opacity-70';
+  if (disabled) {
+    opacityClass = 'opacity-[0.35]';
+  }
+
   return (
     <Pressable
       ref={ref}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
-      className={`shrink-0 items-center justify-center rounded-full active:opacity-70 ${sizeClass[size]} ${toneClass[tone]}`}
+      className={`shrink-0 items-center justify-center rounded-full ${opacityClass} ${sizeClass[size]} ${toneClass[tone]}`}
     >
       {children}
     </Pressable>

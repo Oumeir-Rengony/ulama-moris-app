@@ -16,7 +16,7 @@ import { useLectureQuery } from '@/features/lectures/lectures.queries';
 
 import { fitArtworkSize, nowPlayingTrackInfo } from './now-playing-content';
 import { NowPlayingControls } from './now-playing-controls';
-import { NowPlayingSeekBar } from './now-playing-seek-bar';
+import { NowPlayingProgress } from './now-playing-progress';
 import { beginCloseAfterSwipe, closeNowPlaying, finishCloseAfterSwipe, openEventFromNowPlaying } from './open-now-playing';
 import { MORPH_SPRING, SNAP_BACK_SPRING } from './player-motion-config';
 import { getEntranceProgress, getSwipeRange, shouldCollapseAfterSwipe, type Rect } from './player-surface-geometry';
@@ -295,11 +295,11 @@ function NowPlayingBody({ lecture, onCoverRectChange }: NowPlayingBodyProps) {
               />
             </Animated.View>
           </FadingBlock>
-          {/* Only the seek bar and the controls follow the player, so the rest doesn't re-render
-              with the position. */}
+          {/* Only the seek bar (or its error row) and the controls follow the player, so the rest
+              doesn't re-render with the position. */}
           <FadingBlock timing={seekBarTiming}>
             <View className="mt-[18px]">
-              <NowPlayingSeekBar dataDuration={lecture.duration} />
+              <NowPlayingProgress dataDuration={lecture.duration} />
             </View>
           </FadingBlock>
           <FadingBlock timing={controlsTiming}>

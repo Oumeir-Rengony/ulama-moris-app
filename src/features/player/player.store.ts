@@ -23,6 +23,13 @@ export type QueueSource =
   | { kind: 'event'; eventSlug: string; eventTitle: string }
   | { kind: 'search'; query: string };
 
+// Whether the loaded lecture's audio loaded. Written by PlayerStatusBridge (a failure, a success)
+// and by the engine (a reload, a new lecture).
+// - ok: loading, playing or paused normally.
+// - failed: the audio didn't load (no connection, a bad file). Now Playing and the mini player
+//   say so and their controls are disabled. Opening the lecture again loads it again.
+export type AudioLoadState = 'ok' | 'failed';
+
 // The part of expo-audio's status the UI needs. Written by PlayerStatusBridge only.
 export type MirroredStatus = {
   isPlaying: boolean;
@@ -45,6 +52,9 @@ type PlayerData = MirroredStatus & {
   // While it isn't 'closed', the mini player is hidden and most requests are ignored
   // (open-now-playing.ts says which).
   nowPlayingPresentation: NowPlayingPresentation;
+  // expo-audio reports a failure in one status update only (the next one says "no error"
+  // again), so the failure is kept here until the lecture is opened again or another one loads.
+  audioLoadState: AudioLoadState;
 };
 
 type PlayerSetters = {
@@ -53,6 +63,8 @@ type PlayerSetters = {
   applyStatus: (status: MirroredStatus) => void;
   setHasQueueEnded: (hasQueueEnded: boolean) => void;
   setNowPlayingPresentation: (presentation: NowPlayingPresentation) => void;
+  reportAudioFailure: () => void;
+  clearAudioFailure: () => void;
 };
 
 export type PlayerState = PlayerData & PlayerSetters;
@@ -69,6 +81,7 @@ export const initialPlayerState: PlayerData = {
   durationSec: 0,
   hasQueueEnded: false,
   nowPlayingPresentation: 'closed',
+  audioLoadState: 'ok',
 };
 
 export const usePlayerStore = create<PlayerState>()((set) => ({
@@ -98,6 +111,14 @@ export const usePlayerStore = create<PlayerState>()((set) => ({
 
   setNowPlayingPresentation: (presentation) => {
     set({ nowPlayingPresentation: presentation });
+  },
+
+  reportAudioFailure: () => {
+    set({ audioLoadState: 'failed' });
+  },
+
+  clearAudioFailure: () => {
+    set({ audioLoadState: 'ok' });
   },
 }));
 

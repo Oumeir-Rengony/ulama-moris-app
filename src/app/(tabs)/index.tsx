@@ -7,6 +7,9 @@ import { HomeListHeader } from '@/components/HomeListHeader';
 import { LectureRow, type LectureRowState } from '@/components/LectureRow';
 import { LoadingFooter, SkeletonRow } from '@/components/Skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorCard } from '@/components/ui/error-card';
+import { LoadMoreError } from '@/components/ui/load-more-error';
+import { errorAnnouncement, errorCardMessage, loadMoreErrorMessage } from '@/features/errors/error-copy';
 import { lectureRowMetaLabel } from '@/features/lectures/lecture-labels';
 import { defaultLectureSeries, lectureSeries } from '@/features/lectures/lecture-series';
 import type { Lecture, LectureSeries } from '@/features/lectures/lecture.types';
@@ -17,6 +20,8 @@ import { openNowPlaying } from '@/features/player/open-now-playing';
 import { selectActiveLectureSlug, usePlayerStore } from '@/features/player/player.store';
 import { useMiniPlayerSpace } from '@/features/player/use-mini-player-space';
 import { openSearch } from '@/features/search/open-search';
+import { useAnnouncement } from '@/hooks/use-announcement';
+import { useRetry } from '@/hooks/use-retry';
 
 const seriesLabels = lectureSeries.map((series) => series.label);
 
@@ -105,7 +110,12 @@ export default function HomeScreen() {
   const miniPlayerSpace = useMiniPlayerSpace();
   // Home always shows one series; every request sends it.
   const [selectedSeries, setSelectedSeries] = useState<LectureSeries>(defaultLectureSeries);
-  const { data, isPending, hasNextPage, isFetchingNextPage, fetchNextPage } = useLatestLecturesQuery(selectedSeries);
+  const lecturesQuery = useLatestLecturesQuery(selectedSeries);
+  const { data, isPending, isError, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage, refetch } =
+    lecturesQuery;
+  // One "Try again" for the first page (reloads the list), one for a later page.
+  const firstPageRetry = useRetry(lecturesQuery, refetch);
+  const nextPageRetry = useRetry(lecturesQuery, fetchNextPage);
 
   // Read once here and passed to the rows, rather than each row subscribing to the store.
   const activeLectureSlug = usePlayerStore(selectActiveLectureSlug);
@@ -127,8 +137,9 @@ export default function HomeScreen() {
     }
   }
 
+  // After a failed page, scrolling doesn't ask again (no retry loops): only "Try again" does.
   function handleEndReached() {
-    if (hasNextPage && !isFetchingNextPage) {
+    if (hasNextPage && !isFetchingNextPage && !isFetchNextPageError) {
       fetchNextPage();
     }
   }
@@ -158,19 +169,54 @@ export default function HomeScreen() {
     );
   }
 
+  // Under the rows: the next page loading, or the next page failed (the rows stay).
   let footer = undefined;
-  if (isFetchingNextPage) {
+  let announcement: string | null = null;
+  if (nextPageRetry.isRetrying || (isFetchNextPageError && !isFetchingNextPage)) {
+    const title = 'More lectures didn’t load';
+    const message = loadMoreErrorMessage;
+    footer = (
+      <View className="px-gutter pt-2.5">
+        <LoadMoreError
+          title={title}
+          message={message}
+          isRetrying={nextPageRetry.isRetrying}
+          onRetryPress={nextPageRetry.retry}
+        />
+      </View>
+    );
+    if (!nextPageRetry.isRetrying) {
+      announcement = errorAnnouncement(title, message);
+    }
+  } else if (isFetchingNextPage) {
     footer = <LoadingMoreFooter />;
   }
 
-  // Shown in place of the rows when there are none. A failed first page shows nothing here yet.
-  // TODO(error-states step 4): the "Lectures didn’t load" card.
+  // In place of the rows when there are none: the first page loading, failed, or empty.
   let emptyList = undefined;
-  if (isPending) {
+  const hasNoData = data === undefined;
+  if (hasNoData && (firstPageRetry.isRetrying || isError)) {
+    const title = 'Lectures didn’t load';
+    const message = errorCardMessage;
+    emptyList = (
+      <View className="px-gutter">
+        <ErrorCard
+          title={title}
+          message={message}
+          isRetrying={firstPageRetry.isRetrying}
+          onRetryPress={firstPageRetry.retry}
+        />
+      </View>
+    );
+    if (!firstPageRetry.isRetrying) {
+      announcement = errorAnnouncement(title, message);
+    }
+  } else if (isPending) {
     emptyList = <FirstPageLoading />;
   } else if (data) {
     emptyList = <NoLecturesInSeries seriesLabel={seriesLabelFor(selectedSeries)} />;
   }
+  useAnnouncement(announcement);
 
   return (
     <View className="flex-1 bg-bg">

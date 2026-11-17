@@ -110,6 +110,7 @@ export const MiniLayer = memo(function MiniLayer({
   const isLoaded = usePlayerStore((state) => state.isLoaded);
   const isBuffering = usePlayerStore((state) => state.isBuffering);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
+  const audioLoadState = usePlayerStore((state) => state.audioLoadState);
 
   // Created once for this bar. Its handlers call module-level functions, so it never goes stale.
   const [dismissResponder] = useState(createDismissResponder);
@@ -165,7 +166,7 @@ export const MiniLayer = memo(function MiniLayer({
           <MiniPlayer
             title={lecture.title}
             author={lecture.author}
-            playState={pickMiniPlayerPlayState({ isLoaded, isBuffering, isPlaying })}
+            playState={pickMiniPlayerPlayState({ isLoaded, isBuffering, isPlaying, audioLoadState })}
             progressLine={<MiniPlayerProgressLine />}
             onOpenPress={openNowPlayingForLoadedLecture}
             onTogglePress={toggle}

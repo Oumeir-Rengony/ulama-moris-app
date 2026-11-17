@@ -46,9 +46,11 @@ import { TabBarItem } from '@/components/TabBar';
 import { Chip } from '@/components/ui/chip';
 import { Divider } from '@/components/ui/divider';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorCard } from '@/components/ui/error-card';
 import { Icon } from '@/components/ui/icon';
 import { IconButton } from '@/components/ui/icon-button';
 import { IconLabel } from '@/components/ui/icon-label';
+import { LoadMoreError } from '@/components/ui/load-more-error';
 import { Pill } from '@/components/ui/pill';
 import { PlayPauseButton } from '@/components/ui/play-pause-button';
 import { ProgressBar } from '@/components/ui/progress-bar';
@@ -57,6 +59,7 @@ import { SeekBar } from '@/components/ui/seek-bar';
 import { Spinner } from '@/components/ui/spinner';
 import { SurfaceCard } from '@/components/ui/surface-card';
 import { Text } from '@/components/ui/text';
+import { TryAgainButton } from '@/components/ui/try-again-button';
 import {
   mockEventDetailRowMeta,
   mockEventStats,
@@ -366,6 +369,38 @@ function SurfacesSection() {
         <View className="gap-2">
           <IconLabel icon={MapPin} label="Masjid Muswalla, Highlands" />
           <IconLabel icon={MapPin} label="Masjid Muswalla, Highlands" size="sm" />
+        </View>
+      </Example>
+    </GallerySection>
+  );
+}
+
+function ErrorStatesSection() {
+  return (
+    <GallerySection title="Error states (ErrorCard, LoadMoreError, TryAgainButton)">
+      <Example label="ErrorCard: first page failed">
+        <ErrorCard
+          title="Lectures didn’t load"
+          message="Check your internet connection, then try again."
+          isRetrying={false}
+        />
+      </Example>
+      <Example label="ErrorCard: trying again">
+        <ErrorCard title="Lectures didn’t load" message="Check your internet connection, then try again." isRetrying />
+      </Example>
+      <Example label="LoadMoreError: next page failed / trying again">
+        <View className="gap-2.5">
+          <LoadMoreError title="More lectures didn’t load" message="Check your connection." isRetrying={false} />
+          <LoadMoreError title="More events didn’t load" message="Check your connection." isRetrying />
+        </View>
+      </Example>
+      <Example label="TryAgainButton primary and onDanger, idle and retrying">
+        <View className="flex-row flex-wrap items-center gap-2">
+          <TryAgainButton variant="primary" isRetrying={false} />
+          <TryAgainButton variant="primary" isRetrying />
+          <View className="rounded-row bg-danger-subtle p-2">
+            <TryAgainButton variant="onDanger" isRetrying={false} />
+          </View>
         </View>
       </Example>
     </GallerySection>
@@ -884,6 +919,7 @@ export default function ComponentsGalleryScreen() {
       <ButtonsSection />
       <ChipsAndPillsSection />
       <SurfacesSection />
+      <ErrorStatesSection />
       <ProgressSection />
       <CardsSection />
       <RowsSection />

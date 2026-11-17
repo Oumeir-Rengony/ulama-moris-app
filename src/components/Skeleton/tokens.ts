@@ -9,4 +9,6 @@ export const skeleton = {
 // Spinner (react-native-svg): ring = fg at border-strong alpha, arc = primary.
 //   const c = useThemeColors();
 //   <Circle stroke={c.fg} strokeOpacity={spinner.trackOpacity} … /> <Path stroke={c.primary} … />
-export const spinner = { trackOpacity: borderAlpha.borderStrong } as const;
+// On a coloured button the ring is stronger (onColorTrackOpacity): at border-strong alpha only the
+// arc showed, so the spinner looked smaller than the retry icon it replaces.
+export const spinner = { trackOpacity: borderAlpha.borderStrong, onColorTrackOpacity: 0.45 } as const;

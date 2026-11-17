@@ -86,4 +86,45 @@ describe('MiniPlayer', () => {
     await fireEvent(openButton, 'accessibilityAction', { nativeEvent: { actionName: 'dismiss' } });
     expect(handleDismiss).toHaveBeenCalledTimes(1);
   });
+
+  describe('when the lecture did not load', () => {
+    it('says so instead of the author and disables play and forward 15, with no "Try again"', async () => {
+      const handleToggle = jest.fn();
+      await renderWithProviders(
+        <MiniPlayer
+          title={title}
+          author={author}
+          playState="failed"
+          progressLine={progressLine}
+          onTogglePress={handleToggle}
+        />,
+      );
+
+      expect(screen.getByText('Didn’t load. Tap to open again.')).toBeOnTheScreen();
+      expect(screen.queryByText(author)).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Skip forward 15 seconds' })).toBeDisabled();
+
+      const playButton = screen.getByRole('button', { name: 'Play' });
+      expect(playButton).toBeDisabled();
+      await fireEvent.press(playButton);
+      expect(handleToggle).not.toHaveBeenCalled();
+    });
+
+    it('still opens the player when the text is pressed', async () => {
+      const handleOpen = jest.fn();
+      await renderWithProviders(
+        <MiniPlayer
+          title={title}
+          author={author}
+          playState="failed"
+          progressLine={progressLine}
+          onOpenPress={handleOpen}
+        />,
+      );
+
+      await fireEvent.press(screen.getByRole('button', { name: `Open player: ${title}, ${author}` }));
+      expect(handleOpen).toHaveBeenCalledTimes(1);
+    });
+  });
 });

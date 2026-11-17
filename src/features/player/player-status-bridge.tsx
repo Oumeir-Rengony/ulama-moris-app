@@ -1,3 +1,4 @@
+import NetInfo from '@react-native-community/netinfo';
 import { useAudioPlayerStatus } from 'expo-audio';
 import { useEffect, useRef } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
@@ -6,6 +7,7 @@ import {
   finishPendingResumeIfReady,
   getPlayer,
   playNext,
+  reloadFailedLecture,
   saveCurrentLectureAsFinished,
   saveCurrentProgress,
 } from './audio-engine';
@@ -43,6 +45,21 @@ export function PlayerStatusBridge() {
       positionSec: status.currentTime,
       durationSec: status.duration,
     });
+
+    // The audio didn't load. expo-audio says so in this one update only, so the store keeps it.
+    // Nothing else happens on a failed update: no checkpoint, no auto-advance.
+    const audioError = status.error ?? null;
+    if (audioError !== null) {
+      playerStore.reportAudioFailure();
+      wasPlayingRef.current = false;
+      return;
+    }
+
+    // Loaded after all (a late error from an earlier load, or playback recovered): back to the
+    // normal controls, so the user can never be left with audio playing and no pause button.
+    if (playerStore.audioLoadState === 'failed' && status.isLoaded) {
+      playerStore.clearAudioFailure();
+    }
 
     finishPendingResumeIfReady().catch(logResumeError);
 
@@ -116,6 +133,24 @@ export function PlayerStatusBridge() {
     return () => {
       subscription.remove();
     };
+  }, []);
+
+  // The audio failed to load and the connection then comes back: load it once more by itself, as
+  // if the lecture had been opened again. Only on the change from offline to online, so it can't loop.
+  useEffect(() => {
+    let wasConnected: boolean | null = null;
+
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      const isConnected = state.isConnected === true;
+      const hasReconnected = wasConnected === false && isConnected;
+      wasConnected = isConnected;
+
+      if (hasReconnected && usePlayerStore.getState().audioLoadState === 'failed') {
+        reloadFailedLecture();
+      }
+    });
+
+    return unsubscribe;
   }, []);
 
   return null;

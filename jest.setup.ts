@@ -31,6 +31,13 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
+// NetInfo has no native module in Jest: subscribing crashes ("reading 'isInternetReachable'").
+// The player bridge listens for the connection coming back, so every test that renders it needs
+// this. The library's own mock reports a connection and records listeners.
+jest.mock('@react-native-community/netinfo', () =>
+  require('@react-native-community/netinfo/jest/netinfo-mock'),
+);
+
 // expo-notifications has no native module in Jest, and on import it warns that Expo Go lacks
 // push notifications, which fails the test. The player bridge reaches it through the reminders,
 // so every test gets the in-memory stand-in.

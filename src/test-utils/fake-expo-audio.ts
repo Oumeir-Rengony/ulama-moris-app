@@ -13,6 +13,8 @@ export type FakeStatus = {
   duration: number;
   didJustFinish: boolean;
   mediaServicesDidReset?: boolean;
+  // Set (once) when the audio fails to load, as expo-audio does. null otherwise.
+  error: string | null;
 };
 
 const initialStatus: FakeStatus = {
@@ -22,6 +24,7 @@ const initialStatus: FakeStatus = {
   currentTime: 0,
   duration: 0,
   didJustFinish: false,
+  error: null,
 };
 
 // The one player the engine creates.

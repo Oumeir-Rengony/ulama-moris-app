@@ -118,12 +118,18 @@ export function catAt(index: number): Category {
 // every screen. Topics are free text from the API with no fixed list, so the colour is worked
 // out from the topic's own letters: the same text always adds up to the same number. Case is
 // ignored, so "SEERAH" and "Seerah" match. An empty topic (a lecture without one) is cat-1.
+// cat-3 is left out: it shares the clay hue of the error colour, and Now Playing shows the topic
+// pill right above its "This lecture didn’t load" row, where a clay pill would look like part of
+// the error.
+const topicCategories: Category[] = [1, 2, 4, 5];
+
 export function catForTopic(topic: string): Category {
   let letterTotal = 0;
   for (const character of topic.toLowerCase()) {
     letterTotal += character.codePointAt(0) ?? 0;
   }
-  return catAt(letterTotal);
+  const position = letterTotal % topicCategories.length;
+  return topicCategories[position];
 }
 
 // Tailwind only keeps classes it can see written out, so the class names are literal here.

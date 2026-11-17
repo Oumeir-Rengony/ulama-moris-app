@@ -4,7 +4,7 @@ import { ContinueListeningCard } from '@/components/ContinueListeningCard';
 import type { Lecture } from '@/features/lectures/lecture.types';
 import { useLectureQuery } from '@/features/lectures/lectures.queries';
 
-import { toggle } from './audio-engine';
+import { reloadFailedLecture, toggle } from './audio-engine';
 import { buildContinueListeningContent } from './continue-listening';
 import { useListeningHistoryStore } from './listening-history.store';
 import { openNowPlaying } from './open-now-playing';
@@ -57,6 +57,11 @@ export function ContinueListeningSection({ queue }: ContinueListeningSectionProp
   // Otherwise open Now Playing like a row, which loads it and resumes from the saved point: the
   // mini player never introduces a lecture.
   function handleTogglePress() {
+    // The loaded lecture whose audio didn't load: play loads it again.
+    if (isActive && usePlayerStore.getState().audioLoadState === 'failed') {
+      reloadFailedLecture();
+      return;
+    }
     if (isActive) {
       toggle();
       return;

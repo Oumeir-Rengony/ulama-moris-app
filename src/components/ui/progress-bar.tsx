@@ -8,7 +8,8 @@ type ProgressBarProps = {
   // onEmphasis: 4px ochre bar on the Continue listening card.
   // miniLine: 3px ochre line along the bottom edge of the mini player (absolutely positioned,
   //           so the mini player must be the positioned parent).
-  variant: 'onEmphasis' | 'miniLine';
+  // miniErrorLine: the same line in the error colour, while the lecture's audio didn't load.
+  variant: 'onEmphasis' | 'miniLine' | 'miniErrorLine';
 };
 
 function clampProgress(progress: number): number {
@@ -22,13 +23,17 @@ export function ProgressBar({ progress, variant }: ProgressBarProps) {
 
   // `accessible` makes the bar one element a screen reader can find and read. A View with only
   // a role is skipped by VoiceOver.
-  if (variant === 'miniLine') {
+  if (variant === 'miniLine' || variant === 'miniErrorLine') {
+    let lineClass: string = miniPlayer.progress;
+    if (variant === 'miniErrorLine') {
+      lineClass = miniPlayer.errorLine;
+    }
     return (
       <View
         accessible
         accessibilityRole="progressbar"
         accessibilityValue={accessibilityValue}
-        className={`absolute bottom-0 left-0 h-[3px] ${miniPlayer.progress}`}
+        className={`absolute bottom-0 left-0 h-[3px] ${lineClass}`}
         style={{ width }}
       />
     );

@@ -1,4 +1,5 @@
 import { ApiError, getJson, isNotFound, nullToUndefined } from '@/features/api/api-client';
+import { useForcedFailuresStore } from '@/features/dev/forced-failures.store';
 import { answerFetchWith, fetchedPaths, testApiBaseUrl } from '@/test-utils/fake-fetch';
 
 describe('getJson', () => {
@@ -35,6 +36,16 @@ describe('getJson', () => {
     }) as typeof fetch;
 
     await expect(getJson('/lectures')).rejects.toMatchObject({ status: 502, message: 'Request failed with status 502' });
+  });
+
+  it('fails like a lost connection, without a request, when a development switch says so', async () => {
+    answerFetchWith(() => ({ status: 200, body: {} }));
+    useForcedFailuresStore.setState({ active: ['firstPages'] });
+
+    await expect(getJson('/events?page=1&limit=10')).rejects.toBeInstanceOf(TypeError);
+    expect(fetchedPaths()).toEqual([]);
+
+    useForcedFailuresStore.setState({ active: [] });
   });
 
   it('explains how to fix a missing base URL', async () => {

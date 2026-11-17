@@ -7,6 +7,7 @@ import {
 } from 'expo-audio';
 import { Platform } from 'react-native';
 
+import { isFailureForced } from '@/features/dev/forced-failures.store';
 import type { Lecture } from '@/features/lectures/lecture.types';
 
 import { useListeningHistoryStore } from './listening-history.store';
@@ -33,6 +34,10 @@ export function getPlayer(): AudioPlayer {
 }
 
 const SKIP_SECONDS = 15;
+
+// Development only (/dev/failures): an address that can never resolve (.invalid is reserved),
+// so the player fails to load for real, the same way it does without a connection.
+const FORCED_FAILURE_AUDIO_URL = 'https://forced-failure.invalid/lecture.m4a';
 
 // Play/pause, a seek bar, and back / forward 15 seconds. No next/previous track.
 const lockScreenOptions: AudioLockScreenOptions = {
@@ -102,6 +107,10 @@ export function saveCurrentProgress(): void {
   if (pendingResume !== null) {
     return;
   }
+  // The audio didn't load, so the player's position means nothing. Keep the saved one.
+  if (usePlayerStore.getState().audioLoadState !== 'ok') {
+    return;
+  }
   useListeningHistoryStore.getState().saveProgress(lecture, player.currentTime);
 }
 
@@ -125,7 +134,12 @@ function loadCurrent(shouldPlay: boolean): void {
   }
 
   state.setHasQueueEnded(false);
-  player.replace({ uri: lecture.url, name: lecture.title });
+
+  let audioUrl = lecture.url;
+  if (isFailureForced('audio')) {
+    audioUrl = FORCED_FAILURE_AUDIO_URL;
+  }
+  player.replace({ uri: audioUrl, name: lecture.title });
   // Required, not cosmetic: on Android, without it the OS kills background playback after about
   // 3 minutes. Called again on every track change, so the notification never shows the previous title.
   player.setActiveForLockScreen(true, buildLockScreenMetadata(lecture, selectSourceLabel(state)), lockScreenOptions);
@@ -180,9 +194,15 @@ export function playLecture(
   const currentLecture = selectCurrentLecture(usePlayerStore.getState());
   const isAlreadyLoaded = currentLecture !== null && currentLecture.slug === lecture.slug;
   if (isAlreadyLoaded) {
-    if (options.autoplay) {
-      resume();
+    if (!options.autoplay) {
+      return;
     }
+    // Its audio didn't load: playing it again loads it again.
+    if (usePlayerStore.getState().audioLoadState === 'failed') {
+      reloadFailedLecture();
+      return;
+    }
+    resume();
     return;
   }
 
@@ -197,7 +217,22 @@ export function playLecture(
   }
 
   usePlayerStore.getState().startQueue(queueToPlay, startIndex, source);
+  usePlayerStore.getState().clearAudioFailure();
   loadCurrent(options.autoplay);
+}
+
+// The loaded lecture's audio didn't load and the user opens it again (a list row, Continue
+// listening, the mini player): load it again and play it from its saved resume point, like a
+// fresh start. It shows the normal loading look; if it fails again, PlayerStatusBridge marks it
+// failed again. Does nothing when the audio hasn't failed.
+export function reloadFailedLecture(): void {
+  const state = usePlayerStore.getState();
+  if (state.audioLoadState !== 'failed') {
+    return;
+  }
+
+  state.clearAudioFailure();
+  loadCurrent(true);
 }
 
 export function pause(): void {
@@ -286,6 +321,7 @@ export function playNext(): void {
   }
 
   state.setCurrentIndex(nextIndex);
+  state.clearAudioFailure();
   loadCurrent(true);
 }
 
@@ -299,4 +335,5 @@ export function stopAndClear(): void {
   player.pause();
   player.clearLockScreenControls();
   usePlayerStore.getState().setCurrentIndex(null);
+  usePlayerStore.getState().clearAudioFailure();
 }

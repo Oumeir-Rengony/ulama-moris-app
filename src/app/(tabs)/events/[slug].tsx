@@ -1,3 +1,4 @@
+import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { FlatList, View, type ListRenderItemInfo } from 'react-native';
@@ -5,7 +6,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EventDetailHeader, type EventHeroContent } from '@/components/EventDetailHeader';
 import { NumberedLectureRow } from '@/components/NumberedLectureRow';
+import { ScreenTopBar } from '@/components/ScreenTopBar';
 import { LoadingFooter } from '@/components/Skeleton';
+import { ErrorCard } from '@/components/ui/error-card';
+import { Icon } from '@/components/ui/icon';
+import { IconButton } from '@/components/ui/icon-button';
+import { errorAnnouncement, errorCardMessage } from '@/features/errors/error-copy';
 import type { EventSummary } from '@/features/events/event.types';
 import type { Lecture } from '@/features/lectures/lecture.types';
 import {
@@ -19,6 +25,8 @@ import { ActiveNumberedLectureRow } from '@/features/player/active-numbered-lect
 import { openNowPlaying } from '@/features/player/open-now-playing';
 import { selectActiveLectureSlug, usePlayerStore, type QueueSource } from '@/features/player/player.store';
 import { useMiniPlayerSpace } from '@/features/player/use-mini-player-space';
+import { useAnnouncement } from '@/hooks/use-announcement';
+import { useRetry } from '@/hooks/use-retry';
 
 const bottomSpacing = 24;
 
@@ -50,7 +58,18 @@ export default function EventDetailScreen() {
   const insets = useSafeAreaInsets();
   const miniPlayerSpace = useMiniPlayerSpace();
   const { slug } = useLocalSearchParams<{ slug: string }>();
-  const { data, isSuccess } = useEventQuery(slug);
+  const eventQuery = useEventQuery(slug);
+  const { data, isSuccess, isError, refetch } = eventQuery;
+  const loadRetry = useRetry(eventQuery, refetch);
+
+  const hasLoadFailed = data === undefined && (isError || loadRetry.isRetrying);
+  const loadErrorTitle = 'Event didn’t load';
+  const loadErrorMessage = errorCardMessage;
+  let announcement: string | null = null;
+  if (hasLoadFailed && !loadRetry.isRetrying) {
+    announcement = errorAnnouncement(loadErrorTitle, loadErrorMessage);
+  }
+  useAnnouncement(announcement);
   const activeLectureSlug = usePlayerStore(selectActiveLectureSlug);
 
   // An unknown event (for example a bad deep link): back to the list.
@@ -58,10 +77,35 @@ export default function EventDetailScreen() {
     return <Redirect href="/events" />;
   }
 
+  // The event didn't load: the back button and the shared error card.
+  // TODO(design): Event detail's error state isn't designed; it reuses the lists' card.
+  if (hasLoadFailed) {
+    return (
+      <View className="flex-1 bg-bg" style={{ paddingTop: insets.top }}>
+        <View className="w-full self-center" style={{ maxWidth: 600 }}>
+          <ScreenTopBar
+            left={
+              <IconButton accessibilityLabel="Back" tone="surface" onPress={goBack}>
+                <Icon icon={ChevronLeft} size={22} strokeWidth={2.2} />
+              </IconButton>
+            }
+          />
+          <View className="mt-3.5 px-gutter">
+            <ErrorCard
+              title={loadErrorTitle}
+              message={loadErrorMessage}
+              isRetrying={loadRetry.isRetrying}
+              onRetryPress={loadRetry.retry}
+            />
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   // Headerless screen in the Events tab stack: it owns the top inset; the tab bar owns the
   // bottom. While the event loads, a loading line shows on the ground.
   // TODO(design): no Event detail skeleton is designed.
-  // TODO(error-states): a failed load stays on this screen; it needs its own "didn’t load" state.
   if (!data) {
     return (
       <View className="flex-1 bg-bg" style={{ paddingTop: insets.top + 40 }}>

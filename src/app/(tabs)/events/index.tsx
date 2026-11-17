@@ -6,6 +6,8 @@ import { EventRow } from '@/components/EventRow';
 import { EventsListHeader, type LatestEventContent } from '@/components/EventsListHeader';
 import { LoadingFooter, SkeletonRow } from '@/components/Skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorCard } from '@/components/ui/error-card';
+import { LoadMoreError } from '@/components/ui/load-more-error';
 import { Text } from '@/components/ui/text';
 import type { EventSummary } from '@/features/events/event.types';
 import {
@@ -19,7 +21,10 @@ import { useEventsQuery } from '@/features/events/events.queries';
 import { groupEventsByYear, type EventListItem, type EventYearSection } from '@/features/events/group-by-year';
 import { openEvent } from '@/features/events/open-event';
 import { useMiniPlayerSpace } from '@/features/player/use-mini-player-space';
+import { errorAnnouncement, errorCardMessage, loadMoreErrorMessage } from '@/features/errors/error-copy';
 import { openSearch } from '@/features/search/open-search';
+import { useAnnouncement } from '@/hooks/use-announcement';
+import { useRetry } from '@/hooks/use-retry';
 import { catAt } from '@/theme/tokens';
 
 const bottomSpacing = 24;
@@ -127,7 +132,12 @@ function buildLatestEventContent(event: EventSummary): LatestEventContent {
 export default function EventsScreen() {
   const insets = useSafeAreaInsets();
   const miniPlayerSpace = useMiniPlayerSpace();
-  const { data, isPending, hasNextPage, isFetchingNextPage, fetchNextPage } = useEventsQuery();
+  const eventsQuery = useEventsQuery();
+  const { data, isPending, isError, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage, refetch } =
+    eventsQuery;
+  // One "Try again" for the first page (reloads the list), one for a later page.
+  const firstPageRetry = useRetry(eventsQuery, refetch);
+  const nextPageRetry = useRetry(eventsQuery, fetchNextPage);
 
   let loadedEvents: EventSummary[] = [];
   let eventCountLabel: string | undefined = undefined;
@@ -156,25 +166,61 @@ export default function EventsScreen() {
     return <YearHeader title={section.title} isFirstYear={isFirstYear} />;
   }
 
+  // After a failed page, scrolling doesn't ask again (no retry loops): only "Try again" does.
   function handleEndReached() {
-    if (hasNextPage && !isFetchingNextPage) {
+    if (hasNextPage && !isFetchingNextPage && !isFetchNextPageError) {
       fetchNextPage();
     }
   }
 
+  // Under the rows: the next page loading, or the next page failed (the rows stay).
   let footer = undefined;
-  if (isFetchingNextPage) {
+  let announcement: string | null = null;
+  if (nextPageRetry.isRetrying || (isFetchNextPageError && !isFetchingNextPage)) {
+    const title = 'More events didn’t load';
+    const message = loadMoreErrorMessage;
+    footer = (
+      <View className="px-gutter pt-2.5">
+        <LoadMoreError
+          title={title}
+          message={message}
+          isRetrying={nextPageRetry.isRetrying}
+          onRetryPress={nextPageRetry.retry}
+        />
+      </View>
+    );
+    if (!nextPageRetry.isRetrying) {
+      announcement = errorAnnouncement(title, message);
+    }
+  } else if (isFetchingNextPage) {
     footer = <LoadingMoreFooter />;
   }
 
-  // Shown in place of the rows when there are none. A failed first page shows nothing here yet.
-  // TODO(error-states step 4): the "Events didn’t load" card.
+  // In place of the rows when there are none: the first page loading, failed, or empty.
   let emptyList = undefined;
-  if (isPending) {
+  const hasNoData = data === undefined;
+  if (hasNoData && (firstPageRetry.isRetrying || isError)) {
+    const title = 'Events didn’t load';
+    const message = errorCardMessage;
+    emptyList = (
+      <View className="px-gutter pt-4">
+        <ErrorCard
+          title={title}
+          message={message}
+          isRetrying={firstPageRetry.isRetrying}
+          onRetryPress={firstPageRetry.retry}
+        />
+      </View>
+    );
+    if (!firstPageRetry.isRetrying) {
+      announcement = errorAnnouncement(title, message);
+    }
+  } else if (isPending) {
     emptyList = <FirstPageLoading />;
   } else if (data) {
     emptyList = <NoEvents />;
   }
+  useAnnouncement(announcement);
 
   return (
     // The top inset is padding on the screen, not on the list content: sticky year headers pin to
@@ -182,6 +228,7 @@ export default function EventsScreen() {
     <View className="flex-1 bg-bg" style={{ paddingTop: insets.top }}>
       <StatusBar style="auto" />
       <SectionList
+        testID="events-list"
         sections={sections}
         renderItem={renderEventRow}
         renderSectionHeader={renderYearHeader}

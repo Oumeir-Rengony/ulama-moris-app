@@ -1,5 +1,6 @@
 import { fireEvent, screen } from '@testing-library/react-native';
 
+import { AudioErrorRow } from '@/components/NowPlaying/audio-error-row';
 import { PlayerControls } from '@/components/NowPlaying/player-controls';
 import { TrackInfo } from '@/components/NowPlaying/track-info';
 import { renderWithProviders } from '@/test-utils/render-with-providers';
@@ -83,5 +84,31 @@ describe('PlayerControls', () => {
     expect(handleBack).toHaveBeenCalledTimes(1);
     expect(handleToggle).toHaveBeenCalledTimes(1);
     expect(handleForward).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('PlayerControls when the audio did not load', () => {
+  it('disables play and both skip buttons, with no "Try again"', async () => {
+    const handleToggle = jest.fn();
+    await renderWithProviders(<PlayerControls state="failed" onTogglePress={handleToggle} />);
+
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Back 15 seconds' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Forward 15 seconds' })).toBeDisabled();
+
+    const playButton = screen.getByRole('button', { name: 'Play' });
+    expect(playButton).toBeDisabled();
+    await fireEvent.press(playButton);
+    expect(handleToggle).not.toHaveBeenCalled();
+  });
+});
+
+describe('AudioErrorRow', () => {
+  it('is an alert that says what happened and what to do', async () => {
+    await renderWithProviders(<AudioErrorRow message="Check your internet connection, then try again." />);
+
+    expect(
+      screen.getByRole('alert', { name: 'This lecture didn’t load. Check your internet connection, then try again.' }),
+    ).toBeOnTheScreen();
   });
 });

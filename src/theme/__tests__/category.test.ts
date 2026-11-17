@@ -39,4 +39,11 @@ describe('catForTopic', () => {
     }
     expect(colours.size).toBeGreaterThan(1);
   });
+
+  it('never gives a topic category 3, the clay hue shared with the error colour', () => {
+    const topics = ['sahaba r.a', 'Moon Sighting', 'Ramadan', 'Family', 'Fiqh', 'Gaza', 'spiritual', 'Zakaat', 'Quran'];
+    for (const topic of topics) {
+      expect(catForTopic(topic)).not.toBe(3);
+    }
+  });
 });

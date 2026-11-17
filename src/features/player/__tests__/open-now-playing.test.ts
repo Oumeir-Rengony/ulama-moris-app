@@ -30,6 +30,7 @@ jest.mock('@/features/player/audio-engine', () => ({
   playLecture: jest.fn(),
   pause: jest.fn(),
   resume: jest.fn(),
+  reloadFailedLecture: jest.fn(),
   stopAndClear: jest.fn(),
 }));
 // The motion commands only record their calls. Tests finish an animation by calling the
@@ -49,6 +50,7 @@ const playLecture = jest.mocked(engine.playLecture);
 const pause = jest.mocked(engine.pause);
 const resume = jest.mocked(engine.resume);
 const stopAndClear = jest.mocked(engine.stopAndClear);
+const reloadFailedLecture = jest.mocked(engine.reloadFailedLecture);
 const enterFresh = jest.mocked(motion.enterFresh);
 const expandFromMini = jest.mocked(motion.expandFromMini);
 const collapseToMini = jest.mocked(motion.collapseToMini);
@@ -375,5 +377,40 @@ describe('showNowPlayingFromDeepLink', () => {
     expect(presentation()).toBe('open');
     expect(showNowPlayingWithoutMotion).toHaveBeenCalledTimes(1);
     expect(enterFresh).not.toHaveBeenCalled();
+  });
+});
+
+describe('opening a lecture whose audio did not load', () => {
+  function failFirst() {
+    loadFirstWithMiniPlayerShowing();
+    usePlayerStore.getState().reportAudioFailure();
+  }
+
+  it('from a list row: grows the bar into Now Playing and loads it again', async () => {
+    failFirst();
+
+    await openNowPlaying({ lecture: first, queue: queueOfThree, source: latestSource, resumeIfPaused: false });
+
+    expect(expandFromMini).toHaveBeenCalledTimes(1);
+    expect(reloadFailedLecture).toHaveBeenCalledTimes(1);
+    expect(resume).not.toHaveBeenCalled();
+    expect(playLecture).not.toHaveBeenCalled();
+  });
+
+  it('from the mini player: grows into Now Playing and loads it again', () => {
+    failFirst();
+
+    openNowPlayingForLoadedLecture();
+
+    expect(expandFromMini).toHaveBeenCalledTimes(1);
+    expect(reloadFailedLecture).toHaveBeenCalledTimes(1);
+  });
+
+  it('from the mini player, when the audio is fine: never reloads', () => {
+    loadFirstWithMiniPlayerShowing();
+
+    openNowPlayingForLoadedLecture();
+
+    expect(reloadFailedLecture).not.toHaveBeenCalled();
   });
 });

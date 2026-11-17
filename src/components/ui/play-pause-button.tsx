@@ -19,6 +19,8 @@ type PlayPauseButtonProps = {
   // "Play {title}" / "Pause {title}" in lists; "Play" / "Pause" in the players.
   accessibilityLabel: string;
   onPress?: () => void;
+  // Shown at 35% and not pressable: the players' play button while the lecture's audio didn't load.
+  disabled?: boolean;
 };
 
 type VariantStyle = {
@@ -94,7 +96,7 @@ function NowPlayingButtonShape({ isPlaying }: { isPlaying: boolean }) {
   );
 }
 
-export function PlayPauseButton({ state, variant, accessibilityLabel, onPress }: PlayPauseButtonProps) {
+export function PlayPauseButton({ state, variant, accessibilityLabel, onPress, disabled = false }: PlayPauseButtonProps) {
   const { colorScheme } = useColorScheme();
 
   const isPlaying = state === 'pause';
@@ -111,12 +113,19 @@ export function PlayPauseButton({ state, variant, accessibilityLabel, onPress }:
     shape = <NowPlayingButtonShape isPlaying={isPlaying} />;
   }
 
+  let opacityClass = 'active:opacity-80';
+  if (disabled) {
+    opacityClass = 'opacity-[0.35]';
+  }
+
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
-      className={`shrink-0 items-center justify-center active:opacity-80 ${variantStyle.buttonClass}`}
+      className={`shrink-0 items-center justify-center ${opacityClass} ${variantStyle.buttonClass}`}
     >
       {shape}
       {/* The icon sits in a View so it draws above the Now Playing fill on web. The fill is

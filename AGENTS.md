@@ -32,7 +32,7 @@ Start with [docs/CONTEXT.md](docs/CONTEXT.md): how the app works, what was decid
 |---|---|
 | Colours, tokens, type, spacing, shadows, any visual style | [src/theme/README.md](src/theme/README.md) (recipes), then [docs/DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md) (full reference) |
 | Changing a screen's layout | Its design screenshot (the table in CONTEXT.md "Design screenshots") and the existing code |
-| Error and offline states (next stage) | [docs/ERROR-STATES.md](docs/ERROR-STATES.md) and `docs/artboards/error-states/*.png` |
+| Error and offline states | [docs/ERROR-STATES.md](docs/ERROR-STATES.md), `docs/artboards/error-states/*.png`, and the switches at `/dev/failures` |
 | Audio playback, lock screen, background | AGENTS.md "Audio: expo-audio plays, Zustand remembers", the comments in `src/features/player/audio-engine.ts` and `setup-audio.ts`, then the Expo docs: https://docs.expo.dev/versions/latest/sdk/audio.md |
 | Player motion | CONTEXT.md "Motion", then [docs/Audio-Player-Animations.md](docs/Audio-Player-Animations.md) |
 
@@ -107,6 +107,8 @@ Read [src/theme/README.md](src/theme/README.md) before adding or changing any co
 - Icons: `<Icon icon={…} color="fgMuted" />` with a semantic colour name. Import lucide icons one by one (`import Play from 'lucide-react-native/icons/play'`), never from the package root, which bundles every icon.
 - `react-native-svg` on web passes unknown props to the DOM, so don't put `accessible` / `importantForAccessibility` on `<Svg>`; the button around an icon carries the label.
 - `/dev/components` (development only) shows every component in every state with the mock data in `src/data/mock-ui.ts`, plus a Home screen mock. Add new components there.
+- `/dev/failures` (development only) has switches that make one kind of request fail on purpose (first pages, next pages, search, event detail, lecture audio, no connection), so every error state can be seen in the real screens. A forced request fails like a lost connection. The switches reset on reload.
+- **The `/dev` pages are still in the release build.** Expo Router makes every file in `src/app/` a route, so `/dev/tokens`, `/dev/components` and `/dev/failures` ship in the release bundle, together with the mock data they use (`src/data/sample.ts`, `mock-ui.ts`). Each one only redirects to Home when `__DEV__` is false. Before the first release, remove them from production builds, for bundle size and tidiness (for example by keeping them out of `src/app/` in release builds, or guarding them all in one `src/app/dev/_layout.tsx`).
 
 ## State management
 
@@ -136,7 +138,7 @@ If you can't choose between `useState` and Zustand, start with `useState`. Move 
 | Recent searches per scope | Zustand `recent-searches.store.ts`, persisted | Must survive a restart. The `persist` middleware is simpler than writing your own load/save effects |
 | Search input text, the selected Home filter chip, whether a sheet or menu is open | `useState` | Belongs to one screen |
 | Scheduled reminder notifications | The OS (expo-notifications), rebuilt from `listening-history.store.ts` (`lastPlayedSlug`, `lastPlayedAt`) | A local notification can't run code when it fires, so the schedule is recalculated, never stored |
-| Online/offline (error-states stage) | NetInfo's `useNetInfo()` where it's needed | It's already a subscription. Don't copy it into a store |
+| Online/offline | NetInfo, read where it's needed: TanStack Query's `onlineManager` (app-providers), the offline sheet (`features/offline/offline-gate.tsx`), the player bridge's reconnect retry | It's already a subscription. Don't copy it into a store |
 
 Not in the spec yet: signed-in user, bookmarks, language. Don't add stores or contexts for them until a spec asks for them. When it does, use the questions above. A signed-in user would most likely go in Zustand, with tokens in `expo-secure-store`. Bookmarks would go in a persisted Zustand store, or in TanStack Query if they sync with a server. Language would go in Context or a persisted store.
 
@@ -206,7 +208,7 @@ Spec: `docs/Audio Player Reminder Notifications — Logic Guide.md`. One type at
 - Each fetcher turns the API's JSON into the app's types (`lecture.types.ts`, `event.types.ts`): a value the API sends as `null` becomes `undefined`, so it can go straight to an optional prop. A 404 for one lecture or event returns `null`; any other failure throws, so the query reports an error.
 - Lists are paged by the API (page from 1, 10 per page). Stop on `hasMore`, never on `total` (it reads 0 past the last page). Join pages with `joinLecturePages` / `joinEventPages` / `joinSearchPages`, which drop an item a later page repeats.
 - Home always sends a series (`type`); there is no "all lectures" request. Search sends none, so it searches every series.
-- Cache settings: `staleTime` 1 minute, `gcTime` 5 minutes, `retry: 1`, on the `QueryClient` only. Don't add per-query settings, `initialData`, `placeholderData` or a persisted query cache.
+- Cache settings: `staleTime` 1 minute, `gcTime` 5 minutes, `retry: 1`, `networkMode: 'always'`, on the `QueryClient` only. `'always'` makes a request made offline fail (so the screen shows its "didn’t load" state) instead of pausing behind a skeleton; `refetchOnReconnect` then tries it once more when NetInfo reports the connection back. Don't add per-query settings, `initialData`, `placeholderData` or a persisted query cache.
 
 ### Context rules
 
@@ -291,6 +293,7 @@ These render outside the normal screen tree and do **not** inherit any padding f
 - Before declaring a UI task done, check ios simulator is working fine. we dont have android simulator. use the web version as a replacement for android
 - iOS: `npx expo start --ios` installs Expo Go on the booted simulator and opens the app (every native module in use so far ships in Expo Go). Drive it with **AXe** (`axe screenshot | describe-ui | tap | swipe --udid <id>`). Notes:
   - The first `axe describe-ui` after launch can time out while it sets up; run it again.
+  - A plain `axe tap` often doesn't fire a React Native `Pressable` (iOS 27, AXe 1.8). Press with `axe touch -x <x> -y <y> --down --up --delay 0.15` instead. Open Expo Go with `?__expo_disable_fab=1&__expo_disable_onboarding=1`, or its gear button covers the top-right controls.
   - `axe tap --label` refuses a label that matches several elements. The Home list repeats the sample lectures to reach 81 rows, so "Play {title}" labels repeat: tap those by coordinates (`-x/-y`) taken from `describe-ui`.
   - After `xcrun simctl ui booted content_size …`, terminate and reopen Expo Go (`xcrun simctl terminate booted host.exp.Exponent`); the running app doesn't pick up the new size.
   - In Expo Go, deep links are `exp://127.0.0.1:8081/--/<path>`. The app's own `ulamamoris://` scheme only works in a development build.

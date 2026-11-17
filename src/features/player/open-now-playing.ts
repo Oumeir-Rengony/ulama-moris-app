@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 
 import type { Lecture } from '@/features/lectures/lecture.types';
 
-import { pause, playLecture, resume, stopAndClear } from './audio-engine';
+import { pause, playLecture, reloadFailedLecture, resume, stopAndClear } from './audio-engine';
 import { MINI_EXIT_MS } from './player-motion-config';
 import { collapseToMini, dropMini, enterFresh, expandFromMini, showNowPlayingWithoutMotion } from './player-surface-motion';
 import {
@@ -69,6 +69,18 @@ function markNowPlayingClosed(finished: boolean): void {
   state.setNowPlayingPresentation('closed');
 }
 
+// The loaded lecture is opened again. If its audio didn't load, that is the way to load it
+// again (the players have no "Try again"). Otherwise resume it when asked.
+function resumeOrReloadLoadedLecture(resumeIfPaused: boolean): void {
+  if (usePlayerStore.getState().audioLoadState === 'failed') {
+    reloadFailedLecture();
+    return;
+  }
+  if (resumeIfPaused) {
+    resume();
+  }
+}
+
 export async function openNowPlaying(request: OpenNowPlayingRequest): Promise<void> {
   const stateAtTap = usePlayerStore.getState();
 
@@ -91,9 +103,7 @@ export async function openNowPlaying(request: OpenNowPlayingRequest): Promise<vo
     if (isAlreadyLoaded && isBarShowing) {
       stateAtTap.setNowPlayingPresentation('opening');
       expandFromMini({ onFinished: markNowPlayingOpen });
-      if (request.resumeIfPaused) {
-        resume();
-      }
+      resumeOrReloadLoadedLecture(request.resumeIfPaused);
       return;
     }
 
@@ -109,10 +119,9 @@ export async function openNowPlaying(request: OpenNowPlayingRequest): Promise<vo
     // Intent before audio, audio before motion. The bar stays hidden: the presentation isn't closed.
     usePlayerStore.getState().setNowPlayingPresentation('opening');
     if (isAlreadyLoaded) {
-      // Loaded but the bar wasn't showing (the queue had ended): show it, never reload it.
-      if (request.resumeIfPaused) {
-        resume();
-      }
+      // Loaded but the bar wasn't showing (the queue had ended): show it. Reloaded only if its
+      // audio didn't load.
+      resumeOrReloadLoadedLecture(request.resumeIfPaused);
     } else {
       playLecture(request.lecture, request.queue, request.source);
     }
@@ -124,7 +133,8 @@ export async function openNowPlaying(request: OpenNowPlayingRequest): Promise<vo
   }
 }
 
-// The mini player's text area: the bar grows into Now Playing, same position, no reload.
+// The mini player's text area: the bar grows into Now Playing, same position, no reload, unless
+// the audio didn't load: then this is the way to load it again.
 // Also allowed while Now Playing is still shrinking into the bar: it grows back from where it is.
 export function openNowPlayingForLoadedLecture(): void {
   const state = usePlayerStore.getState();
@@ -141,6 +151,9 @@ export function openNowPlayingForLoadedLecture(): void {
 
   state.setNowPlayingPresentation('opening');
   expandFromMini({ onFinished: markNowPlayingOpen });
+  if (state.audioLoadState === 'failed') {
+    reloadFailedLecture();
+  }
 }
 
 // The chevron and Android back. Also allowed while Now Playing is still opening: it shrinks back

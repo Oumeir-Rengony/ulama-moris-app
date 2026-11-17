@@ -17,6 +17,7 @@ import { useColorScheme } from 'nativewind';
 import { useCallback, useEffect, useState } from 'react';
 
 import { LaunchScreen } from '@/features/launch/launch-screen';
+import { OfflineGate } from '@/features/offline/offline-gate';
 import { PlayerStatusBridge } from '@/features/player/player-status-bridge';
 import { setupAudio } from '@/features/player/setup-audio';
 import { RemindersBridge } from '@/features/reminders/reminders-bridge';
@@ -94,6 +95,8 @@ export default function RootLayout() {
           <Stack.Screen name="player" options={{ animation: 'none' }} />
         </Stack>
         {isLaunchScreenVisible && <LaunchScreen onFinished={hideLaunchScreen} />}
+        {/* Above everything, the launch screen included: with no connection the app is blocked. */}
+        <OfflineGate />
       </ThemeProvider>
     </AppProviders>
   );

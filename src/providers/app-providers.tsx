@@ -12,19 +12,23 @@ const fiveMinutes = 5 * oneMinute;
 
 // One client for the whole app, created once at module scope.
 // retry: 1 shows a failed load after one more attempt, not three: the screens offer "Try again".
+// networkMode 'always': a request made offline fails (and the screen shows its "didn’t load"
+// state with "Try again") instead of waiting silently behind a skeleton. The default, 'online',
+// pauses it until the connection is back, which looks like loading that never ends.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: oneMinute,
       gcTime: fiveMinutes,
       retry: 1,
+      networkMode: 'always',
     },
   },
 });
 
-// React Native doesn't tell TanStack Query when the connection drops. With this, queries pause
-// while offline and resume by themselves when the connection is back. NetInfo reports null
-// while it doesn't know yet; that counts as online, so a launch isn't held up.
+// React Native doesn't tell TanStack Query when the connection comes and goes. With this, a
+// query that failed while offline is fetched again once, by itself, when the connection is back
+// (refetchOnReconnect). NetInfo reports null while it doesn't know yet; that counts as online.
 onlineManager.setEventListener((setOnline) => {
   const unsubscribe = NetInfo.addEventListener((state) => {
     setOnline(state.isConnected !== false);

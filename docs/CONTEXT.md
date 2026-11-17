@@ -20,8 +20,14 @@ Build stages 1–12 are done and merged. Their plan files were deleted once this
 they decided; they are in git history before the commit that removed `plan/`. Lint, typecheck,
 `check:theme` and `npm test` (43 suites, 449 tests) pass.
 
-Next stage: **error and offline states**. [ERROR-STATES.md](ERROR-STATES.md) has the spec, the
-build order and the checklist; the screenshots are in `artboards/error-states/`.
+The **error and offline states** ([ERROR-STATES.md](ERROR-STATES.md)) are built: the list
+cards and next-page footers (Home, Events, Search, and Event detail, which has no design and
+reuses the card), the Now Playing and mini player audio states, and the blocking offline sheet.
+Force any of them in development at `/dev/failures`.
+
+**Before the first release:** the `/dev` pages (`/dev/tokens`, `/dev/components`,
+`/dev/failures`) and the mock data they use still ship in the release bundle; they only
+redirect to Home there. Remove them from production builds for bundle size and tidiness.
 
 Built but not yet checked. Everything was verified in Expo Go on the iOS simulator and on web;
 no development build exists yet. The checks below need one (`npx expo run:ios --device`,
@@ -77,7 +83,7 @@ fail or not checked.
 | `search.tsx` | Root-stack screen over the tabs, so it covers the player too. Accent-insensitive title match |
 | `player.tsx` | **Deep links only** (`/player?slug=…`). Loads the lecture paused, shows Now Playing without an entrance, steps back. Nothing navigates here |
 | `(tabs)/_layout.tsx` | JS tabs (`expo-router/js-tabs`) wrapped in `TuckedContent`, with `PlayerSurface` drawn over them |
-| `dev/components`, `dev/tokens` | Development-only galleries, opened by URL |
+| `dev/components`, `dev/tokens`, `dev/failures` | Development-only galleries and the forced-failure switches, opened by URL. In the release bundle too (redirect to Home): remove before release |
 
 ## Design screenshots
 

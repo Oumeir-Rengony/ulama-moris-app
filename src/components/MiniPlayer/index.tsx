@@ -14,7 +14,9 @@ type MiniPlayerProps = {
   title: string;
   // Hidden when the lecture has no author.
   author?: string;
-  playState: 'playing' | 'paused' | 'loading';
+  // failed: the lecture's audio didn't load. The scholar line says so, and play/pause and forward
+  // 15 are disabled. Tapping the bar opens the lecture again, which loads it again.
+  playState: 'playing' | 'paused' | 'loading' | 'failed';
   // The 3px line on the bottom edge. Passed in as an element, so the line can follow the live
   // position without re-rendering the rest of the bar several times a second.
   progressLine: ReactNode;
@@ -75,8 +77,16 @@ export function MiniPlayer({
     buttonLabel = 'Pause';
   }
 
+  const hasAudioFailed = playState === 'failed';
+
   let toggleControl = (
-    <PlayPauseButton state={buttonState} variant="mini" accessibilityLabel={buttonLabel} onPress={onTogglePress} />
+    <PlayPauseButton
+      state={buttonState}
+      variant="mini"
+      accessibilityLabel={buttonLabel}
+      disabled={hasAudioFailed}
+      onPress={onTogglePress}
+    />
   );
   if (playState === 'loading') {
     // TODO(design): the loading look isn't designed. A small spinner where play/pause sits.
@@ -84,6 +94,33 @@ export function MiniPlayer({
       <View accessible accessibilityLabel="Loading" className="h-touch w-touch items-center justify-center">
         <ActivityIndicator size="small" color={colors[iconColor]} />
       </View>
+    );
+  }
+
+  // The line under the title: the scholar, or what happened to the audio.
+  let secondLine = null;
+  if (hasAudioFailed) {
+    secondLine = (
+      <Text
+        variant="caption"
+        numberOfLines={1}
+        maxFontSizeMultiplier={1.3}
+        accessibilityLiveRegion="polite"
+        className={`font-manrope-semibold ${miniPlayer.errorFg}`}
+      >
+        Didn’t load. Tap to open again.
+      </Text>
+    );
+  } else if (author) {
+    secondLine = (
+      <Text
+        variant="caption"
+        numberOfLines={1}
+        maxFontSizeMultiplier={1.3}
+        className={`font-manrope-semibold ${miniPlayer.fgMuted}`}
+      >
+        {author}
+      </Text>
     );
   }
 
@@ -118,19 +155,15 @@ export function MiniPlayer({
         >
           {title}
         </Text>
-        {author ? (
-          <Text
-            variant="caption"
-            numberOfLines={1}
-            maxFontSizeMultiplier={1.3}
-            className={`font-manrope-semibold ${miniPlayer.fgMuted}`}
-          >
-            {author}
-          </Text>
-        ) : null}
+        {secondLine}
       </Pressable>
       {toggleControl}
-      <IconButton accessibilityLabel="Skip forward 15 seconds" tone="ghost" onPress={onSkipForwardPress}>
+      <IconButton
+        accessibilityLabel="Skip forward 15 seconds"
+        tone="ghost"
+        disabled={hasAudioFailed}
+        onPress={onSkipForwardPress}
+      >
         <Skip15Icon direction="forward" size={22} color={iconColor} />
       </IconButton>
       {progressLine}
