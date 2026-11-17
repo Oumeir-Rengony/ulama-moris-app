@@ -92,12 +92,30 @@ describe('planReminders', () => {
     expect(idsOf(planAt({ lastListen: null }))).toEqual(['reminder-inactive']);
   });
 
-  it('scenario 4: an old unfinished lecture whose 24 h has passed → the first reminder a minute from now', () => {
+  it('scenario 4: an old unfinished lecture whose 24 h has passed → that reminder is skipped, the rest keep their times', () => {
     const now = mondayEvening + 2 * DAY_MS;
     const plan = planAt({ now, lastActivityAt: now, lastListen: halfListened() });
 
-    expect(plan[0].fireAt).toBe(now + 60 * 1000);
-    expect(plan[1].fireAt).toBe(now + 60 * 1000 + 3 * DAY_MS);
+    expect(plan).toHaveLength(9);
+    expect(idsOf(plan)[0]).toBe('reminder-continue-1');
+    expect(plan[0].fireAt).toBe(mondayEvening + DAY_MS + 3 * DAY_MS);
+    expect(plan[8].fireAt).toBe(mondayEvening + DAY_MS + 9 * 3 * DAY_MS);
+  });
+
+  it('skips a continue reminder due sooner than the minimum lead', () => {
+    const firstFireAt = mondayEvening + DAY_MS;
+    const now = firstFireAt - 30 * 1000;
+    const plan = planAt({ now, lastActivityAt: now, lastListen: halfListened() });
+
+    expect(idsOf(plan)[0]).toBe('reminder-continue-1');
+  });
+
+  it('every continue reminder has passed → the inactivity reminder, 3 days after the last activity', () => {
+    const now = mondayEvening + 35 * DAY_MS;
+    const plan = planAt({ now, lastActivityAt: now, lastListen: halfListened() });
+
+    expect(idsOf(plan)).toEqual(['reminder-inactive']);
+    expect(plan[0].fireAt).toBe(now + 3 * DAY_MS);
   });
 
   it('scenario 6: listened again → the series starts from the new listen', () => {

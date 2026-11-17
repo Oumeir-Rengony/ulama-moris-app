@@ -291,8 +291,8 @@ continue listening wins:
 
 | Reminder | When | Repeats | Tap |
 |---|---|---|---|
-| Continue listening | The last listened lecture is unfinished (past 5 s and under 95 %) | First 24 h after the last listen (or within a minute if that's past), then every 3 days, until it's finished. 10 booked ahead (about a month; iOS allows 64 pending) | Opens Now Playing on it, at the saved position |
-| Inactivity | Nothing unfinished | Once, 3 days after the last use of the app; rebooked each visit | Opens the app |
+| Continue listening | The last listened lecture is unfinished (past 5 s and under 95 %) | First 24 h after the last listen, then every 3 days, until it's finished. 10 booked ahead (about a month; iOS allows 64 pending). Times stay fixed from the last listen: on a rebuild, a reminder whose time has passed (or is under a minute away) is skipped, never moved to "now" | Opens Now Playing on it, at the saved position |
+| Inactivity | Nothing unfinished, or every continue reminder has passed | Once, 3 days after the last use of the app; rebooked each visit | Opens the app |
 
 - A notification can't run code when it fires, so the decision is made when booking: every rebuild cancels all `reminder-*` notifications and books the plan again. Fixed IDs (`reminder-continue-0…9`, `reminder-inactive`) mean no duplicates.
 - **When it's rebuilt:** when the user leaves the app, and on a pause or finish while in the background (the lock screen may be the user's last action). Not on pauses while the app is open: one rebuild per visit, and no overlapping rebuilds from fast taps.

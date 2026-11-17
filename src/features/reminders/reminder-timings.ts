@@ -11,7 +11,8 @@ export type ReminderTimings = {
   continueCount: number;
   // From the last activity to the inactivity reminder.
   inactivityDelayMs: number;
-  // A reminder whose time has already passed is sent this long from now instead.
+  // A continue reminder due sooner than this from now (or already past) is skipped, so none
+  // arrives just as the user leaves the app.
   minimumLeadMs: number;
 };
 

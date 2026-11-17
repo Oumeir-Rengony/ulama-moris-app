@@ -52,23 +52,25 @@ export function isUnfinished(listen: LastListen): boolean {
   return playedShare < FINISHED_SHARE;
 }
 
-function notBefore(fireAt: number, earliest: number): number {
-  if (fireAt < earliest) {
-    return earliest;
-  }
-  return fireAt;
-}
-
+// The series always keeps its times from the last listen. A reminder whose time has passed is
+// skipped, not moved to "now": otherwise opening the app and leaving without playing would send
+// a "Continue listening" right after leaving, and restart the series from that moment.
 function planContinueListening(listen: LastListen, input: ReminderPlanInput): PlannedReminder[] {
   const { timings } = input;
   const earliest = input.now + timings.minimumLeadMs;
-  const firstFireAt = notBefore(listen.listenedAt + timings.continueFirstDelayMs, earliest);
+  const firstFireAt = listen.listenedAt + timings.continueFirstDelayMs;
 
   const reminders: PlannedReminder[] = [];
   for (let index = 0; index < timings.continueCount; index++) {
+    const fireAt = firstFireAt + index * timings.continueRepeatMs;
+    const isTooSoon = fireAt < earliest;
+    if (isTooSoon) {
+      continue;
+    }
+
     reminders.push({
       id: `${REMINDER_ID_PREFIX}continue-${index}`,
-      fireAt: firstFireAt + index * timings.continueRepeatMs,
+      fireAt,
       title: 'Continue listening',
       body: `You're partway through ${listen.title}. Tap to keep listening.`,
       openPath: `/player?slug=${encodeURIComponent(listen.slug)}`,
@@ -77,9 +79,10 @@ function planContinueListening(listen: LastListen, input: ReminderPlanInput): Pl
   return reminders;
 }
 
+// Timed from the last activity, which is set when the user leaves the app, so it is always
+// in the future when booked.
 function planInactivity(input: ReminderPlanInput): PlannedReminder[] {
-  const earliest = input.now + input.timings.minimumLeadMs;
-  const fireAt = notBefore(input.lastActivityAt + input.timings.inactivityDelayMs, earliest);
+  const fireAt = input.lastActivityAt + input.timings.inactivityDelayMs;
 
   return [
     {
@@ -93,11 +96,17 @@ function planInactivity(input: ReminderPlanInput): PlannedReminder[] {
 }
 
 // One type at a time: an unfinished lecture gets the continue listening series and nothing
-// else; otherwise the inactivity reminder.
+// else; otherwise the inactivity reminder. Once every continue reminder has passed (about a
+// month of them ignored), the inactivity reminder takes over, so the user isn't left with none.
 export function planReminders(input: ReminderPlanInput): PlannedReminder[] {
   const listen = input.lastListen;
-  if (listen !== null && isUnfinished(listen)) {
-    return planContinueListening(listen, input);
+  if (listen === null || !isUnfinished(listen)) {
+    return planInactivity(input);
   }
-  return planInactivity(input);
+
+  const continueReminders = planContinueListening(listen, input);
+  if (continueReminders.length === 0) {
+    return planInactivity(input);
+  }
+  return continueReminders;
 }
