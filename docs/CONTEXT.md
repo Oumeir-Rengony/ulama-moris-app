@@ -2,8 +2,7 @@
 
 A short orientation for picking the app up again. It says how things work, what was decided, and
 what's still open. Rules are in [AGENTS.md](../AGENTS.md). For visual style (colours, tokens, type)
-go to [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md). The player's current design is "Now Playing and the mini player" below;
-[Audio-Player-Animations.md](Audio-Player-Animations.md) is the retired motion spec.
+go to [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md). The player's current design is "Now Playing and the mini player" below.
 
 ## What the app is
 
@@ -20,12 +19,10 @@ Build stages 1–12 are done and merged. Their plan files were deleted once this
 they decided; they are in git history before the commit that removed `plan/`. Lint, typecheck,
 `check:theme` and `npm test` (55 suites, 601 tests) pass.
 
-**Now Playing animation** (branch `feat/now-playing-animation`, guide in
-[now-playing-animation-migration.md](now-playing-animation-migration.md)): Now Playing is a
+**Now Playing animation** (merged into `main`): Now Playing is a
 panel that slides up over the tabs (a gorhom sheet pinned at 100%, our own release rule) and can
 be dragged down to close; the mini player can be swiped down to stop or up to open, and has
-play/pause only. It replaces phase 1 ([Now-Playing-Phase-1-Plan.md](Now-Playing-Phase-1-Plan.md):
-a plain `/player` screen and a plain bar), which was built because the old animated surface could
+play/pause only. It replaces phase 1 (a plain `/player` screen and a plain bar), which was built because the old animated surface could
 leave a value half-way on Android (`docs/bugs/`). Checked on the iOS simulator (24 Nov 2026); not
 yet on an Android phone or at the largest text size.
 
@@ -114,7 +111,7 @@ What was built, where it differs from the original design spec:
   - No-results copy is "Try another lecture title." / "Try another event title.".
   - **Popular topics is removed** from both scopes.
   - Recent searches are real: `recent-searches.store.ts`, persisted, the last 5 per scope, newest first, a repeat (any capitalisation) moved to the top. A query is saved only when the user commits to it: the keyboard's Search key, or opening one of its results. Search starts empty ("Your searches will appear here."). ✕ removes one; "Clear all" (shown only when there is something to clear) empties the scope.
-- **Now Playing:** a sliding panel over the tabs with drag-to-close, instead of phase 1's plain screen and the older morph in [Audio-Player-Animations.md](Audio-Player-Animations.md). The mini player swipes down to stop and up to open, and has play/pause only. A Search result closes Search first. See "Now Playing and the mini player".
+- **Now Playing:** a sliding panel over the tabs with drag-to-close, instead of phase 1's plain screen and the older morph. The mini player swipes down to stop and up to open, and has play/pause only. A Search result closes Search first. See "Now Playing and the mini player".
 
 ## Where code lives
 
@@ -164,8 +161,7 @@ list into the queue. It's a snapshot the user picked, not a cache.
 
 Now Playing is a panel drawn last in the tabs layout, over the tab bar: a `@gorhom/bottom-sheet`
 pinned at one snap point (`'100%'`). The mini player (`MiniPlayerBar`) floats above the tab bar
-whenever a lecture is active. The full design, its rules and the pitfalls are in
-[now-playing-animation-migration.md](now-playing-animation-migration.md).
+whenever a lecture is active.
 
 **One truth, one coordinator.** The store's `nowPlayingPresentation` (`'open'` / `'closed'`) is
 the only "is it open"; `open-now-playing.ts` is its only writer (store first, then the audio).

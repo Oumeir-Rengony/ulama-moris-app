@@ -35,7 +35,7 @@ Start with [docs/CONTEXT.md](docs/CONTEXT.md): how the app works, what was decid
 | Error and offline states | CONTEXT.md "Error and offline states", `docs/artboards/error-states/*.png`, and the switches at `/dev/failures` |
 | Website API, reminder notifications | CONTEXT.md "The website API" and "Reminder notifications", then the code in `src/features/` |
 | Audio playback, lock screen, background | AGENTS.md "Audio: expo-audio plays, Zustand remembers", the comments in `src/features/player/audio-engine.ts` and `setup-audio.ts`, then the Expo docs: https://docs.expo.dev/versions/latest/sdk/audio.md |
-| Now Playing and the mini player | CONTEXT.md "Now Playing and the mini player", then `docs/now-playing-animation-migration.md` (the design, the rules and the pitfalls) |
+| Now Playing and the mini player | CONTEXT.md "Now Playing and the mini player", then AGENTS.md "Mini player and Now Playing" |
 
 Code comments never cite a doc. Docs change; a comment states the fact it needs.
 
@@ -151,8 +151,6 @@ Not in the spec yet: signed-in user, bookmarks, language. Don't add stores or co
 
 ### Mini player and Now Playing
 
-The design, its rules and the pitfalls are in [docs/now-playing-animation-migration.md](docs/now-playing-animation-migration.md).
-
 - **Two pieces, two states each, no shared gesture.** `MiniPlayerBar` (`features/player/mini-player-bar.tsx`) floats above the tab bar whenever a lecture is active: tap it or swipe it up to open Now Playing, swipe it down (past half its height, or a flick) to stop playback and close it. It has play/pause only (back / forward 15 are on Now Playing and the lock screen). `NowPlayingPanel` (`features/player/now-playing-panel.tsx`, content in `now-playing-view.tsx`) is a full-screen `@gorhom/bottom-sheet` pinned at one snap point (`'100%'`: index 0 open, −1 closed). Drag it down, the chevron or Android back close it; nothing on it can stop playback.
 - **One truth, one coordinator.** `nowPlayingPresentation` is the only "is it open". `open-now-playing.ts` is its only writer (`openNowPlaying`, `openNowPlayingForLoadedLecture`, `closeNowPlaying`, `handlePanelReleased`, `dismissMiniPlayer`, `openEventFromNowPlaying`, `showNowPlayingFromDeepLink`): store first, then the audio. The panel follows the store (`snapToIndex(0)` / `close()`); nothing reads the state back from where the sheet is.
 - **The release is ours.** `panel-sheet-gestures.ts` replaces gorhom's `handleOnEnd` (through `gestureEventsHandlersHook`): `decidePanelRelease` (`panel-rules.ts`) decides open or closed, the spring starts with the finger's speed, and `handlePanelReleased` records it. **No gorhom callbacks** (`onAnimate`, `onChange`, `onClose`): they fire late, or not at all when a spring is interrupted. The sheet has `accessible={false}` (gorhom's default makes the whole panel one element for VoiceOver).
@@ -238,7 +236,7 @@ Current app config (`app.json`): `orientation: "portrait"`, `userInterfaceStyle:
 
 These render outside the normal screen tree and do **not** inherit any padding from it. Every sheet/modal owns its own insets.
 
-- Bottom sheets: default to `BottomSheet` from `@expo/ui` (already installed; see the `expo-ui` skill). Don't add `@gorhom/bottom-sheet` or hand-roll one with Reanimated without a stated reason. The one exception is the Now Playing panel (`now-playing-panel.tsx`, `panel-sheet-gestures.ts`): it must slide over the tab bar from inside the tabs layout, be dragged with our own release rule, and never stop playback from a flick, which `@expo/ui` and route presentations can't do. See `docs/now-playing-animation-migration.md`.
+- Bottom sheets: default to `BottomSheet` from `@expo/ui` (already installed; see the `expo-ui` skill). Don't add `@gorhom/bottom-sheet` or hand-roll one with Reanimated without a stated reason. The one exception is the Now Playing panel (`now-playing-panel.tsx`, `panel-sheet-gestures.ts`): it must slide over the tab bar from inside the tabs layout, be dragged with our own release rule, and never stop playback from a flick, which `@expo/ui` and route presentations can't do.
 - For a sheet presented as a route, use Expo Router's `presentation: 'formSheet'` / `'modal'` (see the `expo-router` skill) instead of a custom overlay.
 - Sheet/modal content must add `paddingBottom: insets.bottom` (plus normal spacing) so the last button clears the home indicator and the Android navigation bar. Test with three-button Android navigation; it's where sheets collide most.
 - Full-screen modals (`presentation: 'fullScreenModal'` or RN `Modal`) need the top inset too, because no header covers the notch. RN `Modal` on Android also needs `statusBarTranslucent` and `navigationBarTranslucent` so it draws edge-to-edge like the rest of the app.

@@ -16,7 +16,6 @@ import { NowPlayingPanel } from '@/features/player/now-playing-panel';
 //   2. the mini player, floating just above the tab bar.
 //   3. Now Playing, last: a full-screen panel that slides up over everything, tab bar included.
 // Search is a root-stack screen drawn over this whole layout, so it still covers all three.
-// See docs/now-playing-animation-migration.md.
 export default function TabsLayout() {
   // 0 until the footer has been laid out; the mini player waits for it.
   const [tabBarHeight, setTabBarHeight] = useState(0);

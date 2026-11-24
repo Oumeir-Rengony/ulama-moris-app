@@ -14,8 +14,8 @@ import { decidePanelRelease, type PanelDecision } from './panel-rules';
 // Gorhom's own start / change / finalize handlers are kept (the sheet follows the finger from
 // wherever it is, clamped between open and closed). Only the release is ours: it decides open or
 // closed with decidePanelRelease, starts the spring there, and reports the decision. So nothing
-// depends on gorhom's onAnimate / onChange, which it skips or fires late (see
-// docs/now-playing-animation-migration.md, "Pitfalls").
+// depends on gorhom's onAnimate / onChange, which it skips or fires late (onAnimate is skipped
+// when the target equals where the last finished spring ended).
 
 type AnimateToPosition = NonNullable<ReturnType<typeof useBottomSheetInternal>>['animateToPosition'];
 // Gorhom's ANIMATION_SOURCE.GESTURE. The enum isn't exported from the package's entry point.

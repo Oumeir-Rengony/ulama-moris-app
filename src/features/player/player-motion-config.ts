@@ -1,7 +1,6 @@
 import type { WithSpringConfig } from 'react-native-reanimated';
 
 // Every number that shapes the player's motion, in one file, so tuning on a device is one edit.
-// The design is in docs/now-playing-animation-migration.md.
 
 // The panel sliding open or closed: every release, the chevron, Android back. Nearly no bounce.
 export const PANEL_SPRING: WithSpringConfig = { damping: 26, stiffness: 220, mass: 1 };
