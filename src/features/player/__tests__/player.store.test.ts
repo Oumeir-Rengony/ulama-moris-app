@@ -126,6 +126,15 @@ describe('selectIsMiniPlayerVisible', () => {
     }
   });
 
+  it('is hidden while Now Playing is open, and back once it closes', () => {
+    loadSecondLecture();
+    usePlayerStore.getState().setNowPlayingPresentation('open');
+    expect(selectIsMiniPlayerVisible(usePlayerStore.getState())).toBe(false);
+
+    usePlayerStore.getState().setNowPlayingPresentation('closed');
+    expect(selectIsMiniPlayerVisible(usePlayerStore.getState())).toBe(true);
+  });
+
   it('is hidden when the queue has ended or nothing is loaded', () => {
     loadSecondLecture();
     usePlayerStore.getState().setHasQueueEnded(true);

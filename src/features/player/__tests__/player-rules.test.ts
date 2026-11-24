@@ -88,10 +88,13 @@ describe('player rules', () => {
     expect(filesContaining(/router\.(navigate|push|replace)\(['"]\/player/)).toEqual(['features/player/open-now-playing.ts']);
   });
 
-  // Only the navigation stack knows whether Now Playing is open. A stored copy of that could
-  // disagree with what is on screen.
-  it('whether Now Playing is open is never stored', () => {
-    expect(filesContaining('nowPlayingPresentation')).toEqual([]);
+  // Whether Now Playing is open lives in one place (the store) and has one writer (the
+  // coordinator). The panel follows it; nothing infers it from where the panel is.
+  it('only the coordinator sets the Now Playing presentation', () => {
+    const callers = filesContaining('setNowPlayingPresentation(').filter(
+      (file) => file !== 'features/player/player.store.ts',
+    );
+    expect(callers).toEqual([]);
   });
 
   // An animation or a finger-driven value left half-way once made Now Playing transparent and

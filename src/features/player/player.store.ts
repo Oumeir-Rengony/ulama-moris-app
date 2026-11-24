@@ -15,6 +15,11 @@ export type QueueSource =
   | { kind: 'event'; eventSlug: string; eventTitle: string }
   | { kind: 'search'; query: string };
 
+// Where Now Playing is heading: 'open' or 'closed'. Written only by open-now-playing.ts; the Now
+// Playing panel animates to it. There are no in-between states: a spring can be grabbed or turned
+// around at any time, and the store already holds where it is going.
+export type NowPlayingPresentation = 'closed' | 'open';
+
 // The part of expo-audio's status the UI needs. Written by PlayerStatusBridge only.
 export type MirroredStatus = {
   isPlaying: boolean;
@@ -40,6 +45,9 @@ type PlayerData = MirroredStatus & {
   // read it through selectHasAudioFailed. Written by PlayerStatusBridge (a failure, a recovery)
   // and cleared by the engine every time it loads a lecture.
   failedLectureSlug: string | null;
+  // While it is 'open', the mini player is covered and most requests are ignored
+  // (open-now-playing.ts says which).
+  nowPlayingPresentation: NowPlayingPresentation;
 };
 
 type PlayerSetters = {
@@ -47,6 +55,7 @@ type PlayerSetters = {
   setCurrentIndex: (index: number | null) => void;
   applyStatus: (status: MirroredStatus) => void;
   setHasQueueEnded: (hasQueueEnded: boolean) => void;
+  setNowPlayingPresentation: (presentation: NowPlayingPresentation) => void;
   // Marks the loaded lecture as failed.
   reportAudioFailure: () => void;
   clearAudioFailure: () => void;
@@ -66,6 +75,7 @@ export const initialPlayerState: PlayerData = {
   durationSec: 0,
   hasQueueEnded: false,
   failedLectureSlug: null,
+  nowPlayingPresentation: 'closed',
 };
 
 export const usePlayerStore = create<PlayerState>()((set) => ({
@@ -91,6 +101,10 @@ export const usePlayerStore = create<PlayerState>()((set) => ({
 
   setHasQueueEnded: (hasQueueEnded) => {
     set({ hasQueueEnded });
+  },
+
+  setNowPlayingPresentation: (presentation) => {
+    set({ nowPlayingPresentation: presentation });
   },
 
   reportAudioFailure: () => {
@@ -158,9 +172,11 @@ export function selectActiveLectureSlug(state: PlayerState): string | null {
   return lecture.slug;
 }
 
-// The mini player shows while a lecture is active. While Now Playing is open, its screen simply
-// covers the bar. Visibility follows "a lecture is active", not "audio is playing", so the bar
-// doesn't flicker on pause, buffering or between two lectures of a queue.
+// The mini player shows the active lecture, but only while Now Playing is closed. Visibility
+// follows "a lecture is active", not "audio is playing", so the bar doesn't flicker on pause,
+// buffering or between two lectures of a queue.
 export function selectIsMiniPlayerVisible(state: PlayerState): boolean {
-  return selectActiveLectureSlug(state) !== null;
+  const hasActiveLecture = selectActiveLectureSlug(state) !== null;
+  const isClosed = state.nowPlayingPresentation === 'closed';
+  return hasActiveLecture && isClosed;
 }

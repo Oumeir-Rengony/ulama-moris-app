@@ -16,6 +16,12 @@ jest.mock('react-native-worklets', () => ({
   },
 }));
 
+// The Now Playing sheet (@gorhom/bottom-sheet) runs on Reanimated and Gesture Handler internals
+// Jest can't load. Its own mock renders the sheet's children and ignores the motion. The mock sets
+// `default` without `__esModule`, so it's added here or `import BottomSheet from` gets the whole
+// module object.
+jest.mock('@gorhom/bottom-sheet', () => ({ __esModule: true, ...require('@gorhom/bottom-sheet/mock') }));
+
 // Gesture Handler's native module isn't available in Jest. Its own setup swaps in mocks.
 require('react-native-gesture-handler/jestSetup');
 
