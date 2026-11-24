@@ -1,5 +1,10 @@
 # Now Playing, phase 1: a plain screen and a plain bar
 
+> **Superseded (24 Nov 2026)** by [now-playing-animation-migration.md](now-playing-animation-migration.md).
+> Phase 1 shipped (commit `bf494cb`); phase 2 below was replaced by a sliding Now Playing panel with
+> drag-to-close and a swipeable mini player. The bugs listed under "Why" are addressed there
+> (section 2). Kept for history.
+
 A plan to replace the animated player surface with something that can't get stuck. Phase 1 has
 **no animation and no gestures**. Phase 2 (at the end) adds one simple, native animation.
 

@@ -5,6 +5,11 @@ step by step. Every step ends with the checks passing, so the app works between 
 
 Written 24 Nov 2026. Source of truth for the design: the demo app, branch `handbuilt-now-playing`.
 
+> **Status (24 Nov 2026):** done on branch `feat/now-playing-animation` (steps 1–8). Checked on
+> the iPhone 17e simulator (Expo Go): every row of section 3 except Android back, plus dark theme
+> and a `/player` deep link while the app runs. Not yet checked: an Android phone, the largest
+> text size, VoiceOver walkthroughs. Notes from doing it are marked **Found while migrating**.
+
 ---
 
 ## 0. Read this first: this guide overrides the current instructions
@@ -347,7 +352,11 @@ Nothing writes the field yet, so the app behaves exactly as before. Checks pass.
    screen readers while closed; reachable and modal while open; the chevron and Android back call
    `closeNowPlaying`; unmounts when the session is cleared).
 
-Not mounted anywhere yet. Checks pass.
+Not mounted anywhere yet.
+
+**Found while migrating:** the panel imports `handlePanelReleased`, which only exists once the
+coordinator is rewritten in step 6, so step 4 doesn't typecheck on its own. Build it here, but
+commit it together with step 6. Step 5 doesn't depend on it.
 
 ### Step 5: the mini player bar gets its swipes, and loses forward 15
 
@@ -547,6 +556,8 @@ Replace the phase 1 rules with the demo's:
    `axe swipe`. Use `--delta 3` to `--delta 5` for quick flicks, or AXe sends too few touch points
    and the pan never activates (seen in the demo). Each AXe command takes about a second to land
    before it touches, so don't read that as app latency.
+   `axe type` didn't reach the Search field in this app; to test a Search result, tap a recent
+   search instead.
 2. Go through section 3's table. Then check:
    - dark theme;
    - the largest text size;
@@ -577,6 +588,9 @@ Replace the phase 1 rules with the demo's:
   above it, so a panel opened from Search would open *under* Search.
 - **Expo Go cold-start deep links** land on Home (already noted in `AGENTS.md`). Check reminder taps
   on a cold start in a development build.
+- **Opening a screen while the panel closes** (the event pill) stalls the panel for about 0.3 s
+  in a development build, while the new screen mounts, then it finishes. Seen on the iOS
+  simulator in Expo Go; check it in a release build before changing anything.
 - **Reanimated in Jest:** the mock finishes animations at once and `useAnimatedReaction` does
   nothing; gestures aren't simulated. Keep every decision in `panel-rules.ts` or the coordinator,
   where it is testable.

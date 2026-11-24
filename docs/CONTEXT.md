@@ -18,13 +18,16 @@ website at `localhost:3000` until it's deployed. There is no sign-in and no book
 
 Build stages 1–12 are done and merged. Their plan files were deleted once this file held what
 they decided; they are in git history before the commit that removed `plan/`. Lint, typecheck,
-`check:theme` and `npm test` (53 suites, 554 tests) pass.
+`check:theme` and `npm test` (55 suites, 601 tests) pass.
 
-**Now Playing phase 1** (branch `feat/now-playing-phase-1`, plan in
-[Now-Playing-Phase-1-Plan.md](Now-Playing-Phase-1-Plan.md)): the animated player surface is
-replaced by a plain `/player` screen and a plain bar, with no animation and no gestures. It was
-built because the animated surface could leave a value half-way on Android: Now Playing showed
-with no background and the bar went invisible (`docs/bugs/`). Checked on the iOS simulator and on web.
+**Now Playing animation** (branch `feat/now-playing-animation`, guide in
+[now-playing-animation-migration.md](now-playing-animation-migration.md)): Now Playing is a
+panel that slides up over the tabs (a gorhom sheet pinned at 100%, our own release rule) and can
+be dragged down to close; the mini player can be swiped down to stop or up to open, and has
+play/pause only. It replaces phase 1 ([Now-Playing-Phase-1-Plan.md](Now-Playing-Phase-1-Plan.md):
+a plain `/player` screen and a plain bar), which was built because the old animated surface could
+leave a value half-way on Android (`docs/bugs/`). Checked on the iOS simulator (24 Nov 2026); not
+yet on an Android phone or at the largest text size.
 
 The **error and offline states** (see "Error and offline states" below) are built: the list
 cards and next-page footers (Home, Events, Search, and Event detail, which has no design and
@@ -77,7 +80,7 @@ fail or not checked.
 | `(tabs)/index.tsx` | Home: Continue listening, the series chips (Local selected at first; every request sends a series), that series' latest lectures with infinite scroll |
 | `(tabs)/events/index.tsx`, `events/[slug].tsx` | Events list (year sections, paging) and Event detail |
 | `search.tsx` | Root-stack screen over the tabs, so it covers the player too. Accent-insensitive title match |
-| `player.tsx` | **Now Playing.** A root-stack screen (`fullScreenModal`, no animation, no swipe, singular). Opened only through `open-now-playing.ts`, and by deep links (`/player?slug=…`: with nothing loaded, loads the lecture paused) |
+| `player.tsx` | **Deep links and reminder taps only** (`/player?slug=…`). With nothing loaded, loads the lecture paused; then opens the Now Playing panel and steps out of the way. Nothing in the app navigates here: Now Playing is a panel in the tabs layout |
 | `(tabs)/_layout.tsx` | JS tabs (`expo-router/js-tabs`), with the mini player (`MiniPlayerBar`) floating above the tab bar |
 | `dev/failures` | Development-only forced-failure switches, opened by URL. In the release bundle too (redirect to Home): remove before release |
 
@@ -111,7 +114,7 @@ What was built, where it differs from the original design spec:
   - No-results copy is "Try another lecture title." / "Try another event title.".
   - **Popular topics is removed** from both scopes.
   - Recent searches are real: `recent-searches.store.ts`, persisted, the last 5 per scope, newest first, a repeat (any capitalisation) moved to the top. A query is saved only when the user commits to it: the keyboard's Search key, or opening one of its results. Search starts empty ("Your searches will appear here."). ✕ removes one; "Clear all" (shown only when there is something to clear) empties the scope.
-- **Now Playing (phase 1):** a plain screen with no animation and no gestures, instead of the morph in [Audio-Player-Animations.md](Audio-Player-Animations.md). No visible way to stop and close the bar: pausing is enough. A Search result replaces Search. See "Now Playing and the mini player".
+- **Now Playing:** a sliding panel over the tabs with drag-to-close, instead of phase 1's plain screen and the older morph in [Audio-Player-Animations.md](Audio-Player-Animations.md). The mini player swipes down to stop and up to open, and has play/pause only. A Search result closes Search first. See "Now Playing and the mini player".
 
 ## Where code lives
 
@@ -126,7 +129,7 @@ What was built, where it differs from the original design spec:
 | Lecture/event pages, event detail, search results | TanStack Query, from the website API. One `QueryClient`: `staleTime` 1 min, `gcTime` 5 min |
 | Queue, `currentIndex`, `source`, `hasQueueEnded`, the mirrored audio status | Zustand `player.store.ts`. **Not persisted**, so a launch shows no bar |
 | Resume points `progressById`, `lastPlayedSlug` | Zustand `listening-history.store.ts`, persisted to AsyncStorage |
-| Whether Now Playing is open | The navigation stack only (the `/player` screen). Never stored |
+| Whether Now Playing is open | Zustand `player.store.ts`: `nowPlayingPresentation` (`'open'` / `'closed'`), written only by `open-now-playing.ts`. The panel follows it |
 | Theme | NativeWind `dark:` + `useColorScheme()`. JS colours from `useThemeColors()` |
 | Search text, selected chip, open menus | `useState` in the screen |
 
@@ -159,37 +162,39 @@ list into the queue. It's a snapshot the user picked, not a cache.
 
 ## Now Playing and the mini player
 
-Now Playing is the `/player` screen in the root stack. The mini player (`MiniPlayerBar`) is a plain
-view in the tabs layout, floating above the tab bar. Only the navigation stack knows whether Now
-Playing is open; the store holds no copy of it.
+Now Playing is a panel drawn last in the tabs layout, over the tab bar: a `@gorhom/bottom-sheet`
+pinned at one snap point (`'100%'`). The mini player (`MiniPlayerBar`) floats above the tab bar
+whenever a lecture is active. The full design, its rules and the pitfalls are in
+[now-playing-animation-migration.md](now-playing-animation-migration.md).
 
-**When the bar shows:** only `selectIsMiniPlayerVisible`: a lecture is loaded and the queue hasn't
-ended. It never depends on `isPlaying`, so pausing or buffering doesn't make it flicker. While Now
-Playing is open, its screen simply covers the bar.
+**One truth, one coordinator.** The store's `nowPlayingPresentation` (`'open'` / `'closed'`) is
+the only "is it open"; `open-now-playing.ts` is its only writer (store first, then the audio).
+The panel follows the store. The panel's own drag is the only gesture that writes: our release
+(`decidePanelRelease`) decides open or closed and reports it to `handlePanelReleased`. No gorhom
+callbacks.
 
-**Every entry and exit goes through `open-now-playing.ts`**: the audio first, then the navigation.
-Nothing in it is async or waits for an animation. A double tap is harmless: the screen is
-`dangerouslySingular`, and opening the loaded lecture never reloads it.
+**When the bar shows:** a lecture is loaded, the queue hasn't ended, and Now Playing is closed.
+It never depends on `isPlaying`. While Now Playing is open the bar stays rendered underneath,
+covered, untouchable and hidden from screen readers.
 
 | Action | What happens |
 |---|---|
-| Tap a row | The lecture loads and Now Playing shows at once |
-| Tap the loaded lecture | Now Playing shows. No reload. A play button also resumes |
-| Tap a different lecture while one plays | `playLecture` saves the old one's position and loads the new one; Now Playing shows it |
-| Tap the bar | Now Playing shows the loaded lecture. A lecture whose audio failed loads again |
-| Chevron | `router.back()` (or `router.replace('/')` when opened cold by a deep link). Playback continues |
-| Android back | Handled by the stack, like the chevron |
-| Event pill on Now Playing | Now Playing closes and `router.navigate` opens the event in the Events tab |
-| Search result | Now Playing replaces Search, so closing it returns to the tab Search was opened from |
-| Deep link `/player?slug=` | Now Playing. With nothing loaded, the linked lecture loads paused |
-| Swipes on the bar or Now Playing | Nothing. No gestures in phase 1 |
+| Tap a row, nothing loaded | The lecture loads and Now Playing slides up from the bottom. No bar first |
+| Tap a row while the bar shows | Now Playing slides up over the bar |
+| Tap the loaded lecture | Now Playing slides up. No reload. A play button also resumes |
+| Tap the bar, or swipe it up | Now Playing slides up for the loaded lecture. A lecture whose audio failed loads again |
+| Swipe the bar down (past half its height, or a flick) | The bar slides away and playback stops. A short swipe springs back |
+| Drag Now Playing down (past 25 %, or a flick) | It slides away, revealing the bar. Playback continues, however hard the flick |
+| Drag Now Playing down a little | It springs back open |
+| Chevron / Android back | Now Playing slides away. Playback continues |
+| Event pill on Now Playing | Now Playing slides away while the event opens in the Events tab |
+| Search result | Search closes, then Now Playing slides up over the tab Search was opened from |
+| Seek bar | Scrubs sideways; the panel doesn't move |
+| Deep link / reminder tap `/player?slug=` | With nothing loaded, the linked lecture loads paused; Now Playing slides up |
+| Queue ends while Now Playing is open | It stays open; closing just slides it away (no bar) |
 
-The bar never introduces a lecture: rows and results always open Now Playing.
-
-**No motion.** Phase 1 has no animation. Phase 2 may set the screen's native
-`animation: 'slide_from_bottom'`; nothing may wait for it, and no shared value or gesture may
-decide what is on screen. `player-rules.test.ts` enforces "no Reanimated, Gesture Handler or
-PanResponder" in the player files.
+The bar never introduces a lecture: rows and results always open Now Playing. The bar has
+play/pause only; back / forward 15 are on Now Playing and the lock screen.
 
 ## The website API
 

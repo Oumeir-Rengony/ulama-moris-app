@@ -330,7 +330,7 @@ import { search } from '@/components/Search/tokens';
   {/* title with <Text className={`${search.highlight} ${search.highlightFg}`}> around the match, scholar, meta */}
 </Pressable>
 
-// Mini player (component tokens): play/pause + forward 15, ochre progress line on the bottom edge.
+// Mini player (component tokens): play/pause, ochre progress line on the bottom edge.
 import { miniPlayer } from '@/components/MiniPlayer/tokens';
 <View className={`rounded-mini pl-2 pr-2 pt-2 pb-2.5 flex-row items-center overflow-hidden ${miniPlayer.bg} ${miniPlayer.outline}`}>
   <View className={`w-touch h-touch rounded-thumb-sm ${miniPlayer.thumbBg}`} />
@@ -392,7 +392,7 @@ Every interactive element in the app is listed below. Build these and only these
 | Event detail | Back, share, lecture row play buttons |
 | Now Playing | Close (chevron), event link pill, progress slider, back 15, play/pause, forward 15 |
 | Search | Back, input, mic / clear, recent searches (run, remove, clear all), popular topic chips, result rows |
-| Mini player + tabs | Open player (text area), play/pause, forward 15, Home tab, Events tab |
+| Mini player + tabs | Open player (text area), play/pause, Home tab, Events tab |
 
 ## 16. Open decisions
 
