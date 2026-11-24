@@ -173,14 +173,14 @@ function LectureResult({ result, query, onOpen }: LectureResultProps) {
 
   function handlePress() {
     onOpen();
-    // Just this lecture, with the query as its "Playing from" source. Now Playing replaces
-    // Search, so minimising it returns to the tab Search was opened from.
+    // Just this lecture, with the query as its "Playing from" source. Search closes first, so Now
+    // Playing slides up over the tab Search was opened from, and minimising it returns there.
     openNowPlaying({
       lecture,
       queue: [lecture],
       source: { kind: 'search', query },
       resumeIfPaused: true,
-      replacesSearch: true,
+      leaveSearchFirst: true,
     });
   }
 

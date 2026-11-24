@@ -1,7 +1,6 @@
-import { fireEvent, screen } from '@testing-library/react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 
-import PlayerScreen from '@/app/player';
+import PlayerDeepLink from '@/app/player';
 import { useLectureQuery } from '@/features/lectures/lectures.queries';
 import * as engine from '@/features/player/audio-engine';
 import * as entryPoint from '@/features/player/open-now-playing';
@@ -10,7 +9,7 @@ import { latestSource, queueOfThree } from '@/test-utils/fixtures';
 import { renderWithProviders } from '@/test-utils/render-with-providers';
 
 jest.mock('expo-router', () => ({
-  router: { replace: jest.fn() },
+  router: { replace: jest.fn(), back: jest.fn(), canGoBack: jest.fn() },
   useLocalSearchParams: jest.fn(),
 }));
 jest.mock('@/features/lectures/lectures.queries', () => ({
@@ -18,14 +17,9 @@ jest.mock('@/features/lectures/lectures.queries', () => ({
 }));
 jest.mock('@/features/player/audio-engine', () => ({
   playLecture: jest.fn(),
-  toggle: jest.fn(),
-  seek: jest.fn(),
-  skipBack15: jest.fn(),
-  skipForward15: jest.fn(),
 }));
 jest.mock('@/features/player/open-now-playing', () => ({
-  closeNowPlaying: jest.fn(),
-  openEventFromNowPlaying: jest.fn(),
+  showNowPlayingFromDeepLink: jest.fn(),
 }));
 
 const [first] = queueOfThree;
@@ -46,29 +40,32 @@ beforeEach(() => {
   jest.clearAllMocks();
   searchParams.mockReturnValue({});
   lectureQuery.mockReturnValue(lectureQueryResult(first, true));
+  jest.mocked(router.canGoBack).mockReturnValue(true);
 });
 
-describe('Now Playing screen', () => {
-  it('shows the loaded lecture', async () => {
+// The /player route is only the deep-link (and reminder-tap) entry: Now Playing itself is the panel
+// in the tabs layout, tested in now-playing-panel.test.tsx.
+describe('/player deep link', () => {
+  it('with a lecture loaded: opens Now Playing, then steps out of the way', async () => {
     loadFirst();
-    await renderWithProviders(<PlayerScreen />);
+    await renderWithProviders(<PlayerDeepLink />);
 
-    expect(screen.getByRole('button', { name: 'Minimise player' })).toBeOnTheScreen();
-    expect(screen.getByText(first.title)).toBeOnTheScreen();
+    expect(entryPoint.showNowPlayingFromDeepLink).toHaveBeenCalledTimes(1);
+    expect(router.back).toHaveBeenCalledTimes(1);
   });
 
-  it('the chevron closes Now Playing', async () => {
+  it('opened cold (nothing to go back to): leaves for the tabs', async () => {
+    jest.mocked(router.canGoBack).mockReturnValue(false);
     loadFirst();
-    await renderWithProviders(<PlayerScreen />);
+    await renderWithProviders(<PlayerDeepLink />);
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Minimise player' }));
-
-    expect(entryPoint.closeNowPlaying).toHaveBeenCalledTimes(1);
+    expect(entryPoint.showNowPlayingFromDeepLink).toHaveBeenCalledTimes(1);
+    expect(router.replace).toHaveBeenCalledWith('/');
   });
 
   it('a deep link with nothing loaded loads the linked lecture, paused', async () => {
     searchParams.mockReturnValue({ slug: first.slug });
-    await renderWithProviders(<PlayerScreen />);
+    await renderWithProviders(<PlayerDeepLink />);
 
     expect(engine.playLecture).toHaveBeenCalledWith(first, [first], { kind: 'latest' }, { autoplay: false });
   });
@@ -76,14 +73,14 @@ describe('Now Playing screen', () => {
   it('a deep link never replaces the loaded lecture', async () => {
     loadFirst();
     searchParams.mockReturnValue({ slug: queueOfThree[2].slug });
-    await renderWithProviders(<PlayerScreen />);
+    await renderWithProviders(<PlayerDeepLink />);
 
     expect(engine.playLecture).not.toHaveBeenCalled();
   });
 
   it('goes to the tabs when there is nothing to show', async () => {
     lectureQuery.mockReturnValue(lectureQueryResult(undefined, false));
-    await renderWithProviders(<PlayerScreen />);
+    await renderWithProviders(<PlayerDeepLink />);
 
     expect(router.replace).toHaveBeenCalledWith('/');
   });
@@ -91,7 +88,7 @@ describe('Now Playing screen', () => {
   it('goes to the tabs when the linked lecture does not exist', async () => {
     searchParams.mockReturnValue({ slug: 'no-such-lecture' });
     lectureQuery.mockReturnValue(lectureQueryResult(null, true));
-    await renderWithProviders(<PlayerScreen />);
+    await renderWithProviders(<PlayerDeepLink />);
 
     expect(router.replace).toHaveBeenCalledWith('/');
   });

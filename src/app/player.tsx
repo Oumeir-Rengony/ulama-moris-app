@@ -4,17 +4,25 @@ import { View } from 'react-native';
 
 import { useLectureQuery } from '@/features/lectures/lectures.queries';
 import { playLecture } from '@/features/player/audio-engine';
-import { NowPlayingView } from '@/features/player/now-playing-view';
+import { showNowPlayingFromDeepLink } from '@/features/player/open-now-playing';
 import { selectCurrentLecture, usePlayerStore } from '@/features/player/player.store';
 
-// Now Playing. Opened by open-now-playing.ts (rows, Continue listening, Search, the mini player)
-// and by deep links (/player?slug=…, a reminder notification).
-export default function PlayerScreen() {
+// Only for deep links (/player?slug=…) and reminder taps. Nothing in the app navigates here: Now
+// Playing is a panel in the tabs layout (NowPlayingPanel). This route loads the lecture if
+// needed, opens the panel (it slides up, like every other open), and steps out of the way.
+function leaveToTabs() {
+  if (router.canGoBack()) {
+    router.back();
+    return;
+  }
+  router.replace('/');
+}
+
+export default function PlayerDeepLink() {
   const { slug } = useLocalSearchParams<{ slug?: string }>();
   const currentLecture = usePlayerStore(selectCurrentLecture);
 
-  // A deep link with nothing loaded: load the linked lecture, paused, so a link never starts
-  // sound by surprise.
+  // Nothing loaded: load the linked lecture, paused, so a link never starts sound by surprise.
   let deepLinkSlug: string | undefined = undefined;
   if (currentLecture === null && slug !== undefined && slug !== '') {
     deepLinkSlug = slug;
@@ -31,16 +39,19 @@ export default function PlayerScreen() {
   const hasNoSlug = slug === undefined || slug === '';
   const deepLinkNotFound = deepLink.isSuccess && deepLinkedLecture === null;
   const hasNothingToShow = currentLecture === null && (hasNoSlug || deepLinkNotFound);
+  const isReadyToShow = currentLecture !== null;
 
   useEffect(() => {
     if (hasNothingToShow) {
       router.replace('/');
+      return;
     }
-  }, [hasNothingToShow]);
+    if (isReadyToShow) {
+      showNowPlayingFromDeepLink();
+      leaveToTabs();
+    }
+  }, [hasNothingToShow, isReadyToShow]);
 
-  // Shown for a moment while a deep-linked lecture loads.
-  if (currentLecture === null) {
-    return <View className="flex-1 bg-bg" />;
-  }
-  return <NowPlayingView />;
+  // Shown for a frame or two while the lecture loads.
+  return <View className="flex-1 bg-bg" />;
 }

@@ -91,13 +91,9 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="search" options={{ animation: 'slide_from_right' }} />
-          {/* Now Playing. Singular: pushing it while it is open doesn't stack a second copy.
-              No animation and no swipe: the chevron and Android back close it. */}
-          <Stack.Screen
-            name="player"
-            dangerouslySingular
-            options={{ presentation: 'fullScreenModal', animation: 'none', gestureEnabled: false }}
-          />
+          {/* Deep links and reminder taps only. Now Playing itself is a panel in the tabs layout:
+              this route opens it and steps out of the way. */}
+          <Stack.Screen name="player" options={{ animation: 'none' }} />
         </Stack>
         {isLaunchScreenVisible && <LaunchScreen onFinished={hideLaunchScreen} />}
         {/* Above everything, the launch screen included: with no connection the app is blocked. */}

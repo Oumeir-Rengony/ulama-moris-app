@@ -84,8 +84,9 @@ describe('player rules', () => {
     expect(filesContaining('useListeningHistoryStore()')).toEqual([]);
   });
 
-  it('only the entry point navigates to Now Playing', () => {
-    expect(filesContaining(/router\.(navigate|push|replace)\(['"]\/player/)).toEqual(['features/player/open-now-playing.ts']);
+  // Now Playing is a panel in the tabs layout. /player is only the deep-link entry.
+  it('nothing in the app navigates to /player', () => {
+    expect(filesContaining(/router\.(navigate|push|replace)\(['"]\/player/)).toEqual([]);
   });
 
   // Whether Now Playing is open lives in one place (the store) and has one writer (the
@@ -94,7 +95,7 @@ describe('player rules', () => {
     const callers = filesContaining('setNowPlayingPresentation(').filter(
       (file) => file !== 'features/player/player.store.ts',
     );
-    expect(callers).toEqual([]);
+    expect(callers).toEqual(['features/player/open-now-playing.ts']);
   });
 
   // The phase 1 Android bug (a value left half-way made Now Playing transparent) came from
@@ -121,6 +122,42 @@ describe('player rules', () => {
     const motionFiles = filesContaining(/react-native-reanimated/).filter((file) => file.startsWith('features/player/'));
     const filesWithShadow = motionFiles.filter((file) => readSource(file).includes('boxShadow'));
     expect(filesWithShadow).toEqual([]);
+  });
+
+  // gorhom's onAnimate / onChange / onClose fire late, or not at all when a spring is interrupted,
+  // which let the store and the sheet drift apart. Our own release handler decides instead.
+  it('only the Now Playing panel uses @gorhom/bottom-sheet, and none of its callbacks', () => {
+    expect(filesContaining('@gorhom/bottom-sheet')).toEqual([
+      'features/player/now-playing-panel.tsx',
+      'features/player/panel-sheet-gestures.ts',
+    ]);
+    const panelSource = readSource('features/player/now-playing-panel.tsx');
+    expect(panelSource).not.toMatch(/\bonAnimate=/);
+    expect(panelSource).not.toMatch(/\bonChange=/);
+    expect(panelSource).not.toMatch(/\bonClose=/);
+  });
+
+  // gorhom's default (accessible, "Bottom Sheet", adjustable) makes Now Playing one element on
+  // iOS: VoiceOver couldn't reach the chevron or the controls.
+  it('the Now Playing sheet does not group its content for screen readers', () => {
+    expect(readSource('features/player/now-playing-panel.tsx')).toMatch(/accessible=\{false\}/);
+  });
+
+  it("only the Now Playing panel animates the panel's position", () => {
+    const filesUsingPanelSpring = filesContaining('PANEL_SPRING').filter(
+      (file) => file !== 'features/player/player-motion-config.ts',
+    );
+    expect(filesUsingPanelSpring).toEqual(['features/player/now-playing-panel.tsx']);
+  });
+
+  // A flick on Now Playing must never stop playback: only the bar's own gesture (or its
+  // screen-reader action) can.
+  it('Now Playing has no path to stopping playback', () => {
+    for (const file of ['features/player/now-playing-panel.tsx', 'features/player/now-playing-view.tsx']) {
+      const source = readSource(file);
+      expect(source).not.toMatch(/dismissMiniPlayer/);
+      expect(source).not.toMatch(/stopAndClear/);
+    }
   });
 
   it('no component in src/components reads the player stores', () => {
