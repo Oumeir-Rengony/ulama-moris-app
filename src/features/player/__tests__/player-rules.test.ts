@@ -97,21 +97,30 @@ describe('player rules', () => {
     expect(callers).toEqual([]);
   });
 
-  // An animation or a finger-driven value left half-way once made Now Playing transparent and
-  // the bar invisible. Phase 1 has neither.
-  it('Now Playing and the mini player have no animation and no gestures', () => {
-    const playerFiles = [
-      'app/player.tsx',
-      'features/player/now-playing-view.tsx',
-      'features/player/mini-player-bar.tsx',
-      'features/player/open-now-playing.ts',
-    ];
-    for (const file of playerFiles) {
+  // The phase 1 Android bug (a value left half-way made Now Playing transparent) came from
+  // JS responders and values written outside the worklet rules. Motion stays on the UI thread,
+  // in Gesture Handler and Reanimated, and never uses PanResponder.
+  it('player files never use PanResponder', () => {
+    const playerFiles = filesContaining(/./).filter((file) => file.startsWith('features/player/'));
+    const filesWithPanResponder = playerFiles.filter((file) => readSource(file).includes('PanResponder'));
+    expect(filesWithPanResponder).toEqual([]);
+  });
+
+  it('player motion uses scheduleOnRN and .get()/.set(), never runOnJS or .value', () => {
+    const motionFiles = filesContaining(/react-native-reanimated/).filter((file) => file.startsWith('features/player/'));
+    expect(motionFiles.length).toBeGreaterThan(0);
+    for (const file of motionFiles) {
       const source = readSource(file);
-      expect(source).not.toMatch(/react-native-reanimated/);
-      expect(source).not.toMatch(/react-native-gesture-handler/);
-      expect(source).not.toMatch(/PanResponder/);
+      expect(source).not.toMatch(/runOnJS/);
+      expect(source).not.toMatch(/\.value\b/);
     }
+  });
+
+  // On Android a Reanimated view with a boxShadow wasn't drawn at all.
+  it('player motion files never put a boxShadow on an animated view', () => {
+    const motionFiles = filesContaining(/react-native-reanimated/).filter((file) => file.startsWith('features/player/'));
+    const filesWithShadow = motionFiles.filter((file) => readSource(file).includes('boxShadow'));
+    expect(filesWithShadow).toEqual([]);
   });
 
   it('no component in src/components reads the player stores', () => {

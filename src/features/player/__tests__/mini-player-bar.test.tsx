@@ -78,6 +78,47 @@ describe('MiniPlayerBar', () => {
     expect(screen.queryByRole('button', { name: openLabel })).not.toBeOnTheScreen();
   });
 
+  it('while Now Playing is open: stays rendered, but hidden from screen readers and not touchable', async () => {
+    loadFirst();
+    usePlayerStore.getState().setNowPlayingPresentation('open');
+    await renderBar();
+
+    expect(screen.queryByRole('button', { name: openLabel })).not.toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: openLabel, hidden: true })).toBeOnTheScreen();
+    expect(screen.getByTestId('mini-player-bar', { includeHiddenElements: true })).toHaveProp('pointerEvents', 'none');
+  });
+
+  it('is reachable again as soon as Now Playing closes', async () => {
+    loadFirst();
+    usePlayerStore.getState().setNowPlayingPresentation('open');
+    await renderBar();
+
+    await act(async () => {
+      usePlayerStore.getState().setNowPlayingPresentation('closed');
+    });
+
+    expect(screen.getByRole('button', { name: openLabel })).toBeOnTheScreen();
+  });
+
+  it('mounted under an open Now Playing (a row opened it): invisible until Now Playing first closes', async () => {
+    loadFirst();
+    usePlayerStore.getState().setNowPlayingPresentation('open');
+    await renderBar();
+    const bar = () => screen.getByTestId('mini-player-bar', { includeHiddenElements: true });
+    expect(bar()).toHaveStyle({ opacity: 0 });
+
+    await act(async () => {
+      usePlayerStore.getState().setNowPlayingPresentation('closed');
+    });
+    expect(bar()).toHaveStyle({ opacity: 1 });
+
+    // From then on it stays visible underneath while Now Playing is open again.
+    await act(async () => {
+      usePlayerStore.getState().setNowPlayingPresentation('open');
+    });
+    expect(bar()).toHaveStyle({ opacity: 1 });
+  });
+
   it('the text area opens Now Playing for the loaded lecture', async () => {
     loadFirst();
     await renderBar();
