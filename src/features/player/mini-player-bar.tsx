@@ -4,7 +4,7 @@ import { CoverArt } from '@/components/artwork/cover-art';
 import { MiniPlayer } from '@/components/MiniPlayer';
 import { miniPlayer } from '@/components/MiniPlayer/tokens';
 
-import { skipForward15, toggle } from './audio-engine';
+import { toggle } from './audio-engine';
 import { pickMiniPlayerPlayState } from './mini-player-play-state';
 import { MiniPlayerProgressLine } from './mini-player-progress-line';
 import { dismissMiniPlayer, openNowPlayingForLoadedLecture } from './open-now-playing';
@@ -20,10 +20,6 @@ type MiniPlayerBarProps = {
 // bar sits in the same column, minus its 12 px side inset on each side, so on a wide window (web,
 // tablets) it lines up with the content instead of stretching from edge to edge.
 const BAR_MAX_WIDTH = 600 - 12 * 2;
-
-function handleSkipForwardPress() {
-  skipForward15();
-}
 
 // The floating bar above the tab bar. A plain view: no animation and no gestures. It shows while
 // a lecture is active; while Now Playing is open, that screen covers it.
@@ -57,7 +53,6 @@ export function MiniPlayerBar({ bottomOffset }: MiniPlayerBarProps) {
           progressLine={<MiniPlayerProgressLine />}
           onOpenPress={openNowPlayingForLoadedLecture}
           onTogglePress={toggle}
-          onSkipForwardPress={handleSkipForwardPress}
           onDismiss={dismissMiniPlayer}
           thumbnail={thumbnail}
           background="filled"

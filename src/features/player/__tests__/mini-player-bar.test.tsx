@@ -10,7 +10,6 @@ import { renderWithProviders } from '@/test-utils/render-with-providers';
 
 jest.mock('@/features/player/audio-engine', () => ({
   toggle: jest.fn(),
-  skipForward15: jest.fn(),
 }));
 jest.mock('@/features/player/open-now-playing', () => ({
   openNowPlayingForLoadedLecture: jest.fn(),
@@ -88,16 +87,15 @@ describe('MiniPlayerBar', () => {
     expect(entryPoint.openNowPlayingForLoadedLecture).toHaveBeenCalledTimes(1);
   });
 
-  it('play/pause and forward 15 never open Now Playing', async () => {
+  it('play/pause never opens Now Playing, and there is no forward 15', async () => {
     loadFirst();
     await renderBar();
 
     await fireEvent.press(screen.getByRole('button', { name: 'Play' }));
-    await fireEvent.press(screen.getByRole('button', { name: 'Skip forward 15 seconds' }));
 
     expect(engine.toggle).toHaveBeenCalledTimes(1);
-    expect(engine.skipForward15).toHaveBeenCalledTimes(1);
     expect(entryPoint.openNowPlayingForLoadedLecture).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Skip forward 15 seconds' })).not.toBeOnTheScreen();
   });
 
   it('shows "Loading" until the audio has loaded', async () => {

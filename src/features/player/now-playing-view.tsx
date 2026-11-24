@@ -51,7 +51,8 @@ function NowPlayingTopBar() {
 }
 
 // Now Playing's content: the top bar, the artwork, the track info, the seek bar and the controls.
-// The /player screen renders it. No header covers the notch, so it owns both insets.
+// The Now Playing panel renders it and paints the card colour behind it. It covers the whole
+// screen, notch included, so it owns both insets.
 export function NowPlayingView() {
   const insets = useSafeAreaInsets();
   const currentLecture = usePlayerStore(selectCurrentLecture);
@@ -59,7 +60,7 @@ export function NowPlayingView() {
   const { data: lecture } = useLectureQuery(currentLecture?.slug);
 
   return (
-    <View className="flex-1 bg-bg" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
+    <View className="flex-1" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <View className="w-full self-center" style={{ maxWidth: contentMaxWidth }}>
         <NowPlayingTopBar />
       </View>

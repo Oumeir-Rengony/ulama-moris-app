@@ -25,11 +25,11 @@ describe('MiniPlayer', () => {
     expect(imageElements).toHaveLength(0);
   });
 
-  it('has the open button, play/pause and "Skip forward 15 seconds"', async () => {
+  it('has the open button and play/pause, and no forward 15', async () => {
     await renderWithProviders(<MiniPlayer title={title} author={author} playState="playing" progressLine={progressLine} />);
     expect(screen.getByRole('button', { name: openLabel })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Pause' })).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Skip forward 15 seconds' })).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Skip forward 15 seconds' })).not.toBeOnTheScreen();
   });
 
   it('labels the toggle "Play" while paused', async () => {
@@ -52,7 +52,6 @@ describe('MiniPlayer', () => {
   it('calls the handler of each button', async () => {
     const handleOpen = jest.fn();
     const handleToggle = jest.fn();
-    const handleSkip = jest.fn();
     await renderWithProviders(
       <MiniPlayer
         title={title}
@@ -61,17 +60,14 @@ describe('MiniPlayer', () => {
         progressLine={progressLine}
         onOpenPress={handleOpen}
         onTogglePress={handleToggle}
-        onSkipForwardPress={handleSkip}
       />,
     );
 
     await fireEvent.press(screen.getByRole('button', { name: openLabel }));
     await fireEvent.press(screen.getByRole('button', { name: 'Play' }));
-    await fireEvent.press(screen.getByRole('button', { name: 'Skip forward 15 seconds' }));
 
     expect(handleOpen).toHaveBeenCalledTimes(1);
     expect(handleToggle).toHaveBeenCalledTimes(1);
-    expect(handleSkip).toHaveBeenCalledTimes(1);
   });
 
   it('offers "Stop and close player" to screen readers, which calls onDismiss', async () => {
@@ -88,7 +84,7 @@ describe('MiniPlayer', () => {
   });
 
   describe('when the lecture did not load', () => {
-    it('says so instead of the author and disables play and forward 15, with no "Try again"', async () => {
+    it('says so instead of the author and disables play, with no "Try again"', async () => {
       const handleToggle = jest.fn();
       await renderWithProviders(
         <MiniPlayer
@@ -103,7 +99,6 @@ describe('MiniPlayer', () => {
       expect(screen.getByText('Didn’t load. Tap to open again.')).toBeOnTheScreen();
       expect(screen.queryByText(author)).toBeNull();
       expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
-      expect(screen.getByRole('button', { name: 'Skip forward 15 seconds' })).toBeDisabled();
 
       const playButton = screen.getByRole('button', { name: 'Play' });
       expect(playButton).toBeDisabled();

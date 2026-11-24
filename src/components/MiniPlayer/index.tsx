@@ -2,8 +2,6 @@ import { useColorScheme } from 'nativewind';
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, View, type AccessibilityActionEvent } from 'react-native';
 
-import { Skip15Icon } from '@/components/icons/skip-15-icon';
-import { IconButton } from '@/components/ui/icon-button';
 import { PlayPauseButton } from '@/components/ui/play-pause-button';
 import { Text } from '@/components/ui/text';
 import { useThemeColors, useThemeShadows, type SemanticColor } from '@/theme/tokens';
@@ -14,15 +12,14 @@ type MiniPlayerProps = {
   title: string;
   // Hidden when the lecture has no author.
   author?: string;
-  // failed: the lecture's audio didn't load. The scholar line says so, and play/pause and forward
-  // 15 are disabled. Tapping the bar opens the lecture again, which loads it again.
+  // failed: the lecture's audio didn't load. The scholar line says so, and play/pause is disabled.
+  // Tapping the bar opens the lecture again, which loads it again.
   playState: 'playing' | 'paused' | 'loading' | 'failed';
   // The 3px line on the bottom edge. Passed in as an element, so the line can follow the live
   // position without re-rendering the rest of the bar several times a second.
   progressLine: ReactNode;
   onOpenPress?: () => void;
   onTogglePress?: () => void;
-  onSkipForwardPress?: () => void;
   // The screen-reader way to dismiss (the swipe down isn't reachable with VoiceOver / TalkBack).
   onDismiss?: () => void;
   // The 44 px square on the left. The player surface passes an empty space of that size and
@@ -44,7 +41,6 @@ export function MiniPlayer({
   progressLine,
   onOpenPress,
   onTogglePress,
-  onSkipForwardPress,
   onDismiss,
   thumbnail,
   background = 'filled',
@@ -158,14 +154,6 @@ export function MiniPlayer({
         {secondLine}
       </Pressable>
       {toggleControl}
-      <IconButton
-        accessibilityLabel="Skip forward 15 seconds"
-        tone="ghost"
-        disabled={hasAudioFailed}
-        onPress={onSkipForwardPress}
-      >
-        <Skip15Icon direction="forward" size={22} color={iconColor} />
-      </IconButton>
       {progressLine}
     </View>
   );
