@@ -1,5 +1,9 @@
 # Spring sheet player: implementation guide
 
+> **Retired (23 Nov 2026).** This spec describes the animated mini player ↔ Now Playing morph, which
+> was removed in Now Playing phase 1 (see [Now-Playing-Phase-1-Plan.md](Now-Playing-Phase-1-Plan.md)).
+> It is not the current behaviour. The current design is in CONTEXT.md, "Now Playing and the mini player".
+
 React Native, Android first. This document covers the lecture list → now playing transition, the mini player, and every situation the player can be in.
 
 ## 1. What it looks like

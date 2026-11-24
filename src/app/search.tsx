@@ -180,7 +180,7 @@ function LectureResult({ result, query, onOpen }: LectureResultProps) {
       queue: [lecture],
       source: { kind: 'search', query },
       resumeIfPaused: true,
-      leaveSearchFirst: true,
+      replacesSearch: true,
     });
   }
 

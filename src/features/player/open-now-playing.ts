@@ -2,30 +2,16 @@ import { router } from 'expo-router';
 
 import type { Lecture } from '@/features/lectures/lecture.types';
 
-import { pause, playLecture, reloadFailedLecture, resume, stopAndClear } from './audio-engine';
-import { MINI_EXIT_MS } from './player-motion-config';
-import { collapseToMini, dropMini, enterFresh, expandFromMini, showNowPlayingWithoutMotion } from './player-surface-motion';
-import {
-  selectCurrentLecture,
-  selectHasAudioFailed,
-  selectIsMiniPlayerVisible,
-  usePlayerStore,
-  type QueueSource,
-} from './player.store';
+import { playLecture, reloadFailedLecture, resume, stopAndClear } from './audio-engine';
+import { selectCurrentLecture, selectHasAudioFailed, usePlayerStore, type QueueSource } from './player.store';
 
 // Every way into and out of Now Playing goes through this file: Home rows, Continue listening,
-// Event detail rows, Search results, the mini player, the chevron, Android back and the swipes.
-// One place decides the order of the steps, because the bugs come from callers each mixing
-// "load" and "show" their own way.
+// Event detail rows, Search results, the mini player, the chevron and the event pill.
+// One place decides the order of the steps: the audio first, then the navigation.
 //
-// The order is store → engine → motion. The intent is recorded first (it hides the mini player
-// in the same update), then the audio is asked to change, then the motion starts. The motion
-// reports back through onFinished, which moves the presentation to its resting value.
-//
-// Now Playing is an overlay in the tabs layout (PlayerSurface), not a route, so nothing here
-// navigates to /player.
-//
-// This is the only file that calls setNowPlayingPresentation.
+// Now Playing is the /player screen, so only the navigation stack knows whether it is open.
+// Nothing here waits for an animation, and nothing is stored about the screen being open.
+// Android back is handled by the stack itself.
 
 export type OpenNowPlayingRequest = {
   lecture: Lecture;
@@ -34,41 +20,10 @@ export type OpenNowPlayingRequest = {
   source: QueueSource;
   // Play buttons resume the lecture if it's the loaded one and paused. Row bodies only show it.
   resumeIfPaused: boolean;
-  // From Search: Search slides away while the sheet rises behind it, over the tab Search was
+  // From Search: Now Playing takes Search's place, so closing it returns to the tab Search was
   // opened from.
-  leaveSearchFirst?: boolean;
+  replacesSearch?: boolean;
 };
-
-function waitForMiniExit(): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, MINI_EXIT_MS);
-  });
-}
-
-// An animation that was replaced by a newer one (finished false) must not overwrite the newer
-// presentation. Checking the presentation as well covers an entrance spring that finishes after
-// a collapse has already started.
-function markNowPlayingOpen(finished: boolean): void {
-  if (!finished) {
-    return;
-  }
-  const state = usePlayerStore.getState();
-  if (state.nowPlayingPresentation !== 'opening') {
-    return;
-  }
-  state.setNowPlayingPresentation('open');
-}
-
-function markNowPlayingClosed(finished: boolean): void {
-  if (!finished) {
-    return;
-  }
-  const state = usePlayerStore.getState();
-  if (state.nowPlayingPresentation !== 'closing') {
-    return;
-  }
-  state.setNowPlayingPresentation('closed');
-}
 
 // The loaded lecture is opened again. If its audio didn't load, that is the way to load it
 // again (the players have no "Try again"). Otherwise resume it when asked.
@@ -82,149 +37,66 @@ function resumeOrReloadLoadedLecture(resumeIfPaused: boolean): void {
   }
 }
 
-export async function openNowPlaying(request: OpenNowPlayingRequest): Promise<void> {
-  const stateAtTap = usePlayerStore.getState();
-
-  // One action at a time: this also ignores double taps, and taps while the bar drops or Now
-  // Playing opens, is open or closes.
-  if (stateAtTap.nowPlayingPresentation !== 'closed') {
+// The /player screen is a singular route, so pushing it while it is already open doesn't stack a
+// second copy. A double tap is harmless.
+function showNowPlayingScreen(replacesSearch: boolean): void {
+  if (replacesSearch) {
+    router.replace('/player');
     return;
   }
-
-  const currentLecture = selectCurrentLecture(stateAtTap);
-  const isAlreadyLoaded = currentLecture !== null && currentLecture.slug === request.lecture.slug;
-  const isBarShowing = selectIsMiniPlayerVisible(stateAtTap);
-
-  if (request.leaveSearchFirst) {
-    router.back();
-  }
-
-  try {
-    // The loaded lecture, with the bar showing: the bar grows into Now Playing. Never reloads.
-    if (isAlreadyLoaded && isBarShowing) {
-      stateAtTap.setNowPlayingPresentation('opening');
-      expandFromMini({ onFinished: markNowPlayingOpen });
-      resumeOrReloadLoadedLecture(request.resumeIfPaused);
-      return;
-    }
-
-    // A different lecture while the bar shows: the old lecture pauses and the bar finishes
-    // dropping away before Now Playing introduces the new one. The bar never shows the new one.
-    if (isBarShowing) {
-      stateAtTap.setNowPlayingPresentation('miniLeaving');
-      pause();
-      dropMini();
-      await waitForMiniExit();
-    }
-
-    // Intent before audio, audio before motion. The bar stays hidden: the presentation isn't closed.
-    usePlayerStore.getState().setNowPlayingPresentation('opening');
-    if (isAlreadyLoaded) {
-      // Loaded but the bar wasn't showing (the queue had ended): show it. Reloaded only if its
-      // audio didn't load.
-      resumeOrReloadLoadedLecture(request.resumeIfPaused);
-    } else {
-      playLecture(request.lecture, request.queue, request.source);
-    }
-    enterFresh({ onFinished: markNowPlayingOpen });
-  } catch (error) {
-    // Don't leave the app unable to open anything. Let the error surface.
-    usePlayerStore.getState().setNowPlayingPresentation('closed');
-    throw error;
-  }
+  router.push('/player');
 }
 
-// The mini player's text area: the bar grows into Now Playing, same position, no reload, unless
-// the audio didn't load: then this is the way to load it again.
-// Also allowed while Now Playing is still shrinking into the bar: it grows back from where it is.
+export function openNowPlaying(request: OpenNowPlayingRequest): void {
+  const currentLecture = selectCurrentLecture(usePlayerStore.getState());
+  const isAlreadyLoaded = currentLecture !== null && currentLecture.slug === request.lecture.slug;
+
+  // The loaded lecture is never reloaded. Another lecture replaces it: playLecture saves the
+  // outgoing lecture's position before loading the new one.
+  if (isAlreadyLoaded) {
+    resumeOrReloadLoadedLecture(request.resumeIfPaused);
+  } else {
+    playLecture(request.lecture, request.queue, request.source);
+  }
+
+  let replacesSearch = false;
+  if (request.replacesSearch === true) {
+    replacesSearch = true;
+  }
+  showNowPlayingScreen(replacesSearch);
+}
+
+// The mini player's text area: Now Playing for the loaded lecture, same position, no reload,
+// unless the audio didn't load: then this is the way to load it again.
 export function openNowPlayingForLoadedLecture(): void {
   const state = usePlayerStore.getState();
   if (selectCurrentLecture(state) === null) {
     return;
   }
-
-  const presentation = state.nowPlayingPresentation;
-  const isBarShowing = presentation === 'closed' && selectIsMiniPlayerVisible(state);
-  const isClosing = presentation === 'closing';
-  if (!isBarShowing && !isClosing) {
-    return;
-  }
-
-  state.setNowPlayingPresentation('opening');
-  expandFromMini({ onFinished: markNowPlayingOpen });
   if (selectHasAudioFailed(state)) {
     reloadFailedLecture();
   }
+  showNowPlayingScreen(false);
 }
 
-// The chevron and Android back. Also allowed while Now Playing is still opening: it shrinks back
-// from where it is. Minimising never stops playback.
+// The chevron. Minimising never stops playback. Opened by a deep link on a cold start, there is
+// no screen to go back to, so it goes to the tabs.
 export function closeNowPlaying(): void {
-  const state = usePlayerStore.getState();
-  const presentation = state.nowPlayingPresentation;
-  if (presentation !== 'open' && presentation !== 'opening') {
+  if (router.canGoBack()) {
+    router.back();
     return;
   }
-
-  state.setNowPlayingPresentation('closing');
-  collapseToMini({ onFinished: markNowPlayingClosed });
+  router.replace('/');
 }
 
-// A swipe down on Now Playing released past the threshold. The gesture has already started the
-// collapse spring on the UI thread (with the finger's speed), so this only records the intent.
-// finishCloseAfterSwipe is that spring's completion.
-export function beginCloseAfterSwipe(): void {
-  const state = usePlayerStore.getState();
-  const presentation = state.nowPlayingPresentation;
-  if (presentation !== 'open' && presentation !== 'opening') {
-    return;
-  }
-  state.setNowPlayingPresentation('closing');
-}
-
-export function finishCloseAfterSwipe(finished: boolean): void {
-  markNowPlayingClosed(finished);
-}
-
-// The bar's swipe down, or the screen-reader "Stop and close player" action. The bar drops
-// away first; the lecture is cleared after, so the surface stays mounted while it falls.
-export async function dismissMiniPlayer(): Promise<void> {
-  const state = usePlayerStore.getState();
-  if (state.nowPlayingPresentation !== 'closed') {
-    return;
-  }
-  if (!selectIsMiniPlayerVisible(state)) {
-    return;
-  }
-
-  state.setNowPlayingPresentation('miniLeaving');
-  dropMini();
-  await waitForMiniExit();
-  stopAndClear();
-  usePlayerStore.getState().setNowPlayingPresentation('closed');
-}
-
-// Now Playing's event pill: Now Playing collapses into the bar while the event opens underneath
-// it, in the Events tab. navigate, not push, so opening the event that is already showing doesn't
-// stack it twice.
+// Now Playing's event pill: Now Playing closes and the event opens in the Events tab. navigate,
+// not push, so opening the event that is already showing doesn't stack it twice.
 export function openEventFromNowPlaying(eventSlug: string): void {
-  const presentation = usePlayerStore.getState().nowPlayingPresentation;
-  if (presentation !== 'open' && presentation !== 'opening') {
-    return;
-  }
   closeNowPlaying();
   router.navigate({ pathname: '/events/[slug]', params: { slug: eventSlug } });
 }
 
-// The /player deep link: Now Playing is shown at once, with no entrance (a cold start).
-export function showNowPlayingFromDeepLink(): void {
-  const state = usePlayerStore.getState();
-  if (state.nowPlayingPresentation !== 'closed') {
-    return;
-  }
-  if (selectCurrentLecture(state) === null) {
-    return;
-  }
-  state.setNowPlayingPresentation('open');
-  showNowPlayingWithoutMotion();
+// The screen-reader "Stop and close player" action on the mini player.
+export function dismissMiniPlayer(): void {
+  stopAndClear();
 }

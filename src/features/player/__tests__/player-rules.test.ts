@@ -84,60 +84,31 @@ describe('player rules', () => {
     expect(filesContaining('useListeningHistoryStore()')).toEqual([]);
   });
 
-  it('Now Playing is never pushed, so it can never be stacked twice', () => {
-    expect(filesContaining(/router\.push\([^)]*player/)).toEqual([]);
+  it('only the entry point navigates to Now Playing', () => {
+    expect(filesContaining(/router\.(navigate|push|replace)\(['"]\/player/)).toEqual(['features/player/open-now-playing.ts']);
   });
 
-  it('only the entry point sets the Now Playing presentation', () => {
-    const callers = filesContaining('setNowPlayingPresentation(').filter(
-      (file) => file !== 'features/player/player.store.ts',
-    );
-    expect(callers).toEqual(['features/player/open-now-playing.ts']);
+  // Only the navigation stack knows whether Now Playing is open. A stored copy of that could
+  // disagree with what is on screen.
+  it('whether Now Playing is open is never stored', () => {
+    expect(filesContaining('nowPlayingPresentation')).toEqual([]);
   });
 
-  it('nothing in the app navigates to /player: Now Playing is an overlay, the route is for deep links', () => {
-    expect(filesContaining(/router\.(navigate|push|replace)\(['"]\/player/)).toEqual([]);
-  });
-
-  it('the motion module never imports the store or the engine', () => {
-    const source = readSource('features/player/player-surface-motion.ts');
-    expect(source).not.toMatch(/player\.store/);
-    expect(source).not.toMatch(/audio-engine/);
-  });
-
-  it('player motion uses scheduleOnRN and .get()/.set(), never runOnJS or .value', () => {
-    const motionFiles = filesContaining(/react-native-reanimated/).filter((file) => file.startsWith('features/player/'));
-    expect(motionFiles.length).toBeGreaterThan(0);
-    for (const file of motionFiles) {
+  // An animation or a finger-driven value left half-way once made Now Playing transparent and
+  // the bar invisible. Phase 1 has neither.
+  it('Now Playing and the mini player have no animation and no gestures', () => {
+    const playerFiles = [
+      'app/player.tsx',
+      'features/player/now-playing-view.tsx',
+      'features/player/mini-player-bar.tsx',
+      'features/player/open-now-playing.ts',
+    ];
+    for (const file of playerFiles) {
       const source = readSource(file);
-      expect(source).not.toMatch(/runOnJS/);
-      expect(source).not.toMatch(/\.value\b/);
+      expect(source).not.toMatch(/react-native-reanimated/);
+      expect(source).not.toMatch(/react-native-gesture-handler/);
+      expect(source).not.toMatch(/PanResponder/);
     }
-  });
-
-  it('a gesture never calls back into JS on every frame (no scheduleOnRN inside onUpdate)', () => {
-    const source = readSource('features/player/player-surface-full-layer.tsx');
-    const onUpdateStart = source.indexOf('onUpdate:');
-    const onDeactivateStart = source.indexOf('onDeactivate:');
-    expect(onUpdateStart).toBeGreaterThan(-1);
-    const onUpdateBody = source.slice(onUpdateStart, onDeactivateStart);
-    expect(onUpdateBody).not.toMatch(/scheduleOnRN/);
-  });
-
-  // On Android (development build) a Reanimated view with a boxShadow wasn't drawn at all: Now
-  // Playing lost its sheet and artwork, and the tabs behind showed through its text.
-  it('player motion files never put a boxShadow on an animated view', () => {
-    const motionFiles = filesContaining(/react-native-reanimated/).filter((file) => file.startsWith('features/player/'));
-    expect(motionFiles.length).toBeGreaterThan(0);
-
-    const filesWithShadow: string[] = [];
-    for (const file of motionFiles) {
-      const source = readSource(file);
-      if (source.includes('boxShadow')) {
-        filesWithShadow.push(file);
-      }
-    }
-    expect(filesWithShadow).toEqual([]);
   });
 
   it('no component in src/components reads the player stores', () => {

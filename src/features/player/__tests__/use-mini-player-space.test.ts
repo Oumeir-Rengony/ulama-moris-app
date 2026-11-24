@@ -24,12 +24,6 @@ describe('useMiniPlayerSpace', () => {
     expect(await readSpace()).toBe(MINI_PLAYER_SPACE);
   });
 
-  it('keeps the space while Now Playing hides the bar, so the list does not jump', async () => {
-    usePlayerStore.getState().startQueue(queueOfThree, 0, latestSource);
-    usePlayerStore.getState().setNowPlayingPresentation('open');
-    expect(await readSpace()).toBe(MINI_PLAYER_SPACE);
-  });
-
   it('is 0 once the queue has ended', async () => {
     usePlayerStore.getState().startQueue(queueOfThree, 0, latestSource);
     usePlayerStore.getState().setHasQueueEnded(true);

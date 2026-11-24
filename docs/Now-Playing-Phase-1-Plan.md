@@ -70,17 +70,11 @@ mounted, and no finger moves a value.
 - Swipe the bar down to stop and close. Screen readers keep the "Stop and close player" action. See open decision 1 for sighted users.
 - Changes to audio behaviour (`audio-engine.ts`, `PlayerStatusBridge`), the Now Playing controls, the seek bar or the bar's progress line.
 
-## Decisions to confirm before building
+## Decisions (confirmed 23 Nov 2026)
 
-1. **How sighted users stop and close the bar.** The swipe goes away.
-   - Options: (a) no visible way in phase 1, pausing is enough; (b) a small close button, which needs a design; (c) a long-press menu.
-   - Recommended: (a) for phase 1, then decide with design.
-2. **Search results.**
-   - Recommended: Now Playing *replaces* Search (`router.replace('/player')`), which keeps today's behaviour.
-   - The alternative is pushing it on top, so closing returns to Search.
-3. **iOS presentation.**
-   - Recommended: `fullScreenModal`, which has no swipe-to-dismiss, as phase 1 requires.
-   - `modal` would give iOS a native page sheet with a swipe down and a native tuck, for free and without sync bugs. Android has no equivalent, so keep it for later.
+1. **Stopping the bar:** pausing is enough for phase 1. There is no visible way to stop and close the bar; screen readers keep the "Stop and close player" action.
+2. **Search results:** Now Playing *replaces* Search (`router.replace('/player')`), as today.
+3. **iOS presentation:** `fullScreenModal`, with no swipe-to-dismiss.
 4. **A reminder for lecture X while lecture Y is loaded** still shows Y, as today. Out of scope; noted so nobody is surprised.
 
 ## Steps
@@ -192,7 +186,7 @@ That removes about 1,600 lines, including `open-now-playing.ts`'s state machine.
     - `nowPlayingPresentation` appears nowhere;
     - `app/player.tsx`, `mini-player-bar.tsx` and `open-now-playing.ts` import neither `react-native-reanimated` nor `react-native-gesture-handler`.
 - **`player.store.test.ts`, `use-mini-player-space.test.ts`:** drop the presentation cases.
-- **New `player-screen.test.tsx`:**
+- **New `now-playing-screen.test.tsx`:**
   - renders the loaded lecture;
   - the caret calls `closeNowPlaying`;
   - a deep link with nothing loaded loads the lecture paused;
