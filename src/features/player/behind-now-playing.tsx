@@ -2,8 +2,8 @@ import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import { usePlayerStore } from './player.store';
 
-// The tabs (their screens and the tab bar), behind Now Playing. They stay as they are while the
-// panel slides over them: no shrinking, no dimming. They stay mounted, so lists keep their scroll
+// The tab screens, behind the player sheet. They stay as they are while the player grows over
+// them: no shrinking, no dimming. (The tab bar is drawn over the sheet and hides itself.) They stay mounted, so lists keep their scroll
 // position, but screen readers must not reach them while Now Playing is open.
 export function BehindNowPlaying({ children }: { children: ReactNode }) {
   const isNowPlayingOpen = usePlayerStore((state) => state.nowPlayingPresentation === 'open');

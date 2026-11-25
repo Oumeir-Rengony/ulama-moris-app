@@ -17,14 +17,15 @@ website at `localhost:3000` until it's deployed. There is no sign-in and no book
 
 Build stages 1–12 are done and merged. Their plan files were deleted once this file held what
 they decided; they are in git history before the commit that removed `plan/`. Lint, typecheck,
-`check:theme` and `npm test` (55 suites, 601 tests) pass.
+`check:theme` and `npm test` (55 suites, 590 tests) pass.
 
-**Now Playing animation** (merged into `main`): Now Playing is a
-panel that slides up over the tabs (a gorhom sheet pinned at 100%, our own release rule) and can
-be dragged down to close; the mini player can be swiped down to stop or up to open, and has
-play/pause only. It replaces phase 1 (a plain `/player` screen and a plain bar), which was built because the old animated surface could
-leave a value half-way on Android (`docs/bugs/`). Checked on the iOS simulator (24 Nov 2026); not
-yet on an Android phone or at the largest text size.
+**Mini player morph** (branch `feat/mini-player-morph`, plan in `docs/mini-player-morph-plan.md`):
+the mini player and Now Playing are one sheet that grows from the bar into the full player under
+the finger, the artwork flying from the thumbnail and the tab bar sliding away. It replaces the
+sliding panel and the bar's swipes (merged into `main` before), which replaced phase 1 (a plain
+`/player` screen and a plain bar, built because an older animated surface could leave a value
+half-way on Android, `docs/bugs/`). Checked on the iOS simulator and on web (25 Nov 2026); not
+yet on an Android phone, at the largest text size, or with VoiceOver / TalkBack.
 
 The **error and offline states** (see "Error and offline states" below) are built: the list
 cards and next-page footers (Home, Events, Search, and Event detail, which has no design and
@@ -111,7 +112,7 @@ What was built, where it differs from the original design spec:
   - No-results copy is "Try another lecture title." / "Try another event title.".
   - **Popular topics is removed** from both scopes.
   - Recent searches are real: `recent-searches.store.ts`, persisted, the last 5 per scope, newest first, a repeat (any capitalisation) moved to the top. A query is saved only when the user commits to it: the keyboard's Search key, or opening one of its results. Search starts empty ("Your searches will appear here."). ✕ removes one; "Clear all" (shown only when there is something to clear) empties the scope.
-- **Now Playing:** a sliding panel over the tabs with drag-to-close, instead of phase 1's plain screen and the older morph. The mini player swipes down to stop and up to open, and has play/pause only. A Search result closes Search first. See "Now Playing and the mini player".
+- **Now Playing:** one sheet with the mini player: tap or drag the bar and it grows into Now Playing; drag Now Playing down and it shrinks back into the bar. The bar has play/pause only and no gesture to stop playback (screen-reader action only). A Search result closes Search first. See "Now Playing and the mini player".
 
 ## Where code lives
 
@@ -159,35 +160,38 @@ list into the queue. It's a snapshot the user picked, not a cache.
 
 ## Now Playing and the mini player
 
-Now Playing is a panel drawn last in the tabs layout, over the tab bar: a `@gorhom/bottom-sheet`
-pinned at one snap point (`'100%'`). The mini player (`MiniPlayerBar`) floats above the tab bar
-whenever a lecture is active.
+The mini player and Now Playing are one `@gorhom/bottom-sheet` drawn in the tabs layout between
+the screens and the tab bar, with two sizes: the bar (index 0) and the whole screen (index 1).
+A card inside it grows from the bar into the full player; every visual (the card's size, side
+inset, colour and corners, the two fades, the flying artwork, the tab bar sliding away) is a
+function of the sheet's live index (`use-player-morph.ts`).
 
 **One truth, one coordinator.** The store's `nowPlayingPresentation` (`'open'` / `'closed'`) is
 the only "is it open"; `open-now-playing.ts` is its only writer (store first, then the audio).
-The panel follows the store. The panel's own drag is the only gesture that writes: our release
-(`decidePanelRelease`) decides open or closed and reports it to `handlePanelReleased`. No gorhom
-callbacks.
+The sheet follows the store. A drag reaches the store through the sheet's resting check: when the
+sheet comes to rest at the other end, `handleSheetSettled` records it. No gorhom callbacks.
 
 **When the bar shows:** a lecture is loaded, the queue hasn't ended, and Now Playing is closed.
-It never depends on `isPlaying`. While Now Playing is open the bar stays rendered underneath,
-covered, untouchable and hidden from screen readers.
+It never depends on `isPlaying`.
 
 | Action | What happens |
 |---|---|
-| Tap a row, nothing loaded | The lecture loads and Now Playing slides up from the bottom. No bar first |
-| Tap a row while the bar shows | Now Playing slides up over the bar |
-| Tap the loaded lecture | Now Playing slides up. No reload. A play button also resumes |
-| Tap the bar, or swipe it up | Now Playing slides up for the loaded lecture. A lecture whose audio failed loads again |
-| Swipe the bar down (past half its height, or a flick) | The bar slides away and playback stops. A short swipe springs back |
-| Drag Now Playing down (past 25 %, or a flick) | It slides away, revealing the bar. Playback continues, however hard the flick |
-| Drag Now Playing down a little | It springs back open |
-| Chevron / Android back | Now Playing slides away. Playback continues |
-| Event pill on Now Playing | Now Playing slides away while the event opens in the Events tab |
-| Search result | Search closes, then Now Playing slides up over the tab Search was opened from |
-| Seek bar | Scrubs sideways; the panel doesn't move |
-| Deep link / reminder tap `/player?slug=` | With nothing loaded, the linked lecture loads paused; Now Playing slides up |
-| Queue ends while Now Playing is open | It stays open; closing just slides it away (no bar) |
+| Tap a row, nothing loaded | The lecture loads; the bar appears in its place and grows straight into Now Playing |
+| Tap a row while the bar shows | The bar grows into Now Playing |
+| Tap the loaded lecture | The bar grows into Now Playing. No reload. A play button also resumes |
+| Tap the bar | It grows into Now Playing for the loaded lecture. A lecture whose audio failed loads again |
+| Drag the bar up | The card follows the finger; let go, it snaps to the nearer size (a flick up opens) |
+| Drag the bar down | Nothing: the bar can't go below its place |
+| Play/pause on the bar | Plays or pauses; never opens Now Playing |
+| Stop playback and close the bar | Screen-reader action "Stop and close player" only |
+| Drag Now Playing down | It shrinks back into the bar under the finger; let go, it snaps to the nearer size (a flick down closes). Playback continues |
+| Chevron / Android back | Now Playing shrinks back into the bar. Playback continues |
+| Event pill on Now Playing | Now Playing shrinks into the bar while the event opens in the Events tab |
+| Search result | Search closes, then the bar grows into Now Playing over the tab Search was opened from |
+| Seek bar | Scrubs sideways; the sheet doesn't move |
+| Deep link / reminder tap `/player?slug=` | With nothing loaded, the linked lecture loads paused; Now Playing opens |
+| Queue ends while Now Playing is open | It stays open; closing slides the sheet away (no bar) |
+| Tab bar | Drawn over the sheet, slides down as Now Playing opens. Another tab returns to its last screen; the selected tab again returns to its first screen |
 
 The bar never introduces a lecture: rows and results always open Now Playing. The bar has
 play/pause only; back / forward 15 are on Now Playing and the lock screen.

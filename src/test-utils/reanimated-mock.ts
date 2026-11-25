@@ -46,6 +46,10 @@ function useAnimatedStyle<Style>(makeStyle: () => Style): Style {
   return makeStyle();
 }
 
+// The player's resting check (a reaction to the sheet's index). Nothing moves in tests, so it never
+// reports; what it reports to (handleSheetSettled) is tested on its own.
+function useAnimatedReaction(): void {}
+
 function withTiming<Value>(toValue: Value, _config?: unknown, callback?: (finished?: boolean) => void): FakeAnimation<Value> {
   return { isFakeAnimation: true, toValue, callback };
 }
@@ -113,6 +117,7 @@ export {
   interpolate,
   interpolateColor,
   makeMutable,
+  useAnimatedReaction,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,

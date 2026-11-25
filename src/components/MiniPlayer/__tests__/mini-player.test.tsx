@@ -63,11 +63,21 @@ describe('MiniPlayer', () => {
       />,
     );
 
-    await fireEvent.press(screen.getByRole('button', { name: openLabel }));
+    // "Open player" is for screen readers: activating it opens. A finger's tap is the player
+    // surface's (its tap area under the bar).
+    await fireEvent(screen.getByRole('button', { name: openLabel }), 'accessibilityAction', {
+      nativeEvent: { actionName: 'activate' },
+    });
     await fireEvent.press(screen.getByRole('button', { name: 'Play' }));
 
     expect(handleOpen).toHaveBeenCalledTimes(1);
     expect(handleToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets touches through everywhere but play/pause, to the tap area drawn under it', async () => {
+    await renderWithProviders(<MiniPlayer title={title} author={author} playState="paused" progressLine={progressLine} />);
+
+    expect(screen.getByRole('button', { name: openLabel })).toHaveProp('pointerEvents', 'none');
   });
 
   it('offers "Stop and close player" to screen readers, which calls onDismiss', async () => {
@@ -77,7 +87,10 @@ describe('MiniPlayer', () => {
     );
 
     const openButton = screen.getByRole('button', { name: openLabel });
-    expect(openButton).toHaveProp('accessibilityActions', [{ name: 'dismiss', label: 'Stop and close player' }]);
+    expect(openButton).toHaveProp('accessibilityActions', [
+      { name: 'activate' },
+      { name: 'dismiss', label: 'Stop and close player' },
+    ]);
 
     await fireEvent(openButton, 'accessibilityAction', { nativeEvent: { actionName: 'dismiss' } });
     expect(handleDismiss).toHaveBeenCalledTimes(1);
@@ -106,7 +119,7 @@ describe('MiniPlayer', () => {
       expect(handleToggle).not.toHaveBeenCalled();
     });
 
-    it('still opens the player when the text is pressed', async () => {
+    it('can still be opened', async () => {
       const handleOpen = jest.fn();
       await renderWithProviders(
         <MiniPlayer
@@ -118,7 +131,9 @@ describe('MiniPlayer', () => {
         />,
       );
 
-      await fireEvent.press(screen.getByRole('button', { name: `Open player: ${title}, ${author}` }));
+      await fireEvent(screen.getByRole('button', { name: openLabel }), 'accessibilityAction', {
+        nativeEvent: { actionName: 'activate' },
+      });
       expect(handleOpen).toHaveBeenCalledTimes(1);
     });
   });

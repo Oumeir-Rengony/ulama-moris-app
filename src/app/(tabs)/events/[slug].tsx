@@ -24,6 +24,7 @@ import { useEventQuery } from '@/features/events/events.queries';
 import { ActiveNumberedLectureRow } from '@/features/player/active-numbered-lecture-row';
 import { openNowPlaying } from '@/features/player/open-now-playing';
 import { selectActiveLectureSlug, usePlayerStore, type QueueSource } from '@/features/player/player.store';
+import { useTabBarHeight } from '@/features/player/tab-bar-height';
 import { useMiniPlayerSpace } from '@/features/player/use-mini-player-space';
 import { useAnnouncement } from '@/hooks/use-announcement';
 import { useRetry } from '@/hooks/use-retry';
@@ -57,6 +58,7 @@ function buildHeroContent(event: EventSummary): EventHeroContent {
 export default function EventDetailScreen() {
   const insets = useSafeAreaInsets();
   const miniPlayerSpace = useMiniPlayerSpace();
+  const tabBarHeight = useTabBarHeight();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const eventQuery = useEventQuery(slug);
   const { data, isSuccess, isError, refetch } = eventQuery;
@@ -169,7 +171,7 @@ export default function EventDetailScreen() {
         }
         // Normal spacing, plus room for the floating mini player so the last row scrolls clear.
         contentContainerStyle={{
-          paddingBottom: bottomSpacing + miniPlayerSpace,
+          paddingBottom: bottomSpacing + tabBarHeight + miniPlayerSpace,
           width: '100%',
           maxWidth: 600,
           alignSelf: 'center',

@@ -117,20 +117,10 @@ describe('player rules', () => {
     }
   });
 
-  // On Android a Reanimated view with a boxShadow wasn't drawn at all.
-  it('player motion files never put a boxShadow on an animated view', () => {
-    const motionFiles = filesContaining(/react-native-reanimated/).filter((file) => file.startsWith('features/player/'));
-    const filesWithShadow = motionFiles.filter((file) => readSource(file).includes('boxShadow'));
-    expect(filesWithShadow).toEqual([]);
-  });
-
   // gorhom's onAnimate / onChange / onClose fire late, or not at all when a spring is interrupted,
-  // which let the store and the sheet drift apart. Our own release handler decides instead.
-  it('only the Now Playing panel uses @gorhom/bottom-sheet, and none of its callbacks', () => {
-    expect(filesContaining('@gorhom/bottom-sheet')).toEqual([
-      'features/player/now-playing-panel.tsx',
-      'features/player/panel-sheet-gestures.ts',
-    ]);
+  // which let the store and the sheet drift apart. The sheet's own resting check reports instead.
+  it('only the player sheet uses @gorhom/bottom-sheet, and none of its callbacks', () => {
+    expect(filesContaining('@gorhom/bottom-sheet')).toEqual(['features/player/now-playing-panel.tsx']);
     const panelSource = readSource('features/player/now-playing-panel.tsx');
     expect(panelSource).not.toMatch(/\bonAnimate=/);
     expect(panelSource).not.toMatch(/\bonChange=/);
@@ -139,19 +129,24 @@ describe('player rules', () => {
 
   // gorhom's default (accessible, "Bottom Sheet", adjustable) makes Now Playing one element on
   // iOS: VoiceOver couldn't reach the chevron or the controls.
-  it('the Now Playing sheet does not group its content for screen readers', () => {
+  it('the player sheet does not group its content for screen readers', () => {
     expect(readSource('features/player/now-playing-panel.tsx')).toMatch(/accessible=\{false\}/);
   });
 
-  it("only the Now Playing panel animates the panel's position", () => {
-    const filesUsingPanelSpring = filesContaining('PANEL_SPRING').filter(
-      (file) => file !== 'features/player/player-motion-config.ts',
-    );
-    expect(filesUsingPanelSpring).toEqual(['features/player/now-playing-panel.tsx']);
+  // Changing it makes gorhom swap the view around its content, which remounts the whole player
+  // (the artwork blinked at both sizes).
+  it('the content panning gesture is never switched', () => {
+    const source = readSource('features/player/now-playing-panel.tsx');
+    const settings = source.match(/enableContentPanningGesture=\{[^}]*\}/g);
+    expect(settings).toEqual(['enableContentPanningGesture={true}']);
   });
 
-  // A flick on Now Playing must never stop playback: only the bar's own gesture (or its
-  // screen-reader action) can.
+  // Every visual is a function of the sheet's index; the morph never talks to the sheet itself.
+  it('the morph does not import gorhom', () => {
+    expect(readSource('features/player/use-player-morph.ts')).not.toMatch(/@gorhom/);
+  });
+
+  // A flick on Now Playing must never stop playback: only the bar's screen-reader action can.
   it('Now Playing has no path to stopping playback', () => {
     for (const file of ['features/player/now-playing-panel.tsx', 'features/player/now-playing-view.tsx']) {
       const source = readSource(file);

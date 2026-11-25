@@ -18,6 +18,7 @@ import { useLatestLecturesQuery } from '@/features/lectures/lectures.queries';
 import { ContinueListeningSection } from '@/features/player/continue-listening-section';
 import { openNowPlaying } from '@/features/player/open-now-playing';
 import { selectActiveLectureSlug, usePlayerStore } from '@/features/player/player.store';
+import { useTabBarHeight } from '@/features/player/tab-bar-height';
 import { useMiniPlayerSpace } from '@/features/player/use-mini-player-space';
 import { openSearch } from '@/features/search/open-search';
 import { useAnnouncement } from '@/hooks/use-announcement';
@@ -108,6 +109,7 @@ function pickRowState(slug: string, activeLectureSlug: string | null, isPlaying:
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const miniPlayerSpace = useMiniPlayerSpace();
+  const tabBarHeight = useTabBarHeight();
   // Home always shows one series; every request sends it.
   const [selectedSeries, setSelectedSeries] = useState<LectureSeries>(defaultLectureSeries);
   const lecturesQuery = useLatestLecturesQuery(selectedSeries);
@@ -247,7 +249,7 @@ export default function HomeScreen() {
         // player so the last row scrolls clear of it.
         contentContainerStyle={{
           paddingTop: insets.top,
-          paddingBottom: bottomSpacing + miniPlayerSpace,
+          paddingBottom: bottomSpacing + tabBarHeight + miniPlayerSpace,
           width: '100%',
           maxWidth: 600,
           alignSelf: 'center',

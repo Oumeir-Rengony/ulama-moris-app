@@ -1,4 +1,3 @@
-import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { Pressable, View } from 'react-native';
 
 import { EventsTabIcon, HomeTabIcon } from '@/components/icons/tab-icons';
@@ -6,13 +5,7 @@ import { Text } from '@/components/ui/text';
 
 import { tabBar } from './tokens';
 
-type TabKey = 'home' | 'events';
-
-// The two tab routes in src/app/(tabs)/. Anything else is not shown as a tab.
-const tabsByRouteName: Record<string, { key: TabKey; label: string }> = {
-  index: { key: 'home', label: 'Home' },
-  events: { key: 'events', label: 'Events' },
-};
+export type TabKey = 'home' | 'events';
 
 type TabBarItemProps = {
   tab: TabKey;
@@ -54,33 +47,27 @@ export function TabBarItem({ tab, label, isSelected, onPress }: TabBarItemProps)
   );
 }
 
-// The row of tabs. TabsFooter puts it under the mini player and owns the bottom inset.
-export function TabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
+// The row of tabs. TabsFooter puts it in the footer chrome and owns the bottom inset.
+// The selected tab and what a press does are the caller's: the player's tab bar works them out
+// from the current route.
+type TabBarProps = {
+  selectedTab: TabKey | null;
+  onTabPress?: (tab: TabKey) => void;
+};
+
+export function TabBar({ selectedTab, onTabPress }: TabBarProps) {
+  function handleHomePress() {
+    onTabPress?.('home');
+  }
+
+  function handleEventsPress() {
+    onTabPress?.('events');
+  }
+
   return (
     <View accessibilityRole="tablist" className="flex-row gap-1">
-      {state.routes.map((route, index) => {
-        const tab = tabsByRouteName[route.name];
-        if (tab === undefined) {
-          return null;
-        }
-
-        const isSelected = state.index === index;
-
-        function handlePress() {
-          const event = emitter.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
-          if (!isSelected && !event.defaultPrevented) {
-            navigateToTab(route.key);
-          }
-        }
-
-        return (
-          <TabBarItem key={route.key} tab={tab.key} label={tab.label} isSelected={isSelected} onPress={handlePress} />
-        );
-      })}
+      <TabBarItem tab="home" label="Home" isSelected={selectedTab === 'home'} onPress={handleHomePress} />
+      <TabBarItem tab="events" label="Events" isSelected={selectedTab === 'events'} onPress={handleEventsPress} />
     </View>
   );
 }

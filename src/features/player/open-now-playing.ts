@@ -3,7 +3,6 @@ import { router } from 'expo-router';
 import type { Lecture } from '@/features/lectures/lecture.types';
 
 import { playLecture, reloadFailedLecture, resume, stopAndClear } from './audio-engine';
-import type { PanelDecision } from './panel-rules';
 import {
   selectCurrentLecture,
   selectHasAudioFailed,
@@ -13,14 +12,14 @@ import {
 } from './player.store';
 
 // Every way into and out of Now Playing goes through this file: Home rows, Continue listening,
-// Event detail rows, Search results, the mini player (tap and swipes), the chevron, Android back,
-// the event pill, the /player deep link, and the panel reporting where a drag sent it. One place
+// Event detail rows, Search results, the mini player's tap, the chevron, Android back, the event
+// pill, the /player deep link, and the player sheet reporting where a drag left it. One place
 // decides the order of the steps, because the bugs come from callers each mixing "load" and
 // "show" their own way.
 //
 // The order is store → engine. The intent is recorded first, then the audio is asked to change.
-// Nothing here moves anything: the panel (NowPlayingPanel) animates to whatever the store says.
-// The panel's spring can be grabbed or turned around at any time, so there are no in-between
+// Nothing here moves anything: the player sheet (NowPlayingPanel) animates to whatever the store
+// says. Its spring can be grabbed or turned around at any time, so there are no in-between
 // presentations: the store holds where the player is heading, `open` or `closed`.
 //
 // Now Playing is a panel in the tabs layout, not a screen, so nothing here navigates to /player.
@@ -52,8 +51,9 @@ function resumeOrReloadLoadedLecture(resumeIfPaused: boolean): void {
   }
 }
 
-// A row, a search result or Continue listening. Now Playing slides up from the bottom, over the bar
-// if one is showing. Switching to another lecture loads it and slides up straight away.
+// A row, a search result or Continue listening. The bar grows into Now Playing; with nothing
+// loaded, Now Playing grows out of the bar's place. Switching to another lecture loads it and
+// opens straight away.
 export function openNowPlaying(request: OpenNowPlayingRequest): void {
   const stateAtTap = usePlayerStore.getState();
 
@@ -86,8 +86,9 @@ export function openNowPlaying(request: OpenNowPlayingRequest): void {
   }
 }
 
-// The bar (a tap on its text area, or a swipe up): Now Playing for the loaded lecture, same
-// position, no reload, unless its audio didn't load: then this is the way to load it again.
+// The bar's tap: Now Playing for the loaded lecture, same position, no reload, unless its audio
+// didn't load: then this is the way to load it again. (A drag up reaches the store through
+// handleSheetSettled instead.)
 export function openNowPlayingForLoadedLecture(): void {
   const state = usePlayerStore.getState();
   if (selectCurrentLecture(state) === null) {
@@ -103,9 +104,8 @@ export function openNowPlayingForLoadedLecture(): void {
   }
 }
 
-// The chevron, Android back and the event pill. Now Playing slides away, revealing the bar.
-// Minimising never stops playback. If the queue has ended there is no bar underneath: the panel
-// just slides away.
+// The chevron, Android back and the event pill. Now Playing shrinks back into the bar.
+// Minimising never stops playback. If the queue has ended there is no bar: the sheet slides away.
 export function closeNowPlaying(): void {
   const state = usePlayerStore.getState();
   if (state.nowPlayingPresentation !== 'open') {
@@ -114,15 +114,22 @@ export function closeNowPlaying(): void {
   state.setNowPlayingPresentation('closed');
 }
 
-// The panel's drag was let go, and the panel has already started its spring towards `decision`.
-// Records it in the store. 'open' covers a closing panel grabbed and pushed back up.
-export function handlePanelReleased(decision: PanelDecision): void {
-  if (decision === 'closed') {
-    closeNowPlaying();
+// Where the player sheet can come to rest: the bar, or the full player.
+export type SheetRestingSize = 'bar' | 'full';
+
+// The player sheet came to rest at one of its sizes. After a tap, a row, the chevron or Android
+// back, the store already says so (they wrote it first) and nothing changes. After the user's own
+// drag, this is how the store hears where the sheet ended up.
+export function handleSheetSettled(restingSize: SheetRestingSize): void {
+  const state = usePlayerStore.getState();
+  if (restingSize === 'bar') {
+    if (state.nowPlayingPresentation === 'closed') {
+      return;
+    }
+    state.setNowPlayingPresentation('closed');
     return;
   }
-  const state = usePlayerStore.getState();
-  if (state.nowPlayingPresentation !== 'closed') {
+  if (state.nowPlayingPresentation === 'open') {
     return;
   }
   if (selectCurrentLecture(state) === null) {
@@ -131,9 +138,9 @@ export function handlePanelReleased(decision: PanelDecision): void {
   state.setNowPlayingPresentation('open');
 }
 
-// The bar swiped away, or its screen-reader action "Stop and close player". Stops and clears the
-// session; the bar goes with it. Only while Now Playing is closed and the bar is showing, so
-// nothing on Now Playing can ever reach this.
+// The bar's screen-reader action "Stop and close player" (the bar has no gesture for it). Stops
+// and clears the session; the bar goes with it. Only while Now Playing is closed and the bar is
+// showing, so nothing on Now Playing can ever reach this.
 export function dismissMiniPlayer(): void {
   const state = usePlayerStore.getState();
   if (state.nowPlayingPresentation !== 'closed') {
@@ -145,7 +152,7 @@ export function dismissMiniPlayer(): void {
   stopAndClear();
 }
 
-// Now Playing's event pill: Now Playing slides away while the event opens underneath it, in the
+// Now Playing's event pill: Now Playing shrinks into the bar while the event opens underneath it, in the
 // Events tab. navigate, not push, so opening the event that is already showing doesn't stack it
 // twice.
 export function openEventFromNowPlaying(eventSlug: string): void {
@@ -156,7 +163,7 @@ export function openEventFromNowPlaying(eventSlug: string): void {
   router.navigate({ pathname: '/events/[slug]', params: { slug: eventSlug } });
 }
 
-// The /player deep link (and a reminder tap): Now Playing slides up, like every other open.
+// The /player deep link (and a reminder tap): Now Playing opens, like every other open.
 export function showNowPlayingFromDeepLink(): void {
   const state = usePlayerStore.getState();
   if (state.nowPlayingPresentation !== 'closed') {

@@ -4,7 +4,7 @@ import * as engine from '@/features/player/audio-engine';
 import {
   closeNowPlaying,
   dismissMiniPlayer,
-  handlePanelReleased,
+  handleSheetSettled,
   openEventFromNowPlaying,
   openNowPlaying,
   openNowPlayingForLoadedLecture,
@@ -204,55 +204,47 @@ describe('closeNowPlaying (chevron, Android back)', () => {
   });
 });
 
-describe('handlePanelReleased (the panel was dragged and let go)', () => {
-  it('released closed from open: closes, playback continues', () => {
+describe('handleSheetSettled (the player sheet came to rest after a drag)', () => {
+  it('dragged down to the bar from open: closes, playback continues', () => {
     loadFirstWithMiniPlayerShowing();
     setPresentation('open');
 
-    handlePanelReleased('closed');
+    handleSheetSettled('bar');
 
     expect(presentation()).toBe('closed');
     expect(stopAndClear).not.toHaveBeenCalled();
   });
 
-  it('released open while open (sprang back): stays open', () => {
+  it('dragged up to the full player from the bar: opens', () => {
+    loadFirstWithMiniPlayerShowing();
+
+    handleSheetSettled('full');
+
+    expect(presentation()).toBe('open');
+  });
+
+  it('arrives where the store already says (after a tap or the chevron): nothing changes', () => {
     loadFirstWithMiniPlayerShowing();
     setPresentation('open');
-
-    handlePanelReleased('open');
-
+    handleSheetSettled('full');
     expect(presentation()).toBe('open');
-  });
 
-  it('grabbed while closing and pushed back up: re-opens', () => {
-    loadFirstWithMiniPlayerShowing();
-
-    handlePanelReleased('open');
-
-    expect(presentation()).toBe('open');
-  });
-
-  it('released closed while already closed: nothing changes, nothing stops', () => {
-    loadFirstWithMiniPlayerShowing();
-
-    handlePanelReleased('closed');
-
+    setPresentation('closed');
+    handleSheetSettled('bar');
     expect(presentation()).toBe('closed');
     expect(stopAndClear).not.toHaveBeenCalled();
   });
 
-  it('does nothing when nothing is loaded', () => {
-    handlePanelReleased('open');
-    expect(presentation()).toBe('closed');
+  it('does not open when nothing is loaded', () => {
+    handleSheetSettled('full');
 
-    handlePanelReleased('closed');
     expect(presentation()).toBe('closed');
   });
 
-  it('a row tapped right after a release always opens Now Playing (the store cannot get stuck)', () => {
+  it('a row tapped right after a drag down always opens Now Playing (the store cannot get stuck)', () => {
     loadFirstWithMiniPlayerShowing();
     setPresentation('open');
-    handlePanelReleased('closed');
+    handleSheetSettled('bar');
 
     openNowPlaying(openSecond);
 

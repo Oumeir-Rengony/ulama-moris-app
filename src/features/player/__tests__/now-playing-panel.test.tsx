@@ -1,5 +1,6 @@
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import { BackHandler } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
 
 import * as entryPoint from '@/features/player/open-now-playing';
 import { NowPlayingPanel } from '@/features/player/now-playing-panel';
@@ -21,7 +22,8 @@ jest.mock('@/features/player/audio-engine', () => ({
 jest.mock('@/features/player/open-now-playing', () => ({
   openNowPlayingForLoadedLecture: jest.fn(),
   closeNowPlaying: jest.fn(),
-  handlePanelReleased: jest.fn(),
+  handleSheetSettled: jest.fn(),
+  dismissMiniPlayer: jest.fn(),
   openEventFromNowPlaying: jest.fn(),
 }));
 
@@ -33,7 +35,9 @@ const pausedAndLoaded: MirroredStatus = {
   durationSec: 2781,
 };
 
-const areaLayout = { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } } };
+const areaLayout = {
+  nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } },
+};
 
 function loadFirst() {
   usePlayerStore.getState().startQueue(queueOfThree, 0, latestSource);
@@ -44,11 +48,18 @@ function setPresentation(presentation: NowPlayingPresentation) {
   usePlayerStore.getState().setNowPlayingPresentation(presentation);
 }
 
-// The panel mounts once the area it slides in has been laid out.
-async function renderPanel() {
-  await renderWithProviders(<NowPlayingPanel />);
+function PanelInLayout({ tabBarHeight }: { tabBarHeight: number }) {
+  const sheetIndex = useSharedValue(-1);
+  return <NowPlayingPanel sheetIndex={sheetIndex} tabBarHeight={tabBarHeight} />;
+}
+
+// The sheet mounts once the area it moves in and the tab bar have been laid out.
+async function renderPanel(tabBarHeight = 83) {
+  await renderWithProviders(<PanelInLayout tabBarHeight={tabBarHeight} />);
   await fireEvent(screen.getByTestId('now-playing-area'), 'layout', areaLayout);
 }
+
+const openPlayerLabel = /Open player/;
 
 beforeEach(() => {
   usePlayerStore.setState(initialPlayerState);
@@ -56,28 +67,46 @@ beforeEach(() => {
 });
 
 describe('NowPlayingPanel', () => {
-  it('renders nothing when nothing is loaded', async () => {
-    await renderPanel();
+  it('waits for the tab bar to be measured', async () => {
+    loadFirst();
+    await renderPanel(0);
 
-    expect(screen.queryByTestId('now-playing-panel', { includeHiddenElements: true })).not.toBeOnTheScreen();
+    expect(
+      screen.queryByTestId('now-playing-panel', {
+        includeHiddenElements: true,
+      }),
+    ).not.toBeOnTheScreen();
   });
 
-  it('while closed: mounted, but hidden from screen readers', async () => {
+  it('while nothing is loaded: no bar, and Now Playing hidden (the sheet is below the screen)', async () => {
+    await renderPanel();
+
+    expect(screen.queryByRole('button', { name: openPlayerLabel, hidden: true })).not.toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Minimise player' })).not.toBeOnTheScreen();
+  });
+
+  it('while closed: the bar is reachable; Now Playing is hidden from screen readers and takes no touches', async () => {
     loadFirst();
     await renderPanel();
 
-    expect(screen.getByTestId('now-playing-panel', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: openPlayerLabel })).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Minimise player' })).not.toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Minimise player', hidden: true })).toBeOnTheScreen();
+    expect(screen.getByTestId('now-playing-panel', { includeHiddenElements: true })).toHaveProp(
+      'pointerEvents',
+      'none',
+    );
   });
 
-  it('while open: reachable by screen readers, and modal', async () => {
+  it('while open: Now Playing is reachable and modal; the bar is hidden', async () => {
     loadFirst();
     setPresentation('open');
     await renderPanel();
 
     expect(screen.getByRole('button', { name: 'Minimise player' })).toBeOnTheScreen();
     expect(screen.getByTestId('now-playing-panel')).toHaveProp('accessibilityViewIsModal', true);
+    expect(screen.getByTestId('now-playing-panel')).toHaveProp('pointerEvents', 'auto');
+    expect(screen.queryByRole('button', { name: openPlayerLabel })).not.toBeOnTheScreen();
   });
 
   it('becomes hidden from screen readers as soon as the store closes', async () => {
@@ -120,7 +149,7 @@ describe('NowPlayingPanel', () => {
     addListener.mockRestore();
   });
 
-  it('unmounts when the session is cleared', async () => {
+  it('the bar goes when the session is cleared', async () => {
     loadFirst();
     await renderPanel();
 
@@ -128,6 +157,6 @@ describe('NowPlayingPanel', () => {
       usePlayerStore.getState().setCurrentIndex(null);
     });
 
-    expect(screen.queryByTestId('now-playing-panel', { includeHiddenElements: true })).not.toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: openPlayerLabel, hidden: true })).not.toBeOnTheScreen();
   });
 });
