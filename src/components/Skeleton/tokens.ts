@@ -4,6 +4,10 @@ import { borderAlpha } from '@/theme/tokens';
 export const skeleton = {
   bg: 'bg-surface-2',   // placeholder bars, circles and tiles
   row: 'bg-surface-1',  // the row they sit in
+  // A placeholder for a forest card is forest too, so the real card doesn't flash in over a
+  // pale one. Its bars use the info-chip tint.
+  emphasisCard: 'bg-emphasis',
+  emphasisBar: 'bg-emphasis-fg/[0.12]',
 } as const;
 
 // Spinner (react-native-svg): ring = fg at border-strong alpha, arc = primary.

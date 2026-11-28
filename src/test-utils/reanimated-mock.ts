@@ -46,6 +46,10 @@ function useAnimatedStyle<Style>(makeStyle: () => Style): Style {
   return makeStyle();
 }
 
+// The player's resting check (a reaction to the sheet's index). Nothing moves in tests, so it never
+// reports; what it reports to (handleSheetSettled) is tested on its own.
+function useAnimatedReaction(): void {}
+
 function withTiming<Value>(toValue: Value, _config?: unknown, callback?: (finished?: boolean) => void): FakeAnimation<Value> {
   return { isFakeAnimation: true, toValue, callback };
 }
@@ -91,6 +95,11 @@ const Easing = {
   quad: () => 0,
 };
 
+// The player follows the keyboard. No keyboard opens in tests: its height stays 0.
+function useAnimatedKeyboard() {
+  return { height: makeMutable(0), state: makeMutable(0) };
+}
+
 function useReducedMotion(): boolean {
   return false;
 }
@@ -113,6 +122,8 @@ export {
   interpolate,
   interpolateColor,
   makeMutable,
+  useAnimatedKeyboard,
+  useAnimatedReaction,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,

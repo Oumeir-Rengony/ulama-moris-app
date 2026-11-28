@@ -37,8 +37,19 @@ function loadFirst(status: MirroredStatus = pausedAndLoaded) {
   usePlayerStore.getState().applyStatus(status);
 }
 
-async function renderBar(bottomOffset = 90) {
-  await renderWithProviders(<MiniPlayerBar bottomOffset={bottomOffset} />);
+const handleHeightChange = jest.fn();
+const handleThumbnailSlotChange = jest.fn();
+
+async function renderBar() {
+  await renderWithProviders(
+    <MiniPlayerBar onHeightChange={handleHeightChange} onThumbnailSlotChange={handleThumbnailSlotChange} />,
+  );
+}
+
+function activateOpen() {
+  return fireEvent(screen.getByRole('button', { name: openLabel }), 'accessibilityAction', {
+    nativeEvent: { actionName: 'activate' },
+  });
 }
 
 beforeEach(() => {
@@ -60,14 +71,26 @@ describe('MiniPlayerBar', () => {
     expect(screen.getByRole('button', { name: openLabel })).toBeOnTheScreen();
   });
 
-  it('waits for the tab bar to be measured', async () => {
+  it('reports its height and where its thumbnail slot is', async () => {
     loadFirst();
-    await renderBar(0);
+    await renderBar();
 
-    expect(screen.queryByRole('button', { name: openLabel })).not.toBeOnTheScreen();
+    await fireEvent(screen.getByTestId('mini-player-bar'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 0, width: 366, height: 62 } },
+    });
+    expect(handleHeightChange).toHaveBeenCalledWith(62);
+
+    await fireEvent(screen.getByTestId('mini-player-thumbnail-slot'), 'layout', {
+      nativeEvent: { layout: { x: 8, y: 8, width: 44, height: 44 } },
+    });
+    expect(handleThumbnailSlotChange).toHaveBeenCalledWith({
+      x: 8,
+      y: 8,
+      size: 44,
+    });
   });
 
-  it('goes away once the queue has ended', async () => {
+  it('once the queue has ended: hidden from screen readers and not touchable (the sheet goes away)', async () => {
     loadFirst();
     await renderBar();
 
@@ -76,9 +99,10 @@ describe('MiniPlayerBar', () => {
     });
 
     expect(screen.queryByRole('button', { name: openLabel })).not.toBeOnTheScreen();
+    expect(screen.getByTestId('mini-player-bar', { includeHiddenElements: true })).toHaveProp('pointerEvents', 'none');
   });
 
-  it('while Now Playing is open: stays rendered, but hidden from screen readers and not touchable', async () => {
+  it('while Now Playing is open: hidden from screen readers and not touchable (it sits over the full player)', async () => {
     loadFirst();
     usePlayerStore.getState().setNowPlayingPresentation('open');
     await renderBar();
@@ -98,32 +122,14 @@ describe('MiniPlayerBar', () => {
     });
 
     expect(screen.getByRole('button', { name: openLabel })).toBeOnTheScreen();
+    expect(screen.getByTestId('mini-player-bar')).toHaveProp('pointerEvents', 'box-none');
   });
 
-  it('mounted under an open Now Playing (a row opened it): invisible until Now Playing first closes', async () => {
-    loadFirst();
-    usePlayerStore.getState().setNowPlayingPresentation('open');
-    await renderBar();
-    const bar = () => screen.getByTestId('mini-player-bar', { includeHiddenElements: true });
-    expect(bar()).toHaveStyle({ opacity: 0 });
-
-    await act(async () => {
-      usePlayerStore.getState().setNowPlayingPresentation('closed');
-    });
-    expect(bar()).toHaveStyle({ opacity: 1 });
-
-    // From then on it stays visible underneath while Now Playing is open again.
-    await act(async () => {
-      usePlayerStore.getState().setNowPlayingPresentation('open');
-    });
-    expect(bar()).toHaveStyle({ opacity: 1 });
-  });
-
-  it('the text area opens Now Playing for the loaded lecture', async () => {
+  it('"Open player" opens Now Playing for the loaded lecture', async () => {
     loadFirst();
     await renderBar();
 
-    await fireEvent.press(screen.getByRole('button', { name: openLabel }));
+    await activateOpen();
 
     expect(entryPoint.openNowPlayingForLoadedLecture).toHaveBeenCalledTimes(1);
   });

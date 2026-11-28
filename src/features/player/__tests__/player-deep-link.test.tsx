@@ -44,7 +44,7 @@ beforeEach(() => {
 });
 
 // The /player route is only the deep-link (and reminder-tap) entry: Now Playing itself is the panel
-// in the tabs layout, tested in now-playing-panel.test.tsx.
+// in PlayerShell, tested in now-playing-panel.test.tsx.
 describe('/player deep link', () => {
   it('with a lecture loaded: opens Now Playing, then steps out of the way', async () => {
     loadFirst();

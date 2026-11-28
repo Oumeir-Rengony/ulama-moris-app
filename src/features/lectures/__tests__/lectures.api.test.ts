@@ -77,7 +77,7 @@ describe('fetchLecturePage', () => {
     const request = fetchLecturePage({ page: 1, series: 'local' });
 
     await expect(request).rejects.toBeInstanceOf(ApiError);
-    await expect(request).rejects.toMatchObject({ status: 500, message: 'Failed to fetch lectures' });
+    await expect(request).rejects.toMatchObject({ status: 500, message: 'API 500: Failed to fetch lectures' });
   });
 
   it('lets a failed connection fail the request', async () => {

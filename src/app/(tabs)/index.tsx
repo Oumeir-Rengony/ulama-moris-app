@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { FlatList, View, type ListRenderItemInfo } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -9,6 +9,7 @@ import { LoadingFooter, SkeletonRow } from '@/components/Skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorCard } from '@/components/ui/error-card';
 import { LoadMoreError } from '@/components/ui/load-more-error';
+import { QueryBoundary } from '@/features/api/query-boundary';
 import { errorAnnouncement, errorCardMessage, loadMoreErrorMessage } from '@/features/errors/error-copy';
 import { lectureRowMetaLabel } from '@/features/lectures/lecture-labels';
 import { defaultLectureSeries, lectureSeries } from '@/features/lectures/lecture-series';
@@ -18,6 +19,7 @@ import { useLatestLecturesQuery } from '@/features/lectures/lectures.queries';
 import { ContinueListeningSection } from '@/features/player/continue-listening-section';
 import { openNowPlaying } from '@/features/player/open-now-playing';
 import { selectActiveLectureSlug, usePlayerStore } from '@/features/player/player.store';
+import { useTabBarHeight } from '@/features/player/tab-bar-height';
 import { useMiniPlayerSpace } from '@/features/player/use-mini-player-space';
 import { openSearch } from '@/features/search/open-search';
 import { useAnnouncement } from '@/hooks/use-announcement';
@@ -105,54 +107,46 @@ function pickRowState(slug: string, activeLectureSlug: string | null, isPlaying:
   return 'active-paused';
 }
 
-export default function HomeScreen() {
+type HomeListProps = {
+  lectures: Lecture[];
+  // "81 lectures". Left out until the first page has loaded.
+  lectureCountLabel?: string;
+  selectedSeries: LectureSeries;
+  onSeriesPress: (label: string) => void;
+  // In place of the rows when there are none: the skeleton, the error card or the empty card.
+  emptyList?: ReactElement;
+  // Under the rows: the next page loading or failed.
+  footer?: ReactElement;
+  onEndReached?: () => void;
+};
+
+// The Home list as it looks in every state: the header (greeting, search, Continue listening,
+// series chips) and the lecture rows, or `emptyList` when there are none.
+function HomeList({
+  lectures,
+  lectureCountLabel,
+  selectedSeries,
+  onSeriesPress,
+  emptyList,
+  footer,
+  onEndReached,
+}: HomeListProps) {
   const insets = useSafeAreaInsets();
   const miniPlayerSpace = useMiniPlayerSpace();
-  // Home always shows one series; every request sends it.
-  const [selectedSeries, setSelectedSeries] = useState<LectureSeries>(defaultLectureSeries);
-  const lecturesQuery = useLatestLecturesQuery(selectedSeries);
-  const { data, isPending, isError, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage, refetch } =
-    lecturesQuery;
-  // One "Try again" for the first page (reloads the list), one for a later page.
-  const firstPageRetry = useRetry(lecturesQuery, refetch);
-  const nextPageRetry = useRetry(lecturesQuery, fetchNextPage);
-
+  const tabBarHeight = useTabBarHeight();
   // Read once here and passed to the rows, rather than each row subscribing to the store.
   const activeLectureSlug = usePlayerStore(selectActiveLectureSlug);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
-
-  let loadedLectures: Lecture[] = [];
-  let lectureCountLabel: string | undefined = undefined;
-  if (data) {
-    loadedLectures = joinLecturePages(data.pages);
-    // The total comes from the API; the app never counts. The first page's total is used:
-    // past the last page the API reports 0.
-    lectureCountLabel = lectureCountText(data.pages[0].total);
-  }
-
-  function handleSeriesPress(label: string) {
-    const series = seriesKeyFor(label);
-    if (series !== undefined) {
-      setSelectedSeries(series);
-    }
-  }
-
-  // After a failed page, scrolling doesn't ask again (no retry loops): only "Try again" does.
-  function handleEndReached() {
-    if (hasNextPage && !isFetchingNextPage && !isFetchNextPageError) {
-      fetchNextPage();
-    }
-  }
 
   function renderLectureRow({ item }: ListRenderItemInfo<Lecture>) {
     // The row body opens Now Playing. The play button also resumes the lecture if it's the
     // loaded one and paused.
     function handleOpen() {
-      openNowPlaying({ lecture: item, queue: loadedLectures, source: { kind: 'latest' }, resumeIfPaused: false });
+      openNowPlaying({ lecture: item, queue: lectures, source: { kind: 'latest' }, resumeIfPaused: false });
     }
 
     function handlePlayPress() {
-      openNowPlaying({ lecture: item, queue: loadedLectures, source: { kind: 'latest' }, resumeIfPaused: true });
+      openNowPlaying({ lecture: item, queue: lectures, source: { kind: 'latest' }, resumeIfPaused: true });
     }
 
     return (
@@ -167,6 +161,104 @@ export default function HomeScreen() {
         />
       </View>
     );
+  }
+
+  return (
+    <View className="flex-1 bg-bg">
+      <StatusBar style="auto" />
+      <FlatList
+        data={lectures}
+        renderItem={renderLectureRow}
+        // The rows' look depends on the player, which isn't part of `data`.
+        extraData={`${activeLectureSlug}:${isPlaying}`}
+        keyExtractor={lectureKey}
+        ItemSeparatorComponent={RowGap}
+        ListHeaderComponent={
+          <HomeListHeader
+            continueListening={<ContinueListeningSection queue={lectures} />}
+            lectureCountLabel={lectureCountLabel}
+            seriesLabels={seriesLabels}
+            selectedSeriesLabel={seriesLabelFor(selectedSeries)}
+            onSeriesPress={onSeriesPress}
+            onSearchPress={handleSearchPress}
+          />
+        }
+        ListEmptyComponent={emptyList}
+        ListFooterComponent={footer}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.5}
+        // The tab screen has no header, so it owns the top inset. The tab bar below the screen
+        // owns the bottom inset. The list adds normal spacing, plus room for the floating mini
+        // player so the last row scrolls clear of it.
+        contentContainerStyle={{
+          paddingTop: insets.top,
+          paddingBottom: bottomSpacing + tabBarHeight + miniPlayerSpace,
+          width: '100%',
+          maxWidth: 600,
+          alignSelf: 'center',
+        }}
+      />
+    </View>
+  );
+}
+
+type HomeSeriesProps = {
+  selectedSeries: LectureSeries;
+  onSeriesPress: (label: string) => void;
+};
+
+// The series' first page is loading (the QueryBoundary shows this while the query suspends).
+function HomeLoading({ selectedSeries, onSeriesPress }: HomeSeriesProps) {
+  return (
+    <HomeList
+      lectures={[]}
+      selectedSeries={selectedSeries}
+      onSeriesPress={onSeriesPress}
+      emptyList={<FirstPageLoading />}
+    />
+  );
+}
+
+type HomeLoadErrorProps = HomeSeriesProps & {
+  retry: () => void;
+};
+
+// The series' first page didn't load. "Try again" goes back to the skeleton while it reloads.
+function HomeLoadError({ selectedSeries, onSeriesPress, retry }: HomeLoadErrorProps) {
+  const title = 'Lectures didn’t load';
+  const message = errorCardMessage;
+  useAnnouncement(errorAnnouncement(title, message));
+
+  return (
+    <HomeList
+      lectures={[]}
+      selectedSeries={selectedSeries}
+      onSeriesPress={onSeriesPress}
+      emptyList={
+        <View className="px-gutter">
+          <ErrorCard title={title} message={message} isRetrying={false} onRetryPress={retry} />
+        </View>
+      }
+    />
+  );
+}
+
+// The series' lectures. Suspends until the first page has loaded; later pages load under the rows.
+function HomeLoadedList({ selectedSeries, onSeriesPress }: HomeSeriesProps) {
+  const lecturesQuery = useLatestLecturesQuery(selectedSeries);
+  const { data, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage } = lecturesQuery;
+  const nextPageRetry = useRetry(lecturesQuery, fetchNextPage);
+
+  const loadedLectures = joinLecturePages(data.pages);
+  // The total comes from the API; the app never counts. The first page's total is used:
+  // past the last page the API reports 0.
+  const lectureCountLabel = lectureCountText(data.pages[0].total);
+
+  // After a failed page, scrolling doesn't ask again (no retry loops): only "Try again" does.
+  function handleEndReached() {
+    if (hasNextPage && !isFetchingNextPage && !isFetchNextPageError) {
+      fetchNextPage();
+    }
   }
 
   // Under the rows: the next page loading, or the next page failed (the rows stay).
@@ -191,68 +283,45 @@ export default function HomeScreen() {
   } else if (isFetchingNextPage) {
     footer = <LoadingMoreFooter />;
   }
-
-  // In place of the rows when there are none: the first page loading, failed, or empty.
-  let emptyList = undefined;
-  const hasNoData = data === undefined;
-  if (hasNoData && (firstPageRetry.isRetrying || isError)) {
-    const title = 'Lectures didn’t load';
-    const message = errorCardMessage;
-    emptyList = (
-      <View className="px-gutter">
-        <ErrorCard
-          title={title}
-          message={message}
-          isRetrying={firstPageRetry.isRetrying}
-          onRetryPress={firstPageRetry.retry}
-        />
-      </View>
-    );
-    if (!firstPageRetry.isRetrying) {
-      announcement = errorAnnouncement(title, message);
-    }
-  } else if (isPending) {
-    emptyList = <FirstPageLoading />;
-  } else if (data) {
-    emptyList = <NoLecturesInSeries seriesLabel={seriesLabelFor(selectedSeries)} />;
-  }
   useAnnouncement(announcement);
 
   return (
-    <View className="flex-1 bg-bg">
-      <StatusBar style="auto" />
-      <FlatList
-        data={loadedLectures}
-        renderItem={renderLectureRow}
-        // The rows' look depends on the player, which isn't part of `data`.
-        extraData={`${activeLectureSlug}:${isPlaying}`}
-        keyExtractor={lectureKey}
-        ItemSeparatorComponent={RowGap}
-        ListHeaderComponent={
-          <HomeListHeader
-            continueListening={<ContinueListeningSection queue={loadedLectures} />}
-            lectureCountLabel={lectureCountLabel}
-            seriesLabels={seriesLabels}
-            selectedSeriesLabel={seriesLabelFor(selectedSeries)}
-            onSeriesPress={handleSeriesPress}
-            onSearchPress={handleSearchPress}
-          />
-        }
-        ListEmptyComponent={emptyList}
-        ListFooterComponent={footer}
-        onEndReached={handleEndReached}
-        onEndReachedThreshold={0.5}
-        // The tab screen has no header, so it owns the top inset. The tab bar below the screen
-        // owns the bottom inset. The list adds normal spacing, plus room for the floating mini
-        // player so the last row scrolls clear of it.
-        contentContainerStyle={{
-          paddingTop: insets.top,
-          paddingBottom: bottomSpacing + miniPlayerSpace,
-          width: '100%',
-          maxWidth: 600,
-          alignSelf: 'center',
-        }}
-      />
-    </View>
+    <HomeList
+      lectures={loadedLectures}
+      lectureCountLabel={lectureCountLabel}
+      selectedSeries={selectedSeries}
+      onSeriesPress={onSeriesPress}
+      emptyList={<NoLecturesInSeries seriesLabel={seriesLabelFor(selectedSeries)} />}
+      footer={footer}
+      onEndReached={handleEndReached}
+    />
+  );
+}
+
+export default function HomeScreen() {
+  // Home always shows one series; every request sends it.
+  const [selectedSeries, setSelectedSeries] = useState<LectureSeries>(defaultLectureSeries);
+
+  function handleSeriesPress(label: string) {
+    const series = seriesKeyFor(label);
+    if (series !== undefined) {
+      setSelectedSeries(series);
+    }
+  }
+
+  function renderLoadError(retry: () => void) {
+    return <HomeLoadError selectedSeries={selectedSeries} onSeriesPress={handleSeriesPress} retry={retry} />;
+  }
+
+  // A series that isn't loaded yet suspends the list, so the skeleton rows show under the
+  // header. Switching series clears a load error.
+  return (
+    <QueryBoundary
+      loading={<HomeLoading selectedSeries={selectedSeries} onSeriesPress={handleSeriesPress} />}
+      renderError={renderLoadError}
+      resetKeys={[selectedSeries]}
+    >
+      <HomeLoadedList selectedSeries={selectedSeries} onSeriesPress={handleSeriesPress} />
+    </QueryBoundary>
   );
 }

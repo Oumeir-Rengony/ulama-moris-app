@@ -8,7 +8,7 @@ import { showNowPlayingFromDeepLink } from '@/features/player/open-now-playing';
 import { selectCurrentLecture, usePlayerStore } from '@/features/player/player.store';
 
 // Only for deep links (/player?slug=…) and reminder taps. Nothing in the app navigates here: Now
-// Playing is a panel in the tabs layout (NowPlayingPanel). This route loads the lecture if
+// Playing is a panel in PlayerShell (NowPlayingPanel). This route loads the lecture if
 // needed, opens the panel (it slides up, like every other open), and steps out of the way.
 function leaveToTabs() {
   if (router.canGoBack()) {

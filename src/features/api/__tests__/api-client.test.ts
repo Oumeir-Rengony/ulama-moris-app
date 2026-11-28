@@ -19,7 +19,7 @@ describe('getJson', () => {
     const request = getJson('/lectures?type=international');
 
     await expect(request).rejects.toBeInstanceOf(ApiError);
-    await expect(request).rejects.toMatchObject({ status: 400, message: 'Unknown type "international"' });
+    await expect(request).rejects.toMatchObject({ status: 400, message: 'API 400: Unknown type "international"' });
   });
 
   it('still throws with the status when the error body is not JSON', async () => {
@@ -35,7 +35,7 @@ describe('getJson', () => {
       return response as unknown as Response;
     }) as typeof fetch;
 
-    await expect(getJson('/lectures')).rejects.toMatchObject({ status: 502, message: 'Request failed with status 502' });
+    await expect(getJson('/lectures')).rejects.toMatchObject({ status: 502, message: 'API 502: Request failed with status 502' });
   });
 
   it('fails like a lost connection, without a request, when a development switch says so', async () => {

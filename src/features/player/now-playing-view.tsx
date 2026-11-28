@@ -1,9 +1,8 @@
 import ChevronDown from 'lucide-react-native/icons/chevron-down';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CoverArt } from '@/components/artwork/cover-art';
 import { TrackInfo } from '@/components/NowPlaying/track-info';
 import { ScreenTopBar } from '@/components/ScreenTopBar';
 import { Icon } from '@/components/ui/icon';
@@ -50,10 +49,23 @@ function NowPlayingTopBar() {
   );
 }
 
-// Now Playing's content: the top bar, the artwork, the track info, the seek bar and the controls.
-// The Now Playing panel renders it and paints the card colour behind it. It covers the whole
-// screen, notch included, so it owns both insets.
-export function NowPlayingView() {
+// Where the artwork sits, relative to Now Playing's top-left corner (which is the player card's).
+export type ArtworkSlot = {
+  x: number;
+  y: number;
+  size: number;
+};
+
+type NowPlayingViewProps = {
+  // Reports where the (empty) artwork slot is: the player draws the one artwork over it, the same
+  // one that sits in the bar's thumbnail.
+  onArtworkSlotChange?: (slot: ArtworkSlot) => void;
+};
+
+// Now Playing's content: the top bar, the artwork slot, the track info, the seek bar and the
+// controls. The player card renders it at full-screen size and paints the card colour behind it.
+// It covers the whole screen, notch included, so it owns both insets.
+export function NowPlayingView({ onArtworkSlotChange }: NowPlayingViewProps) {
   const insets = useSafeAreaInsets();
   const currentLecture = usePlayerStore(selectCurrentLecture);
   // The detail record (topic, event) of the loaded lecture. The queue holds list summaries.
@@ -64,17 +76,24 @@ export function NowPlayingView() {
       <View className="w-full self-center" style={{ maxWidth: contentMaxWidth }}>
         <NowPlayingTopBar />
       </View>
-      {lecture ? <NowPlayingBody lecture={lecture} /> : null}
+      {lecture ? <NowPlayingBody lecture={lecture} onArtworkSlotChange={onArtworkSlotChange} /> : null}
     </View>
   );
 }
 
 type BodyArea = {
+  x: number;
+  y: number;
   width: number;
   height: number;
 };
 
-function NowPlayingBody({ lecture }: { lecture: Lecture }) {
+type NowPlayingBodyProps = {
+  lecture: Lecture;
+  onArtworkSlotChange?: (slot: ArtworkSlot) => void;
+};
+
+function NowPlayingBody({ lecture, onArtworkSlotChange }: NowPlayingBodyProps) {
   const trackInfo = nowPlayingTrackInfo(lecture);
 
   let handleEventPress: (() => void) | undefined = undefined;
@@ -91,8 +110,8 @@ function NowPlayingBody({ lecture }: { lecture: Lecture }) {
   const [belowArtworkHeight, setBelowArtworkHeight] = useState<number | null>(null);
 
   function handleBodyLayout(event: LayoutChangeEvent) {
-    const { width, height } = event.nativeEvent.layout;
-    setBodyArea({ width, height });
+    const { x, y, width, height } = event.nativeEvent.layout;
+    setBodyArea({ x, y, width, height });
   }
 
   function handleBelowArtworkLayout(event: LayoutChangeEvent) {
@@ -109,15 +128,31 @@ function NowPlayingBody({ lecture }: { lecture: Lecture }) {
     });
   }
 
+  // The slot's place, from the numbers that lay it out: the column is centred in the body and the
+  // slot is centred in the column, artworkTopMargin below the body's top. Measured sizes only
+  // change with the screen or the text size, so this runs rarely, never during a drag.
+  let slotX: number | null = null;
+  let slotY: number | null = null;
+  if (bodyArea !== null && artworkSize !== null) {
+    slotX = bodyArea.x + (bodyArea.width - artworkSize) / 2;
+    slotY = bodyArea.y + artworkTopMargin;
+  }
+
+  useEffect(() => {
+    if (slotX === null || slotY === null || artworkSize === null) {
+      return;
+    }
+    onArtworkSlotChange?.({ x: slotX, y: slotY, size: artworkSize });
+  }, [slotX, slotY, artworkSize, onArtworkSlotChange]);
+
   // A plain View, not a ScrollView: the artwork shrinks so everything fits.
   return (
     <View className="flex-1 overflow-hidden" onLayout={handleBodyLayout}>
       <View className="w-full self-center px-gutter" style={{ maxWidth: contentMaxWidth }}>
         <View className="mt-2.5 items-center">
           {artworkSize !== null ? (
-            <View className="overflow-hidden rounded-card bg-emphasis" style={{ width: artworkSize, height: artworkSize }}>
-              <CoverArt />
-            </View>
+            // Empty: the player draws the artwork over it.
+            <View testID="now-playing-artwork-slot" style={{ width: artworkSize, height: artworkSize }} />
           ) : null}
         </View>
 

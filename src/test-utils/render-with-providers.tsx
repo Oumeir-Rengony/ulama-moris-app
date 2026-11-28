@@ -8,7 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 // A new client for every test, so no query data leaks from one test into the next.
 // retry: false makes a failing query fail at once instead of retrying three times.
 // gcTime: Infinity keeps data in the cache for the whole test, even while nothing reads it.
-function createTestQueryClient(): QueryClient {
+export function createTestQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {
@@ -19,9 +19,18 @@ function createTestQueryClient(): QueryClient {
   });
 }
 
+type RenderOptions = {
+  // A client the test has already put data in (for example a list another screen loaded).
+  // A new, empty one when left out.
+  queryClient?: QueryClient;
+};
+
 // Renders the UI inside the same providers the app puts around every screen.
-export async function renderWithProviders(ui: ReactElement) {
-  const queryClient = createTestQueryClient();
+export async function renderWithProviders(ui: ReactElement, options: RenderOptions = {}) {
+  let queryClient: QueryClient = createTestQueryClient();
+  if (options.queryClient !== undefined) {
+    queryClient = options.queryClient;
+  }
 
   function TestProviders({ children }: { children: ReactNode }) {
     return (

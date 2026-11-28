@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useQuery, useSuspenseInfiniteQuery } from '@tanstack/react-query';
 
 import type { LectureSeries } from './lecture.types';
 import { fetchLectureBySlug, fetchLecturePage, type LecturePage } from './lectures.api';
@@ -13,8 +13,9 @@ function nextPageAfter(lastPage: LecturePage): number | undefined {
 
 // The Home list: one series' lectures, newest first, one page at a time. Each series has its own
 // cache entry, so switching chips back shows the pages already loaded.
+// Suspends until the first page has loaded: render it inside a QueryBoundary.
 export function useLatestLecturesQuery(series: LectureSeries) {
-  return useInfiniteQuery({
+  return useSuspenseInfiniteQuery({
     queryKey: ['lectures', 'latest', { series }],
     initialPageParam: 1,
     queryFn: ({ pageParam }) => fetchLecturePage({ page: pageParam, series }),

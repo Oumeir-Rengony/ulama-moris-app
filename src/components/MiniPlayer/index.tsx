@@ -1,6 +1,6 @@
 import { useColorScheme } from 'nativewind';
 import type { ReactNode } from 'react';
-import { ActivityIndicator, Pressable, View, type AccessibilityActionEvent } from 'react-native';
+import { ActivityIndicator, View, type AccessibilityActionEvent } from 'react-native';
 
 import { PlayPauseButton } from '@/components/ui/play-pause-button';
 import { Text } from '@/components/ui/text';
@@ -18,9 +18,11 @@ type MiniPlayerProps = {
   // The 3px line on the bottom edge. Passed in as an element, so the line can follow the live
   // position without re-rendering the rest of the bar several times a second.
   progressLine: ReactNode;
+  // Screen readers only: "Open player" is activated with VoiceOver / TalkBack. A finger's tap is
+  // the player surface's: it puts a tap area under the bar (see below).
   onOpenPress?: () => void;
   onTogglePress?: () => void;
-  // The screen-reader way to dismiss (the swipe down isn't reachable with VoiceOver / TalkBack).
+  // The screen-reader way to stop playback and close the bar (others swipe it down).
   onDismiss?: () => void;
   // The 44 px square on the left. The player surface passes an empty space of that size and
   // draws the cover over it (the cover morphs into Now Playing's artwork). Leave out for no thumb.
@@ -30,10 +32,16 @@ type MiniPlayerProps = {
   background?: 'filled' | 'transparent';
 };
 
+const activateActionName = 'activate';
 const dismissActionName = 'dismiss';
 
-// The floating bar above the tab bar on every tab screen. Charcoal in light,
-// forest with a hairline outline in dark (miniPlayer tokens).
+// The bar above the tab bar on every tab screen. Charcoal in light, forest with a hairline outline
+// in dark (miniPlayer tokens).
+//
+// Touches: only play/pause takes them. Everything else (the thumbnail and the text) lets them
+// through to whatever the player surface draws underneath, its tap area. That tap is a Gesture
+// Handler tap, not a Pressable, so it never fights the drag that grows the bar into Now Playing,
+// and a press on play/pause never reaches it.
 export function MiniPlayer({
   title,
   author,
@@ -61,7 +69,12 @@ export function MiniPlayer({
   }
 
   function handleAccessibilityAction(event: AccessibilityActionEvent) {
-    if (event.nativeEvent.actionName === dismissActionName && onDismiss) {
+    const actionName = event.nativeEvent.actionName;
+    if (actionName === activateActionName && onOpenPress) {
+      onOpenPress();
+      return;
+    }
+    if (actionName === dismissActionName && onDismiss) {
       onDismiss();
     }
   }
@@ -129,17 +142,22 @@ export function MiniPlayer({
 
   return (
     <View
+      pointerEvents="box-none"
       className={`flex-row items-center gap-1 overflow-hidden rounded-mini pb-2.5 pl-2 pr-2 pt-2 ${backgroundClass}`}
       style={backgroundStyle}
     >
       {thumbnail}
-      <Pressable
+      <View
+        accessible
         accessibilityRole="button"
         accessibilityLabel={openPlayerLabel}
-        accessibilityActions={[{ name: dismissActionName, label: 'Stop and close player' }]}
+        accessibilityActions={[
+          { name: activateActionName },
+          { name: dismissActionName, label: 'Stop and close player' },
+        ]}
         onAccessibilityAction={handleAccessibilityAction}
-        onPress={onOpenPress}
-        className="min-h-touch flex-1 justify-center gap-0.5 pl-2 active:opacity-80"
+        pointerEvents="none"
+        className="min-h-touch flex-1 justify-center gap-0.5 pl-2"
       >
         {/* The bar is always on screen above the tabs, so its text is capped like the tab labels
             at 1.3×; uncapped, it would cover too much of the list. */}
@@ -152,7 +170,7 @@ export function MiniPlayer({
           {title}
         </Text>
         {secondLine}
-      </Pressable>
+      </View>
       {toggleControl}
       {progressLine}
     </View>

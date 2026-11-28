@@ -18,6 +18,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { LaunchScreen } from '@/features/launch/launch-screen';
 import { OfflineGate } from '@/features/offline/offline-gate';
+import { PlayerShell } from '@/features/player/player-shell';
 import { PlayerStatusBridge } from '@/features/player/player-status-bridge';
 import { setupAudio } from '@/features/player/setup-audio';
 import { RemindersBridge } from '@/features/reminders/reminders-bridge';
@@ -88,13 +89,17 @@ export default function RootLayout() {
         <PlayerStatusBridge />
         {/* After PlayerStatusBridge, so the resume point is saved before reminders are planned. */}
         <RemindersBridge />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="search" options={{ animation: 'slide_from_right' }} />
-          {/* Deep links and reminder taps only. Now Playing itself is a panel in the tabs layout:
-              this route opens it and steps out of the way. */}
-          <Stack.Screen name="player" options={{ animation: 'none' }} />
-        </Stack>
+        {/* The mini player, Now Playing and the tab bar are drawn over every screen, so the mini
+            player stays on Search too. */}
+        <PlayerShell>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="search" options={{ animation: 'slide_from_right' }} />
+            {/* Deep links and reminder taps only. Now Playing itself is a panel in PlayerShell:
+                this route opens it and steps out of the way. */}
+            <Stack.Screen name="player" options={{ animation: 'none' }} />
+          </Stack>
+        </PlayerShell>
         {isLaunchScreenVisible && <LaunchScreen onFinished={hideLaunchScreen} />}
         {/* Above everything, the launch screen included: with no connection the app is blocked. */}
         <OfflineGate />
