@@ -1,5 +1,9 @@
-import BottomSheet, { useBottomSheetSpringConfigs } from '@gorhom/bottom-sheet';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import BottomSheet, {
+  useBottomSheetSpringConfigs,
+  useGestureEventsHandlersDefault,
+  type GestureEventHandlerCallbackType,
+} from '@gorhom/bottom-sheet';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, Keyboard, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { useAnimatedReaction, useSharedValue, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -120,6 +124,8 @@ function PlayerSheet({ area, tabBarHeight, sheetIndex }: PlayerSheetProps) {
   const sheetRef = useRef<BottomSheet>(null);
   // The sheet's top edge, written by the sheet every frame. The card's height follows it.
   const sheetTop = useSharedValue(area.height);
+  // Whether a finger is dragging the sheet, written by useDragTrackingHandlers.
+  const isDraggingSheet = useSharedValue(false);
 
   const [barHeight, setBarHeight] = useState(ESTIMATED_BAR_HEIGHT);
   const [thumbnailSlot, setThumbnailSlot] = useState<ThumbnailSlot | null>(null);
@@ -184,8 +190,9 @@ function PlayerSheet({ area, tabBarHeight, sheetIndex }: PlayerSheetProps) {
       if (headingTo.current === 'gone') {
         return;
       }
-      // Otherwise the user swiped the bar down: the store stops the session, or, if the drag
-      // started on Now Playing, only closes it.
+      // Otherwise the user swiped the bar down: the store stops the session. (A drag from Now
+      // Playing can't get below the bar, see enablePanDownToClose, but if the store still says
+      // open, it only closes Now Playing.)
       headingTo.current = 'gone';
       handleSheetSettled('gone');
 
@@ -205,8 +212,16 @@ function PlayerSheet({ area, tabBarHeight, sheetIndex }: PlayerSheetProps) {
   // The resting check: crosses to React only when the sheet comes to rest at an end, and only at
   // a different end from the last one. Never per frame, and never from gorhom's callbacks
   // (onAnimate / onChange are skipped or late).
+  //
+  // Never while a finger drags the sheet: a drag from Now Playing passes through the bar's
+  // position on its way down, and reporting the bar there would record Now Playing as closed
+  // mid-drag. (Springs need no such check: from Now Playing the bar is the lowest point, see
+  // enablePanDownToClose, so a spring only reaches the bar by ending there.)
   useAnimatedReaction(
-    () => {
+    (): SheetTarget | 'moving' => {
+      if (isDraggingSheet.get()) {
+        return 'moving';
+      }
       const index = sheetIndex.get();
       if (index >= RESTING_AT_FULL_INDEX) {
         return 'full';
@@ -273,66 +288,130 @@ function PlayerSheet({ area, tabBarHeight, sheetIndex }: PlayerSheetProps) {
   // While closed, screen readers skip Now Playing and it takes no touches (it is invisible under
   // the bar). While open it is modal: screen readers stay inside it.
   return (
-    <BottomSheet
-      ref={sheetRef}
-      index={initialIndex}
-      snapPoints={snapPoints}
-      animatedIndex={sheetIndex}
-      animatedPosition={sheetTop}
-      // Otherwise gorhom adds a content-sized snap point and the indexes shift.
-      enableDynamicSizing={false}
-      // Swiping the bar down below the screen stops and closes the player (the store decides).
-      enablePanDownToClose={true}
-      // Never past either end.
-      enableOverDrag={false}
-      handleComponent={null}
-      // The card draws the colours.
-      backgroundComponent={null}
-      // Never change this: gorhom swaps the view around its content when it changes, which
-      // remounts the whole player and makes the artwork blink.
-      enableContentPanningGesture={true}
-      animationConfigs={animationConfigs}
-      activeOffsetY={PANEL_ACTIVE_OFFSET_Y}
-      failOffsetX={PANEL_FAIL_OFFSET_X}
-      // Gorhom makes its content one accessible element by default ("Bottom Sheet", adjustable),
-      // which groups everything inside: screen readers couldn't reach the chevron or the controls.
-      // The views below set the screen-reader behaviour instead.
-      accessible={false}
-    >
-      {/* Plain styles on the Animated.Views: NativeWind classes don't reach them. */}
-      <Animated.View style={[styles.card, morph.cardStyle]}>
-        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, morph.outlineStyle]}>
-          <View className={`flex-1 rounded-mini ${miniPlayer.outline}`} />
-        </Animated.View>
+    <SheetDragContext.Provider value={isDraggingSheet}>
+      <BottomSheet
+        ref={sheetRef}
+        index={initialIndex}
+        snapPoints={snapPoints}
+        animatedIndex={sheetIndex}
+        animatedPosition={sheetTop}
+        // Otherwise gorhom adds a content-sized snap point and the indexes shift.
+        enableDynamicSizing={false}
+        // Swiping the bar down below the screen stops and closes the player (the store decides).
+        // While Now Playing is open, the bar is the lowest the sheet goes: a drag or a hard flick
+        // from Now Playing stops there, so nothing started on Now Playing can stop playback.
+        enablePanDownToClose={!isOpen}
+        // Never past either end.
+        enableOverDrag={false}
+        handleComponent={null}
+        // The card draws the colours.
+        backgroundComponent={null}
+        // Never change this: gorhom swaps the view around its content when it changes, which
+        // remounts the whole player and makes the artwork blink.
+        enableContentPanningGesture={true}
+        // gorhom's drag, plus a note of when a finger is dragging (read by the resting check).
+        gestureEventsHandlersHook={useDragTrackingHandlers}
+        animationConfigs={animationConfigs}
+        activeOffsetY={PANEL_ACTIVE_OFFSET_Y}
+        failOffsetX={PANEL_FAIL_OFFSET_X}
+        // Gorhom makes its content one accessible element by default ("Bottom Sheet", adjustable),
+        // which groups everything inside: screen readers couldn't reach the chevron or the controls.
+        // The views below set the screen-reader behaviour instead.
+        accessible={false}
+      >
+        {/* Plain styles on the Animated.Views: NativeWind classes don't reach them. */}
+        <Animated.View style={[styles.card, morph.cardStyle]}>
+          <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, morph.outlineStyle]}>
+            <View className={`flex-1 rounded-mini ${miniPlayer.outline}`} />
+          </Animated.View>
 
-        {/* Laid out once at full-screen size and clipped by the card, so nothing in it is laid out
-            again while the card grows. */}
-        <Animated.View
-          testID="now-playing-panel"
-          pointerEvents={isOpen ? 'auto' : 'none'}
-          accessibilityViewIsModal={isOpen}
-          accessibilityElementsHidden={!isOpen}
-          importantForAccessibility={isOpen ? 'auto' : 'no-hide-descendants'}
-          style={[styles.fullContent, { width: area.width, height: area.height }, morph.fullContentStyle]}
-        >
-          <NowPlayingView onArtworkSlotChange={setArtworkSlot} />
-        </Animated.View>
+          {/* Laid out once at full-screen size and clipped by the card, so nothing in it is laid out
+              again while the card grows. */}
+          <Animated.View
+            testID="now-playing-panel"
+            pointerEvents={isOpen ? 'auto' : 'none'}
+            accessibilityViewIsModal={isOpen}
+            accessibilityElementsHidden={!isOpen}
+            importantForAccessibility={isOpen ? 'auto' : 'no-hide-descendants'}
+            style={[styles.fullContent, { width: area.width, height: area.height }, morph.fullContentStyle]}
+          >
+            <NowPlayingView onArtworkSlotChange={setArtworkSlot} />
+          </Animated.View>
 
-        {/* box-none: the row itself decides (it takes no touches while Now Playing is open, where it
-            would cover the chevron). */}
-        <Animated.View pointerEvents="box-none" style={[styles.barRow, { width: barWidth }, morph.barRowStyle]}>
-          <MiniPlayerBar onHeightChange={setBarHeight} onThumbnailSlotChange={setThumbnailSlot} />
-        </Animated.View>
+          {/* box-none: the row itself decides (it takes no touches while Now Playing is open, where it
+              would cover the chevron). */}
+          <Animated.View pointerEvents="box-none" style={[styles.barRow, { width: barWidth }, morph.barRowStyle]}>
+            <MiniPlayerBar onHeightChange={setBarHeight} onThumbnailSlotChange={setThumbnailSlot} />
+          </Animated.View>
 
-        {/* The one artwork, flying between the bar's thumbnail and Now Playing's slot. */}
-        <Animated.View pointerEvents="none" style={[styles.artwork, morph.artworkStyle]}>
-          <View className={`flex-1 ${miniPlayer.thumbBg}`}>
-            <CoverArt />
-          </View>
+          {/* The one artwork, flying between the bar's thumbnail and Now Playing's slot. */}
+          <Animated.View pointerEvents="none" style={[styles.artwork, morph.artworkStyle]}>
+            <View className={`flex-1 ${miniPlayer.thumbBg}`}>
+              <CoverArt />
+            </View>
+          </Animated.View>
         </Animated.View>
-      </Animated.View>
-    </BottomSheet>
+      </BottomSheet>
+    </SheetDragContext.Provider>
   );
+}
+
+// Whether a finger is dragging the sheet. PlayerSheet creates it and hands it to
+// useDragTrackingHandlers through this context, because gorhom calls that hook itself, with no
+// arguments.
+const SheetDragContext = createContext<SharedValue<boolean> | null>(null);
+
+// gorhom's own drag handlers, plus a note of when a drag starts and ends. Passed to the sheet as
+// gestureEventsHandlersHook (gorhom's public way to extend its drag). Each handler sets the flag,
+// then calls gorhom's handler unchanged, so the drag itself behaves exactly as before.
+function useDragTrackingHandlers() {
+  const defaultHandlers = useGestureEventsHandlersDefault();
+  const isDraggingSheet = useContext(SheetDragContext);
+  if (isDraggingSheet === null) {
+    throw new Error('useDragTrackingHandlers needs a SheetDragContext provider around the sheet');
+  }
+
+  const defaultOnStart = defaultHandlers.handleOnStart;
+  const defaultOnEnd = defaultHandlers.handleOnEnd;
+  const defaultOnFinalize = defaultHandlers.handleOnFinalize;
+
+  // Runs once the drag has started (after PANEL_ACTIVE_OFFSET_Y). A touch that never becomes a
+  // drag doesn't move the sheet, so it doesn't count.
+  const handleOnStart = useCallback<GestureEventHandlerCallbackType>(
+    (source, payload) => {
+      'worklet';
+      isDraggingSheet.set(true);
+      defaultOnStart(source, payload);
+    },
+    [isDraggingSheet, defaultOnStart],
+  );
+
+  // The finger lifted. gorhom picks where the sheet goes and starts its spring.
+  const handleOnEnd = useCallback<GestureEventHandlerCallbackType>(
+    (source, payload) => {
+      'worklet';
+      isDraggingSheet.set(false);
+      defaultOnEnd(source, payload);
+    },
+    [isDraggingSheet, defaultOnEnd],
+  );
+
+  // Always runs last, also when the drag was cancelled without an end.
+  const handleOnFinalize = useCallback<GestureEventHandlerCallbackType>(
+    (source, payload) => {
+      'worklet';
+      isDraggingSheet.set(false);
+      defaultOnFinalize(source, payload);
+    },
+    [isDraggingSheet, defaultOnFinalize],
+  );
+
+  return {
+    handleOnStart,
+    handleOnChange: defaultHandlers.handleOnChange,
+    handleOnEnd,
+    handleOnFinalize,
+  };
 }
 
 const styles = StyleSheet.create({

@@ -141,6 +141,25 @@ describe('player rules', () => {
     expect(settings).toEqual(['enableContentPanningGesture={true}']);
   });
 
+  // A drag from Now Playing passes through the bar's position. If that counted as resting at the
+  // bar, Now Playing was recorded as closed mid-drag, and letting go below the bar stopped playback.
+  // The finger is tracked through gorhom's public handler hook, never its internal context, whose
+  // fields can change without notice.
+  it('the resting check waits until no finger drags the sheet, tracked through public gorhom API', () => {
+    const source = readSource('features/player/now-playing-panel.tsx');
+    expect(source).toMatch(/gestureEventsHandlersHook=\{useDragTrackingHandlers\}/);
+    expect(source).toMatch(/if \(isDraggingSheet\.get\(\)\) \{\s*return 'moving';/);
+    expect(source).not.toMatch(/useBottomSheetInternal/);
+  });
+
+  // While Now Playing is open the bar is the lowest the sheet goes, so a drag or a flick from Now
+  // Playing can never reach "gone" (which stops playback when started from the bar).
+  it('pan down to close is on only while Now Playing is closed', () => {
+    const source = readSource('features/player/now-playing-panel.tsx');
+    const settings = source.match(/enablePanDownToClose=\{[^}]*\}/g);
+    expect(settings).toEqual(['enablePanDownToClose={!isOpen}']);
+  });
+
   // Every visual is a function of the sheet's index; the morph never talks to the sheet itself.
   it('the morph does not import gorhom', () => {
     expect(readSource('features/player/use-player-morph.ts')).not.toMatch(/@gorhom/);

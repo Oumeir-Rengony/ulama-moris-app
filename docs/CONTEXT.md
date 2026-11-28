@@ -170,7 +170,8 @@ function of the sheet's live index (`use-player-morph.ts`).
 **One truth, one coordinator.** The store's `nowPlayingPresentation` (`'open'` / `'closed'`) is
 the only "is it open"; `open-now-playing.ts` is its only writer (store first, then the audio).
 The sheet follows the store. A drag reaches the store through the sheet's resting check: when the
-sheet comes to rest at the other end, `handleSheetSettled` records it. No gorhom callbacks.
+sheet comes to rest at the other end with no finger dragging it, `handleSheetSettled`
+records it. Passing through the bar's position mid-drag doesn't count. No gorhom callbacks.
 
 **On Search** (any screen outside the tabs) the tab bar slides down out of the way and the bar
 drops into its place, above the safe area; with the keyboard open it rides on top of the keyboard
