@@ -162,8 +162,24 @@ function PlayerSheet({ area, tabBarHeight, sheetIndex }: PlayerSheetProps) {
       sheetRef.current?.snapToIndex(sheetIndexByTarget.full);
       return;
     }
-    // Only the store sends the sheet away; a drag can't.
     if (restingAt === 'gone') {
+      // If the store sent the sheet below the screen (the session was cleared, the queue ended),
+      // there is nothing to do.
+      if (headingTo.current === 'gone') {
+        return;
+      }
+      // Otherwise the user swiped the bar down: the store stops the session, or, if the drag
+      // started on Now Playing, only closes it.
+      headingTo.current = 'gone';
+      handleSheetSettled('gone');
+
+      // When the session was stopped, the sheet is already where it should be. Otherwise it goes
+      // back to the bar.
+      const isStillActive = selectActiveLectureSlug(usePlayerStore.getState()) !== null;
+      if (isStillActive) {
+        headingTo.current = 'bar';
+        sheetRef.current?.snapToIndex(sheetIndexByTarget.bar);
+      }
       return;
     }
     headingTo.current = restingAt;
@@ -241,8 +257,8 @@ function PlayerSheet({ area, tabBarHeight, sheetIndex }: PlayerSheetProps) {
       animatedPosition={sheetTop}
       // Otherwise gorhom adds a content-sized snap point and the indexes shift.
       enableDynamicSizing={false}
-      // A drag can't send the sheet below the bar: only the store does (a cleared session).
-      enablePanDownToClose={false}
+      // Swiping the bar down below the screen stops and closes the player (the store decides).
+      enablePanDownToClose={true}
       // Never past either end.
       enableOverDrag={false}
       handleComponent={null}

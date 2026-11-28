@@ -51,7 +51,7 @@ fail or not checked.
 - [ ] Unplugging headphones pauses, and the UI shows it.
 - [ ] A pause from the lock screen shows in the app when it's reopened.
 - [ ] Moving between screens doesn't stop playback.
-- [ ] Stopping (the bar's screen-reader "Stop and close player" action) clears the notification and the lock-screen card.
+- [ ] Stopping (swiping the bar down, or its screen-reader "Stop and close player" action) clears the notification and the lock-screen card.
 
 **Now Playing on real devices:**
 - [ ] Android back on Now Playing closes it and never leaves the app.
@@ -183,7 +183,7 @@ It never depends on `isPlaying`.
 | Drag the bar up | The card follows the finger; let go, it snaps to the nearer size (a flick up opens) |
 | Drag the bar down | Nothing: the bar can't go below its place |
 | Play/pause on the bar | Plays or pauses; never opens Now Playing |
-| Stop playback and close the bar | Screen-reader action "Stop and close player" only |
+| Stop playback and close the bar | Swipe the bar down; screen readers: the action "Stop and close player" |
 | Drag Now Playing down | It shrinks back into the bar under the finger; let go, it snaps to the nearer size (a flick down closes). Playback continues |
 | Chevron / Android back | Now Playing shrinks back into the bar. Playback continues |
 | Event pill on Now Playing | Now Playing shrinks into the bar while the event opens in the Events tab |

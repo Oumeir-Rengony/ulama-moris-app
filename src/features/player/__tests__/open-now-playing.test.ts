@@ -279,6 +279,24 @@ describe('dismissing the bar', () => {
 
     expect(stopAndClear).not.toHaveBeenCalled();
   });
+
+  it('swiping the bar down below the screen stops and clears the session', () => {
+    loadFirstWithMiniPlayerShowing();
+
+    handleSheetSettled('gone');
+
+    expect(stopAndClear).toHaveBeenCalledTimes(1);
+  });
+
+  it('a flick from Now Playing past the bar only closes Now Playing, and never stops playback', () => {
+    loadFirstWithMiniPlayerShowing();
+    setPresentation('open');
+
+    handleSheetSettled('gone');
+
+    expect(presentation()).toBe('closed');
+    expect(stopAndClear).not.toHaveBeenCalled();
+  });
 });
 
 describe('openEventFromNowPlaying (the event pill)', () => {

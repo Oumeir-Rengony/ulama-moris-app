@@ -114,13 +114,18 @@ export function closeNowPlaying(): void {
   state.setNowPlayingPresentation('closed');
 }
 
-// Where the player sheet can come to rest: the bar, or the full player.
-export type SheetRestingSize = 'bar' | 'full';
+// Where the player sheet can come to rest: below the screen (gone), the bar, or the full player.
+export type SheetRestingSize = 'gone' | 'bar' | 'full';
 
 // The player sheet came to rest at one of its sizes. After a tap, a row, the chevron or Android
 // back, the store already says so (they wrote it first) and nothing changes. After the user's own
 // drag, this is how the store hears where the sheet ended up.
 export function handleSheetSettled(restingSize: SheetRestingSize): void {
+  if (restingSize === 'gone') {
+    handleSheetDraggedAway();
+    return;
+  }
+
   const state = usePlayerStore.getState();
   if (restingSize === 'bar') {
     if (state.nowPlayingPresentation === 'closed') {
@@ -138,9 +143,21 @@ export function handleSheetSettled(restingSize: SheetRestingSize): void {
   state.setNowPlayingPresentation('open');
 }
 
-// The bar's screen-reader action "Stop and close player" (the bar has no gesture for it). Stops
-// and clears the session; the bar goes with it. Only while Now Playing is closed and the bar is
-// showing, so nothing on Now Playing can ever reach this.
+// The bar was swiped down below the screen: stop and close, like the screen-reader action.
+// A hard flick down on Now Playing can carry the sheet past the bar too, but nothing on Now
+// Playing stops playback, so that only closes Now Playing (the sheet comes back to the bar).
+function handleSheetDraggedAway(): void {
+  const state = usePlayerStore.getState();
+  if (state.nowPlayingPresentation === 'open') {
+    closeNowPlaying();
+    return;
+  }
+  dismissMiniPlayer();
+}
+
+// The bar's swipe down and its screen-reader action "Stop and close player". Stops and clears the
+// session; the bar goes with it. Only while Now Playing is closed and the bar is showing, so
+// nothing on Now Playing can ever reach this.
 export function dismissMiniPlayer(): void {
   const state = usePlayerStore.getState();
   if (state.nowPlayingPresentation !== 'closed') {

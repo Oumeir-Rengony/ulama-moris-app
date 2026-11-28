@@ -146,7 +146,8 @@ describe('player rules', () => {
     expect(readSource('features/player/use-player-morph.ts')).not.toMatch(/@gorhom/);
   });
 
-  // A flick on Now Playing must never stop playback: only the bar's screen-reader action can.
+  // A flick on Now Playing must never stop playback: only the bar (its swipe down, or its
+  // screen-reader action) can, and that decision lives in open-now-playing.ts.
   it('Now Playing has no path to stopping playback', () => {
     for (const file of ['features/player/now-playing-panel.tsx', 'features/player/now-playing-view.tsx']) {
       const source = readSource(file);

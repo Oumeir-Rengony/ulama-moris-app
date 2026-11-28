@@ -30,7 +30,8 @@ type MiniPlayerBarProps = {
 // Tap it to open Now Playing. Its tap is a Gesture Handler tap, drawn under the row, so a finger
 // that moves (a drag up) is the sheet's, never the tap's. While Now Playing is open the row sits
 // over the top of the full player (invisible), so it takes no touches and screen readers skip it.
-// There is no gesture to stop playback: only the screen-reader action "Stop and close player".
+// Swiping the bar down (the player sheet) stops playback; screen readers use the action "Stop and
+// close player".
 export function MiniPlayerBar({ onHeightChange, onThumbnailSlotChange }: MiniPlayerBarProps) {
   const lecture = usePlayerStore(selectCurrentLecture);
   const isVisible = usePlayerStore(selectIsMiniPlayerVisible);

@@ -22,7 +22,7 @@ type MiniPlayerProps = {
   // the player surface's: it puts a tap area under the bar (see below).
   onOpenPress?: () => void;
   onTogglePress?: () => void;
-  // The screen-reader way to stop playback and close the bar (it has no gesture for it).
+  // The screen-reader way to stop playback and close the bar (others swipe it down).
   onDismiss?: () => void;
   // The 44 px square on the left. The player surface passes an empty space of that size and
   // draws the cover over it (the cover morphs into Now Playing's artwork). Leave out for no thumb.
