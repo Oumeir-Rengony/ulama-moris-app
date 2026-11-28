@@ -22,7 +22,7 @@ import {
 // says. Its spring can be grabbed or turned around at any time, so there are no in-between
 // presentations: the store holds where the player is heading, `open` or `closed`.
 //
-// Now Playing is a panel in the tabs layout, not a screen, so nothing here navigates to /player.
+// Now Playing is a panel in PlayerShell (around every screen), not a screen, so nothing here navigates to /player.
 // That route is only for deep links and reminder taps.
 //
 // This is the only file that calls setNowPlayingPresentation.
@@ -34,8 +34,8 @@ export type OpenNowPlayingRequest = {
   source: QueueSource;
   // Play buttons resume the lecture if it's the loaded one and paused. Row bodies only show it.
   resumeIfPaused: boolean;
-  // From Search: Search closes first, so Now Playing rises over the tab Search was opened from
-  // (the panel is drawn in the tabs layout, under Search).
+  // From Search: Search closes first, so Now Playing rises over the tab Search was opened from,
+  // and minimising it returns there. (The panel is drawn over Search too, so this is a choice.)
   leaveSearchFirst?: boolean;
 };
 

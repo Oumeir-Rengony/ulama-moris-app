@@ -176,3 +176,47 @@ export function usePlayerMorph({
 
   return { cardStyle, outlineStyle, barRowStyle, fullContentStyle, artworkStyle };
 }
+
+type PlayerPlacementInput = {
+  // The sheet's live index: 0 = the bar, 1 = the full player (−1 = gone, below the screen).
+  sheetIndex: SharedValue<number>;
+  // 0 on a tab screen, 1 on a screen outside the tabs (Search), where the tab bar slides away.
+  outsideTabsProgress: SharedValue<number>;
+  // The keyboard's height, 0 while it is closed.
+  keyboardHeight: SharedValue<number>;
+  // The tab bar's measured height (bottom inset included). The sheet's bar size is set to sit just
+  // above it.
+  tabBarHeight: number;
+  // The safe-area bottom inset: where the bar rests when there is no tab bar.
+  bottomInset: number;
+};
+
+// Where the whole player sits up or down, for the bar only. The sheet itself always places the
+// bar just above the tab bar. Outside the tabs there is no tab bar, so the bar drops down to the
+// safe area; with the keyboard open it rides on top of the keyboard instead. As the bar grows into
+// the full player the shift fades out, so Now Playing always fills the screen exactly.
+export function usePlayerPlacementStyle({
+  sheetIndex,
+  outsideTabsProgress,
+  keyboardHeight,
+  tabBarHeight,
+  bottomInset,
+}: PlayerPlacementInput) {
+  return useAnimatedStyle(() => {
+    // How far below the tab bar's top the bar's floor moves when the tab bar slides away.
+    const dropWithoutTabBar = (tabBarHeight - bottomInset) * outsideTabsProgress.get();
+    const barFloor = tabBarHeight - dropWithoutTabBar;
+
+    // An open keyboard taller than the floor lifts the bar to just above it.
+    let liftAboveKeyboard = keyboardHeight.get() - barFloor;
+    if (liftAboveKeyboard < 0) {
+      liftAboveKeyboard = 0;
+    }
+
+    // 1 at the bar (and below it), 0 at the full player.
+    const barWeight = interpolate(sheetIndex.get(), [BAR_INDEX, FULL_INDEX], [1, 0], Extrapolation.CLAMP);
+
+    const translateY = (dropWithoutTabBar - liftAboveKeyboard) * barWeight;
+    return { transform: [{ translateY }] };
+  });
+}

@@ -20,6 +20,7 @@ import { errorAnnouncement, errorCardMessage, loadMoreErrorMessage } from '@/fea
 import { latestEventMetaLabel } from '@/features/events/event-labels';
 import { openEvent } from '@/features/events/open-event';
 import { openNowPlaying } from '@/features/player/open-now-playing';
+import { useMiniPlayerSpace } from '@/features/player/use-mini-player-space';
 import { useRecentSearchesStore } from '@/features/search/recent-searches.store';
 import { parseSearchScope, type SearchScope } from '@/features/search/scope';
 import {
@@ -233,6 +234,7 @@ function EventResult({ result, position, onOpen }: EventResultProps) {
 // when the user presses the keyboard's Search key or opens one of its results.
 export default function SearchScreen() {
   const insets = useSafeAreaInsets();
+  const miniPlayerSpace = useMiniPlayerSpace();
   const params = useLocalSearchParams<{ scope?: string }>();
   const scope = parseSearchScope(params.scope);
 
@@ -347,6 +349,8 @@ export default function SearchScreen() {
   }
 
   // No header and no tab bar, so this screen owns the top inset, and the list owns the bottom one.
+  // The mini player floats over the bottom of the list (and over the keyboard while it is open),
+  // so the last row scrolls clear of it.
   return (
     <View className="flex-1 bg-bg" style={{ paddingTop: insets.top }}>
       <StatusBar style="auto" />
@@ -393,7 +397,7 @@ export default function SearchScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           contentContainerStyle={{
-            paddingBottom: insets.bottom + bottomSpacing,
+            paddingBottom: insets.bottom + bottomSpacing + miniPlayerSpace,
             width: '100%',
             maxWidth: contentMaxWidth,
             alignSelf: 'center',

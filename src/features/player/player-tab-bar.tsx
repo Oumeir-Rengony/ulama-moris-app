@@ -11,6 +11,8 @@ import { usePlayerStore } from './player.store';
 type PlayerTabBarProps = {
   // The player sheet's live index: 0 = the bar, 1 = the full player.
   sheetIndex: SharedValue<number>;
+  // 0 on a tab screen, 1 on a screen outside the tabs (Search), where the tab bar slides away.
+  outsideTabsProgress: SharedValue<number>;
   // Reports the tab bar's height (bottom inset included). The bar's place and the screens' bottom
   // padding are worked out from it.
   onHeightChange: (height: number) => void;
@@ -33,10 +35,11 @@ const rootPathByTab: Record<TabKey, Href> = {
   events: '/events',
 };
 
-// The tab bar, drawn by the tabs layout over the player sheet instead of by the navigator (which
+// The tab bar, drawn by PlayerShell over the player sheet instead of by the navigator (which
 // would draw it under the sheet, where the sheet would take its taps). As the player grows into
-// Now Playing, the tab bar slides down out of the way, driven by the same index as the morph.
-export function PlayerTabBar({ sheetIndex, onHeightChange }: PlayerTabBarProps) {
+// Now Playing, the tab bar slides down out of the way, driven by the same index as the morph. It
+// slides away too on a screen outside the tabs (Search), where the mini player takes its place.
+export function PlayerTabBar({ sheetIndex, outsideTabsProgress, onHeightChange }: PlayerTabBarProps) {
   const isNowPlayingOpen = usePlayerStore((state) => state.nowPlayingPresentation === 'open');
   const [height, setHeight] = useState(0);
 
@@ -80,20 +83,27 @@ export function PlayerTabBar({ sheetIndex, onHeightChange }: PlayerTabBarProps) 
     onHeightChange(measuredHeight);
   }
 
+  // Whichever pushes it further down wins: Now Playing growing, or a screen outside the tabs.
   const slideAwayStyle = useAnimatedStyle(() => {
-    const translateY = interpolate(sheetIndex.get(), [0, 1], [0, height], Extrapolation.CLAMP);
+    const slideForNowPlaying = interpolate(sheetIndex.get(), [0, 1], [0, height], Extrapolation.CLAMP);
+    const slideOutsideTabs = outsideTabsProgress.get() * height;
+    let translateY = slideForNowPlaying;
+    if (slideOutsideTabs > translateY) {
+      translateY = slideOutsideTabs;
+    }
     return { transform: [{ translateY }] };
   });
 
-  // While Now Playing is open the tab bar is off-screen: screen readers skip it, and it can't be
-  // touched.
+  // While Now Playing is open, or a screen outside the tabs is showing, the tab bar is off-screen:
+  // screen readers skip it, and it can't be touched.
+  const isOffScreen = isNowPlayingOpen || tabFromPath === null;
   return (
     <Animated.View
       testID="player-tab-bar"
       onLayout={handleLayout}
-      pointerEvents={isNowPlayingOpen ? 'none' : 'auto'}
-      accessibilityElementsHidden={isNowPlayingOpen}
-      importantForAccessibility={isNowPlayingOpen ? 'no-hide-descendants' : 'auto'}
+      pointerEvents={isOffScreen ? 'none' : 'auto'}
+      accessibilityElementsHidden={isOffScreen}
+      importantForAccessibility={isOffScreen ? 'no-hide-descendants' : 'auto'}
       style={[{ position: 'absolute', left: 0, right: 0, bottom: 0 }, slideAwayStyle]}
     >
       <TabsFooter selectedTab={selectedTab} onTabPress={handleTabPress} />

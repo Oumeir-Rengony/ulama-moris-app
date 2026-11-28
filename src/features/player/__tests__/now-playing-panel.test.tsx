@@ -1,5 +1,5 @@
 import { act, fireEvent, screen } from '@testing-library/react-native';
-import { BackHandler } from 'react-native';
+import { BackHandler, Keyboard } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
 import * as entryPoint from '@/features/player/open-now-playing';
@@ -50,7 +50,8 @@ function setPresentation(presentation: NowPlayingPresentation) {
 
 function PanelInLayout({ tabBarHeight }: { tabBarHeight: number }) {
   const sheetIndex = useSharedValue(-1);
-  return <NowPlayingPanel sheetIndex={sheetIndex} tabBarHeight={tabBarHeight} />;
+  const outsideTabsProgress = useSharedValue(0);
+  return <NowPlayingPanel sheetIndex={sheetIndex} tabBarHeight={tabBarHeight} outsideTabsProgress={outsideTabsProgress} />;
 }
 
 // The sheet mounts once the area it moves in and the tab bar have been laid out.
@@ -119,6 +120,21 @@ describe('NowPlayingPanel', () => {
     });
 
     expect(screen.queryByRole('button', { name: 'Minimise player' })).not.toBeOnTheScreen();
+  });
+
+  // A keyboard left open by Search would cover Now Playing's controls.
+  it('closes the keyboard when Now Playing opens, and not before', async () => {
+    const dismissKeyboard = jest.spyOn(Keyboard, 'dismiss');
+    loadFirst();
+    await renderPanel();
+    expect(dismissKeyboard).not.toHaveBeenCalled();
+
+    await act(async () => {
+      setPresentation('open');
+    });
+
+    expect(dismissKeyboard).toHaveBeenCalledTimes(1);
+    dismissKeyboard.mockRestore();
   });
 
   it('the chevron closes Now Playing', async () => {

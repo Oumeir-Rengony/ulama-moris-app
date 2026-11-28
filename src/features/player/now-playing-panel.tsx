@@ -1,7 +1,8 @@
 import BottomSheet, { useBottomSheetSpringConfigs } from '@gorhom/bottom-sheet';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { BackHandler, Keyboard, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { useAnimatedReaction, useSharedValue, type SharedValue } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { CoverArt } from '@/components/artwork/cover-art';
@@ -22,7 +23,8 @@ import {
   SHEET_SPRING,
 } from './player-motion-config';
 import { selectActiveLectureSlug, usePlayerStore } from './player.store';
-import { ARTWORK_LAYOUT_SIZE, usePlayerMorph } from './use-player-morph';
+import { useKeyboardHeight } from './use-keyboard-height';
+import { ARTWORK_LAYOUT_SIZE, usePlayerMorph, usePlayerPlacementStyle } from './use-player-morph';
 
 type NowPlayingPanelProps = {
   // The sheet's live index (0 = the bar, 1 = the full player, −1 = gone). Written by the sheet,
@@ -30,6 +32,9 @@ type NowPlayingPanelProps = {
   sheetIndex: SharedValue<number>;
   // The tab bar's measured height. The bar sits just above it. 0 until measured.
   tabBarHeight: number;
+  // 0 on a tab screen, 1 on a screen outside the tabs (Search): there the tab bar slides away and
+  // the bar drops into its place.
+  outsideTabsProgress: SharedValue<number>;
 };
 
 type Area = {
@@ -40,10 +45,21 @@ type Area = {
 // The player: ONE sheet that is the mini player at its small size and Now Playing at full size.
 // Dragging it, or tapping the bar, grows one into the other under the finger.
 //
-// The outer view only measures the area the sheet moves in (the whole screen). The sheet waits
-// for that and for the tab bar, whose height places the bar.
-export function NowPlayingPanel({ sheetIndex, tabBarHeight }: NowPlayingPanelProps) {
+// The outer view measures the area the sheet moves in (the whole screen), and moves the bar down
+// where there is no tab bar and up above an open keyboard. The sheet waits for the area and for
+// the tab bar, whose height places the bar.
+export function NowPlayingPanel({ sheetIndex, tabBarHeight, outsideTabsProgress }: NowPlayingPanelProps) {
   const [area, setArea] = useState<Area | null>(null);
+  const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
+
+  const placementStyle = usePlayerPlacementStyle({
+    sheetIndex,
+    outsideTabsProgress,
+    keyboardHeight,
+    tabBarHeight,
+    bottomInset: insets.bottom,
+  });
 
   function handleAreaLayout(event: LayoutChangeEvent) {
     const { width, height } = event.nativeEvent.layout;
@@ -54,14 +70,14 @@ export function NowPlayingPanel({ sheetIndex, tabBarHeight }: NowPlayingPanelPro
 
   // box-none: the screens and the tab bar stay touchable around the sheet.
   return (
-    <View
+    <Animated.View
       testID="now-playing-area"
       pointerEvents="box-none"
-      style={StyleSheet.absoluteFill}
+      style={[StyleSheet.absoluteFill, placementStyle]}
       onLayout={handleAreaLayout}
     >
       {canShow ? <PlayerSheet area={area} tabBarHeight={tabBarHeight} sheetIndex={sheetIndex} /> : null}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -210,6 +226,14 @@ function PlayerSheet({ area, tabBarHeight, sheetIndex }: PlayerSheetProps) {
       scheduleOnRN(handleSheetRested, restingAt);
     },
   );
+
+  // Now Playing covers the whole screen, so a keyboard left open by Search would cover its
+  // controls.
+  useEffect(() => {
+    if (isOpen) {
+      Keyboard.dismiss();
+    }
+  }, [isOpen]);
 
   // Android back shrinks Now Playing into the bar instead of leaving the screen. (Web has no back
   // handler.)

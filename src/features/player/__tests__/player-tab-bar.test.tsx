@@ -15,7 +15,8 @@ const mockedUsePathname = jest.mocked(usePathname);
 
 function TabBarInLayout() {
   const sheetIndex = useSharedValue(0);
-  return <PlayerTabBar sheetIndex={sheetIndex} onHeightChange={jest.fn()} />;
+  const outsideTabsProgress = useSharedValue(0);
+  return <PlayerTabBar sheetIndex={sheetIndex} outsideTabsProgress={outsideTabsProgress} onHeightChange={jest.fn()} />;
 }
 
 async function renderTabBar() {
@@ -54,7 +55,16 @@ describe('PlayerTabBar', () => {
     mockedUsePathname.mockReturnValue('/search');
     await rerender(<TabBarInLayout />);
 
-    expect(screen.getByRole('tab', { name: 'Events' })).toBeSelected();
+    // Off-screen on Search, so only found among the hidden elements.
+    expect(screen.getByRole('tab', { name: 'Events', includeHiddenElements: true })).toBeSelected();
+  });
+
+  it('on a screen outside the tabs (Search): hidden from screen readers and not touchable', async () => {
+    mockedUsePathname.mockReturnValue('/search');
+    await renderTabBar();
+
+    expect(screen.queryByRole('tab', { name: 'Home' })).not.toBeOnTheScreen();
+    expect(screen.getByTestId('player-tab-bar', { includeHiddenElements: true })).toHaveProp('pointerEvents', 'none');
   });
 
   it('switching back to a tab shows its last screen again', async () => {

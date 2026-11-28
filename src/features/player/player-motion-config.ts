@@ -20,6 +20,10 @@ export const SHEET_SPRING: WithSpringConfig = {
 // grows from there into the full player.
 export const SHEET_JUMP: WithTimingConfig = { duration: 0 };
 
+// Opening Search: the tab bar slides down out of the way while the mini player drops into its
+// place (and the reverse on the way back). About as long as Search's slide in from the right.
+export const TAB_BAR_SLIDE_TIMING: WithTimingConfig = { duration: 250 };
+
 // The sheet's drag starts after 8 pt vertically, and gives up after 12 pt horizontally, so the
 // seek bar (4 pt horizontally) always wins a scrub.
 export const PANEL_ACTIVE_OFFSET_Y: [number, number] = [-8, 8];

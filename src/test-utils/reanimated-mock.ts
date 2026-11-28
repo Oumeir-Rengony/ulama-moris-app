@@ -95,6 +95,11 @@ const Easing = {
   quad: () => 0,
 };
 
+// The player follows the keyboard. No keyboard opens in tests: its height stays 0.
+function useAnimatedKeyboard() {
+  return { height: makeMutable(0), state: makeMutable(0) };
+}
+
 function useReducedMotion(): boolean {
   return false;
 }
@@ -117,6 +122,7 @@ export {
   interpolate,
   interpolateColor,
   makeMutable,
+  useAnimatedKeyboard,
   useAnimatedReaction,
   useAnimatedStyle,
   useReducedMotion,

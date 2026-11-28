@@ -78,8 +78,9 @@ fail or not checked.
 | `(tabs)/index.tsx` | Home: Continue listening, the series chips (Local selected at first; every request sends a series), that series' latest lectures with infinite scroll |
 | `(tabs)/events/index.tsx`, `events/[slug].tsx` | Events list (year sections, paging) and Event detail |
 | `search.tsx` | Root-stack screen over the tabs, so it covers the player too. Accent-insensitive title match |
-| `player.tsx` | **Deep links and reminder taps only** (`/player?slug=…`). With nothing loaded, loads the lecture paused; then opens the Now Playing panel and steps out of the way. Nothing in the app navigates here: Now Playing is a panel in the tabs layout |
-| `(tabs)/_layout.tsx` | JS tabs (`expo-router/js-tabs`), with the mini player (`MiniPlayerBar`) floating above the tab bar |
+| `player.tsx` | **Deep links and reminder taps only** (`/player?slug=…`). With nothing loaded, loads the lecture paused; then opens the Now Playing panel and steps out of the way. Nothing in the app navigates here: Now Playing is a panel in `PlayerShell` |
+| `_layout.tsx` | The root stack, wrapped in `PlayerShell` (`features/player/player-shell.tsx`): the mini player / Now Playing sheet and the tab bar, drawn over every screen, Search included |
+| `(tabs)/_layout.tsx` | JS tabs (`expo-router/js-tabs`), drawing no tab bar (PlayerShell draws it) |
 | `dev/failures` | Development-only forced-failure switches, opened by URL. In the release bundle too (redirect to Home): remove before release |
 
 ## Design screenshots
@@ -160,8 +161,8 @@ list into the queue. It's a snapshot the user picked, not a cache.
 
 ## Now Playing and the mini player
 
-The mini player and Now Playing are one `@gorhom/bottom-sheet` drawn in the tabs layout between
-the screens and the tab bar, with two sizes: the bar (index 0) and the whole screen (index 1).
+The mini player and Now Playing are one `@gorhom/bottom-sheet` drawn by `PlayerShell` (in the
+root layout, around every screen) between the screens and the tab bar, with two sizes: the bar (index 0) and the whole screen (index 1).
 A card inside it grows from the bar into the full player; every visual (the card's size, side
 inset, colour and corners, the two fades, the flying artwork, the tab bar sliding away) is a
 function of the sheet's live index (`use-player-morph.ts`).
@@ -170,6 +171,10 @@ function of the sheet's live index (`use-player-morph.ts`).
 the only "is it open"; `open-now-playing.ts` is its only writer (store first, then the audio).
 The sheet follows the store. A drag reaches the store through the sheet's resting check: when the
 sheet comes to rest at the other end, `handleSheetSettled` records it. No gorhom callbacks.
+
+**On Search** (any screen outside the tabs) the tab bar slides down out of the way and the bar
+drops into its place, above the safe area; with the keyboard open it rides on top of the keyboard
+(`usePlayerPlacementStyle`). Opening Now Playing closes the keyboard.
 
 **When the bar shows:** a lecture is loaded, the queue hasn't ended, and Now Playing is closed.
 It never depends on `isPlaying`.

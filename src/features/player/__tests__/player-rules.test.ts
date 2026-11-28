@@ -84,7 +84,7 @@ describe('player rules', () => {
     expect(filesContaining('useListeningHistoryStore()')).toEqual([]);
   });
 
-  // Now Playing is a panel in the tabs layout. /player is only the deep-link entry.
+  // Now Playing is a panel in PlayerShell. /player is only the deep-link entry.
   it('nothing in the app navigates to /player', () => {
     expect(filesContaining(/router\.(navigate|push|replace)\(['"]\/player/)).toEqual([]);
   });
@@ -154,6 +154,32 @@ describe('player rules', () => {
       expect(source).not.toMatch(/dismissMiniPlayer/);
       expect(source).not.toMatch(/stopAndClear/);
     }
+  });
+
+  // The mini player has to stay on every screen, Search included. Search is a root-stack screen
+  // drawn over the tabs, so the player and the tab bar must be drawn around the whole root stack.
+  it('the root layout draws the player around every screen, and nothing else draws it', () => {
+    expect(filesContaining('<PlayerShell')).toEqual(['app/_layout.tsx']);
+    expect(filesContaining('<NowPlayingPanel')).toEqual(['features/player/player-shell.tsx']);
+    expect(filesContaining('<PlayerTabBar')).toEqual(['features/player/player-shell.tsx']);
+  });
+
+  // The root stack is inside PlayerShell, so Search (one of its screens) is under the player.
+  it('the root stack is wrapped in PlayerShell', () => {
+    const source = readSource('app/_layout.tsx');
+    const shellStart = source.indexOf('<PlayerShell>');
+    const stackStart = source.indexOf('<Stack ');
+    const shellEnd = source.indexOf('</PlayerShell>');
+    expect(shellStart).toBeGreaterThan(-1);
+    expect(stackStart).toBeGreaterThan(shellStart);
+    expect(shellEnd).toBeGreaterThan(stackStart);
+  });
+
+  // The keyboard is read in one place, with a web version that does nothing (Reanimated only
+  // warns there).
+  it('the keyboard height is read only through useKeyboardHeight', () => {
+    expect(filesContaining('useAnimatedKeyboard')).toEqual(['features/player/use-keyboard-height.ts']);
+    expect(fs.existsSync(path.join(srcFolder, 'features/player/use-keyboard-height.web.ts'))).toBe(true);
   });
 
   it('no component in src/components reads the player stores', () => {
