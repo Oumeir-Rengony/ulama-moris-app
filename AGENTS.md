@@ -32,7 +32,7 @@ Start with [docs/CONTEXT.md](docs/CONTEXT.md): how the app works, what was decid
 |---|---|
 | Colours, tokens, type, spacing, shadows, any visual style | [src/theme/README.md](src/theme/README.md) (recipes), then [docs/DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md) (full reference) |
 | Changing a screen's layout | Its design screenshot (the table in CONTEXT.md "Design screenshots") and the existing code |
-| Error and offline states | CONTEXT.md "Error and offline states", `docs/artboards/error-states/*.png`, and the switches at `/dev/failures` |
+| Error and offline states | CONTEXT.md "Error and offline states" and `docs/artboards/error-states/*.png` |
 | Website API, reminder notifications | CONTEXT.md "The website API" and "Reminder notifications", then the code in `src/features/` |
 | Audio playback, lock screen, background | AGENTS.md "Audio: expo-audio plays, Zustand remembers", the comments in `src/features/player/audio-engine.ts` and `setup-audio.ts`, then the Expo docs: https://docs.expo.dev/versions/latest/sdk/audio.md |
 | Now Playing and the mini player | CONTEXT.md "Now Playing and the mini player", then AGENTS.md "Mini player and Now Playing" |
@@ -106,8 +106,6 @@ Read [src/theme/README.md](src/theme/README.md) before adding or changing any co
 - Category colours are chosen by the caller and passed as `category: Category`: `catAt(index)` by position, `catForTopic(topic)` by topic (worked out from the topic's letters, so it needs no list).
 - Icons: `<Icon icon={…} color="fgMuted" />` with a semantic colour name. Import lucide icons one by one (`import Play from 'lucide-react-native/icons/play'`), never from the package root, which bundles every icon.
 - `react-native-svg` on web passes unknown props to the DOM, so don't put `accessible` / `importantForAccessibility` on `<Svg>`; the button around an icon carries the label.
-- `/dev/failures` (development only) has switches that make one kind of request fail on purpose (first pages, next pages, search, event detail, lecture audio, no connection), so every error state can be seen in the real screens. A forced request fails like a lost connection. The switches reset on reload. It has no in-app link: open it by URL (web: `localhost:8081/dev/failures`; iOS in Expo Go: `xcrun simctl openurl booted "exp://127.0.0.1:8081/--/dev/failures"`).
-- **`/dev/failures` is still in the release build.** Expo Router makes every file in `src/app/` a route, so it ships in the release bundle and only redirects to Home when `__DEV__` is false. Before the first release, remove it from production builds (for example by keeping it out of `src/app/` in release builds, or guarding it in a `src/app/dev/_layout.tsx`).
 
 ## State management
 

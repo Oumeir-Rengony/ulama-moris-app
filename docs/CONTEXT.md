@@ -30,10 +30,6 @@ yet on an Android phone, at the largest text size, or with VoiceOver / TalkBack.
 The **error and offline states** (see "Error and offline states" below) are built: the list
 cards and next-page footers (Home, Events, Search, and Event detail, which has no design and
 reuses the card), the Now Playing and mini player audio states, and the blocking offline sheet.
-Force any of them in development at `/dev/failures`.
-
-**Before the first release:** `/dev/failures` still ships in the release bundle; it only
-redirects to Home there. Remove it from production builds.
 
 Built but not yet checked. Everything was verified in Expo Go on the iOS simulator and on web;
 no development build exists yet. The checks below need one (`npx expo run:ios --device`,
@@ -81,7 +77,6 @@ fail or not checked.
 | `player.tsx` | **Deep links and reminder taps only** (`/player?slug=…`). With nothing loaded, loads the lecture paused; then opens the Now Playing panel and steps out of the way. Nothing in the app navigates here: Now Playing is a panel in `PlayerShell` |
 | `_layout.tsx` | The root stack, wrapped in `PlayerShell` (`features/player/player-shell.tsx`): the mini player / Now Playing sheet and the tab bar, drawn over every screen, Search included |
 | `(tabs)/_layout.tsx` | JS tabs (`expo-router/js-tabs`), drawing no tab bar (PlayerShell draws it) |
-| `dev/failures` | Development-only forced-failure switches, opened by URL. In the release bundle too (redirect to Home): remove before release |
 
 ## Design screenshots
 
@@ -226,7 +221,6 @@ What the app relies on:
 ## Error and offline states
 
 Each has a screenshot in `artboards/error-states/`; the built screens are the reference now.
-Force any of them at `/dev/failures`.
 
 - **Colour:** the semantic `danger` family (`bg-danger-subtle`, `text-danger-subtle-fg`, `danger` for lines and icons), `miniPlayer.errorFg` / `errorLine` on the mini player, `scrim` for the offline pop-up. Never a category colour, no separate red.
 - **Copy** (`features/errors/error-copy.ts`): say what happened and what to do, never apologise ("Lectures didn’t load" + "Check your internet connection, then try again.").

@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { AppState, Modal, type AppStateStatus } from 'react-native';
 
 import { OfflineSheet, type OfflineSheetStatus } from '@/components/OfflineSheet';
-import { isFailureForced } from '@/features/dev/forced-failures.store';
 import { lectureSeries } from '@/features/lectures/lecture-series';
 
 const seriesLabels = lectureSeries.map((series) => series.label);
@@ -13,11 +12,7 @@ type GateStatus = 'hidden' | OfflineSheetStatus;
 
 // NetInfo says null while it doesn't know yet. That counts as connected, so the app isn't
 // blocked by a guess; only a definite "no connection" shows the sheet.
-// In development, the "No connection" switch at /dev/failures makes every check say offline.
 function isDefinitelyOffline(isConnected: boolean | null): boolean {
-  if (isFailureForced('offline')) {
-    return true;
-  }
   return isConnected === false;
 }
 

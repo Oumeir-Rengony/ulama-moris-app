@@ -11,7 +11,6 @@ import {
   stopAndClear,
   toggle,
 } from '@/features/player/audio-engine';
-import { useForcedFailuresStore } from '@/features/dev/forced-failures.store';
 import { initialListeningHistoryState, useListeningHistoryStore } from '@/features/player/listening-history.store';
 import { LOCK_SCREEN_ARTWORK_URL } from '@/features/player/lock-screen-artwork';
 import {
@@ -46,7 +45,6 @@ beforeEach(async () => {
   usePlayerStore.setState(initialPlayerState);
   useListeningHistoryStore.setState(initialListeningHistoryState);
   fakeAudio.resetFakeAudio();
-  useForcedFailuresStore.setState({ active: [] });
   await AsyncStorage.clear();
 });
 
@@ -446,16 +444,5 @@ describe('when the audio did not load', () => {
     playNext();
 
     expect(selectHasAudioFailed(usePlayerStore.getState())).toBe(false);
-  });
-
-  it('loads an address that can never resolve when the development switch is on', () => {
-    useForcedFailuresStore.setState({ active: ['audio'] });
-
-    playLecture(first, queueOfThree, latestSource);
-
-    expect(fakePlayer.replace).toHaveBeenCalledWith({
-      uri: 'https://forced-failure.invalid/lecture.m4a',
-      name: first.title,
-    });
   });
 });

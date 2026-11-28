@@ -7,8 +7,8 @@ import { ApiError } from '@/features/api/api-client';
 
 // React Native reports every error a boundary catches to LogBox, which in development covers
 // the screen with a "Render Error" for a failed load that the screen already shows as its error
-// card. These two are load failures: no connection (fetch's TypeError, or the one /dev/failures
-// forces) and an API error status (ApiError's "API <status>:" message). Other errors still show.
+// card. These two are load failures: no connection (fetch's TypeError) and an
+// API error status (ApiError's "API <status>:" message). Other errors still show.
 LogBox.ignoreLogs([/^Network request failed/, /^API \d+: /]);
 
 type QueryBoundaryProps = {

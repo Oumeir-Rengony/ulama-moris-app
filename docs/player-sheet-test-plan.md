@@ -179,7 +179,7 @@ does not fire** (no pause, no skip, no seek, no navigation).
 | F2 | Search with the keyboard open (bar riding on it) | B1 (keyboard closes as it opens), B3 | Same results; the keyboard doesn't move the sheet |
 | F3 | Events tab, and an event's detail | A2, B3 | Same results |
 | F4 | Lecture paused | A2, B3 | A2: stays paused, bar. B3: gone |
-| F5 | Lecture whose audio failed (use `/dev/failures`) | A2, B1, B3 | No crash. Opening reloads it; the bar's swipe clears it |
+| F5 | Lecture whose audio failed (turn the network off, then play a lecture) | A2, B1, B3 | No crash. Opening reloads it; the bar's swipe clears it |
 | F6 | The queue ended while Now Playing is open | A2 | Now Playing closes and the sheet leaves (there is no bar to go to) |
 | F7 | A `/player?slug=…` deep link while the bar is showing | Then A2 | Opens Now Playing; A2 as normal |
 
@@ -252,7 +252,7 @@ handler hook, pan down to close only while Now Playing is closed). iOS: iPhone 1
 | F1 | Search, keyboard closed | Pass. A2 → bar, B1 → full, B3 flick → gone |
 | F2 | Search, keyboard open (bar at y 506) | Pass. B1 → full (keyboard closes), B3 flick → gone |
 | F4 | Paused lecture | Pass. A2 → bar, still paused. B3 → gone |
-| F5 | Lecture audio failing (`/dev/failures`) | Pass. Error shown; A2 → bar, B1 → full, B3 → gone |
+| F5 | Lecture audio failing | Pass. Error shown; A2 → bar, B1 → full, B3 → gone |
 | F7 | `/player?slug=…` while the bar shows | Pass. Opens Now Playing for the loaded lecture (the link only loads its own lecture when nothing is loaded); A2 → bar |
 | G1 | Reduce Motion on | Pass. Opening jumps to Now Playing in one frame, no animation; the sheet always appears. Row tap, chevron, bar tap, A2, B1, B3 all end right |
 | G2 | Largest text size | Sheet: pass (bar 50 pt tall; A2, B1, B3 right). **Now Playing: fail.** The seek bar (y 877) and play button (y 1013) are below the screen (874), so touch can't reach them. Not caused by this branch |

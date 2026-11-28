@@ -7,7 +7,6 @@ import {
 } from 'expo-audio';
 import { Platform } from 'react-native';
 
-import { isFailureForced } from '@/features/dev/forced-failures.store';
 import type { Lecture } from '@/features/lectures/lecture.types';
 
 import { useListeningHistoryStore } from './listening-history.store';
@@ -40,10 +39,6 @@ export function getPlayer(): AudioPlayer {
 }
 
 const SKIP_SECONDS = 15;
-
-// Development only (/dev/failures): an address that can never resolve (.invalid is reserved),
-// so the player fails to load for real, the same way it does without a connection.
-const FORCED_FAILURE_AUDIO_URL = 'https://forced-failure.invalid/lecture.m4a';
 
 // Play/pause, a seek bar, and back / forward 15 seconds. No next/previous track.
 const lockScreenOptions: AudioLockScreenOptions = {
@@ -144,11 +139,7 @@ function loadCurrent(shouldPlay: boolean): void {
   // loads a lecture can forget it. A new failure is reported by PlayerStatusBridge.
   state.clearAudioFailure();
 
-  let audioUrl = lecture.url;
-  if (isFailureForced('audio')) {
-    audioUrl = FORCED_FAILURE_AUDIO_URL;
-  }
-  player.replace({ uri: audioUrl, name: lecture.title });
+  player.replace({ uri: lecture.url, name: lecture.title });
   // Required, not cosmetic: on Android, without it the OS kills background playback after about
   // 3 minutes. Called again on every track change, so the notification never shows the previous title.
   player.setActiveForLockScreen(true, buildLockScreenMetadata(lecture, selectSourceLabel(state)), lockScreenOptions);
