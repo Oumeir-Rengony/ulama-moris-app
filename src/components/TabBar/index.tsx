@@ -38,7 +38,14 @@ export function TabBarItem({ tab, label, isSelected, onPress }: TabBarItemProps)
       onPress={onPress}
       className="min-h-touch flex-1 items-center gap-1 pt-1"
     >
-      <View className={`h-8 w-[60px] items-center justify-center rounded-full ${pillClass}`}>{icon}</View>
+      {/* The key gives the pill a new native view when the tab is selected. On Android, a
+          background added to a view that already exists is drawn square, ignoring its rounded corners. */}
+      <View
+        key={isSelected ? 'selected-pill' : 'pill'}
+        className={`h-8 w-[60px] items-center justify-center rounded-full ${pillClass}`}
+      >
+        {icon}
+      </View>
       {/* The tab bar can't grow much, so its label is capped. */}
       <Text variant="caption" maxFontSizeMultiplier={1.3} numberOfLines={1} className={labelClass}>
         {label}
