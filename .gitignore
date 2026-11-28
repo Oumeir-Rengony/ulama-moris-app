@@ -30,7 +30,9 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files. .env holds this machine's API address; cloud builds and updates use EAS
+# environment variables instead. .env.example shows what to put in it.
+.env
 .env*.local
 
 # typescript
