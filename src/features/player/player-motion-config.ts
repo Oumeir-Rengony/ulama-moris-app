@@ -32,7 +32,8 @@ export const PANEL_FAIL_OFFSET_X: [number, number] = [-12, 12];
 // A finger that moves further than this (pt) is dragging the sheet, not tapping the bar.
 export const BAR_TAP_MAX_DISTANCE = 10;
 
-// The sheet counts as resting at an end only this close to it, never mid-drag.
+// The sheet counts as resting at an end only this close to it, and only with no finger dragging
+// it.
 export const RESTING_AT_FULL_INDEX = 0.99;
 export const RESTING_AT_BAR_INDEX = 0.01;
 export const RESTING_GONE_INDEX = -0.99;

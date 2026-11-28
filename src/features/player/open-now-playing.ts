@@ -144,7 +144,8 @@ export function handleSheetSettled(restingSize: SheetRestingSize): void {
 }
 
 // The bar was swiped down below the screen: stop and close, like the screen-reader action.
-// A hard flick down on Now Playing can carry the sheet past the bar too, but nothing on Now
+// A drag from Now Playing can't take the sheet below the bar (the sheet turns pan-down-to-close
+// off while it is open). If the sheet gets there anyway while Now Playing is open, nothing on Now
 // Playing stops playback, so that only closes Now Playing (the sheet comes back to the bar).
 function handleSheetDraggedAway(): void {
   const state = usePlayerStore.getState();
