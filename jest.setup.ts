@@ -63,6 +63,20 @@ function describeConsoleCall(args: unknown[]): string {
   return parts.join(' ');
 }
 
+// The test renderer logs every error an error boundary catches ("Caught error:", error, info),
+// and RNTL's render can't turn that off. A failed request caught by a screen's QueryBoundary is
+// the error state working, not a bug, so only that log is skipped. Any other caught error still
+// fails the test.
+function isCaughtLoadError(args: unknown[]): boolean {
+  if (args[0] !== 'Caught error:') {
+    return false;
+  }
+  // Required here, not imported at the top, so no app code loads before the mocks above.
+  const { ApiError } = require('./src/features/api/api-client');
+  const error = args[1];
+  return error instanceof ApiError || error instanceof TypeError;
+}
+
 let consoleErrorSpy: jest.SpyInstance;
 let consoleWarnSpy: jest.SpyInstance;
 
@@ -70,6 +84,9 @@ beforeEach(() => {
   consoleMessages = [];
 
   consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+    if (isCaughtLoadError(args)) {
+      return;
+    }
     consoleMessages.push(`console.error: ${describeConsoleCall(args)}`);
   });
   consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation((...args: unknown[]) => {

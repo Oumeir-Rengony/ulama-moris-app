@@ -5,11 +5,13 @@ import { isApiFailureForced } from '@/features/dev/forced-failures.store';
 
 // Thrown when the API answers with an error status (400, 404, 500 …). A failed connection
 // (no internet, server down) throws fetch's own TypeError instead.
+// The message starts with "API <status>:" so development tools can recognise it by its text
+// (QueryBoundary keeps a failed load out of LogBox by matching it).
 export class ApiError extends Error {
   status: number;
 
   constructor(status: number, message: string) {
-    super(message);
+    super(`API ${status}: ${message}`);
     this.name = 'ApiError';
     this.status = status;
   }

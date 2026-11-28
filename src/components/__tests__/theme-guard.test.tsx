@@ -33,7 +33,7 @@ import { RecentSearchList } from '@/components/Search/recent-search-list';
 import { SearchFieldButton } from '@/components/Search/search-field-button';
 import { SearchInput } from '@/components/Search/search-input';
 import { SearchResultRow } from '@/components/Search/search-result-row';
-import { LoadingFooter, SkeletonRow } from '@/components/Skeleton';
+import { EventDetailSkeleton, EventLecturesSkeleton, LoadingFooter, SkeletonRow } from '@/components/Skeleton';
 import { TabBarItem } from '@/components/TabBar';
 import { Chip } from '@/components/ui/chip';
 import { Divider } from '@/components/ui/divider';
@@ -164,6 +164,9 @@ const everyComponent: { name: string; element: ReactElement }[] = [
   },
   { name: 'TabBarItem', element: <TabBarItem tab="events" label="Events" isSelected /> },
   { name: 'SkeletonRow', element: <SkeletonRow variant="lecture" /> },
+  { name: 'SkeletonRow numbered', element: <SkeletonRow variant="numbered" /> },
+  { name: 'EventDetailSkeleton', element: <EventDetailSkeleton /> },
+  { name: 'EventLecturesSkeleton', element: <EventLecturesSkeleton /> },
   { name: 'LoadingFooter', element: <LoadingFooter label="Loading more lectures" /> },
   { name: 'TrackInfo', element: <TrackInfo title="Title" author="Author" topicLabel="Topic" eventTitle="Event" /> },
   { name: 'PlayerControls', element: <PlayerControls state="playing" /> },
